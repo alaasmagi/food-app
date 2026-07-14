@@ -1,20 +1,236 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Project overview
+  - Food dashboard backend: daily lunch-offer aggregation and personal restaurant organization
+  - Each authenticated Keycloak-identity user manages only their own environments, favourites, and wheels
+  - Restaurant and OfferProvider records are shared, admin-managed reference data, not user-owned
+  - The system stores: app users, restaurants, offer providers, dining environments, environment-restaurant
+    memberships, favourites, user wheels, and a short-lived daily offer cache
+  - Daily offers are fetched on-demand (never on a schedule) and cached with a short TTL, then re-fetched
+  - A scheduled process assembles and publishes a "daily lunch recommendation" email event per opted-in user
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Tech stack
+  - ASP.NET Core 10 (Web API + MVC for Identity/OIDC pages)
+  - Entity Framework Core 10
+  - PostgreSQL for domain data (AppDbContext)
+  - SQLite for the offer cache (OfferCacheDbContext) - separate DbContext, separate connection, separate
+    migration history from AppDbContext
+  - Keycloak for authentication and authorization (alaasmagi.Base.Keycloak) - there is no ASP.NET Core
+    Identity and no AppIdentityDbContext in this project; Keycloak is the sole identity provider
+  - RabbitMQ (alaasmagi.Base.Message.RabbitMQ) for inbound Keycloak lifecycle events and outbound
+    notification events
+  - Redis (External/Cache/RedisCache.cs, alaasmagi.Base.Cache) is reserved for other caching needs; it is
+    NOT used for the offer cache, which lives in its own SQLite database/table instead
+  - Bootstrap via wwwroot libs, Razor views for the MVC/Identity surface
+  - alaasmagi.Base.* NuGet packages (Domain, DataAccess.EF, Application, DTO, Exception, Message,
+    Message.RabbitMQ, Keycloak) are mandatory building blocks; do not reimplement what they already provide
+
+  Solution architecture
+  - Domain
+  - DTO
+  - Contracts
+  - DataAccess
+  - Application
+  - External
+  - Web
+  - Keep the current structure stable and do not reorganize folders unless absolutely necessary
+  - Domain contains pure business entities and enums only, built on alaasmagi.Base.Domain base classes
+  - DTO contains DataAccess DTOs, Web DTOs, and mappers
+  - Contracts contains repository and application service interfaces (Application/, DataAccess/, External/)
+  - DataAccess contains repository implementations and DbContexts (AppDbContext, OfferCacheDbContext)
+  - Application contains use-case services
+  - External contains RabbitMQ publisher/consumer/handler wiring and cache implementations
+  - Web contains both API controllers (Web/API/Controllers) and MVC controllers/views for Keycloak
+    OIDC login/logout and any Identity-adjacent pages (Web/MVC)
+
+  Reference implementation (authoritative)
+  - The existing AppUser vertical slice already present in this repository - Domain/AppUser.cs,
+    DTO/DataAccess/AppUserEntity.cs + AppUserEntityMapper, DTO/Web/AppUserDto.cs + AppUserDtoMapper,
+    Contracts/DataAccess/IAppUserRepository, Contracts/Application/IAppUserService,
+    DataAccess/AppUserRepository, Application/AppUserService, Web/API/Controllers/AppUsersController -
+    is real, working, trusted code, not a placeholder or a sketch
+  - This is the single source of truth for how every layer is wired together in this specific project:
+    naming, constructor shape, mapper style, DI registration, controller-to-service-to-repository
+    call flow, and IMethodResponse handling
+  - Every new entity (Restaurant, OfferProvider, DiningEnvironment, EnvironmentRestaurant, Favourite,
+    UserWheel) must follow this exact pattern layer-for-layer
+  - Where the alaasmagi.Base.* package guide's own examples (see External documentation) differ in
+    style from the existing AppUser code, the existing AppUser code wins - it reflects the actual
+    conventions already established for this project, the package guide is only a reference for what
+    the base classes/contracts offer
+  - Before generating code for a new entity, read the existing AppUser files across all six projects
+    first and mirror their structure; do not invent a new convention even if it seems cleaner
+
+  Domain model rules
+  - Keep the existing naming exactly as defined in the project
+  - Do not rename domain classes for "cleaner" naming
+  - Use alaasmagi.Base.Domain base classes instead of a hand-rolled BaseEntity:
+    - AppUser -> BaseEntityWithMeta (its Id is the Keycloak subject UUID, not a freshly generated Guid;
+      it is provisioned, never created ad hoc by the app)
+    - Restaurant -> BaseEntityWithMeta (shared/global, not user-owned)
+    - OfferProvider -> BaseEntityWithMeta (shared/global, not user-owned)
+    - DiningEnvironment -> BaseEntityUserWithMeta
+    - EnvironmentRestaurant -> BaseEntityUserWithMeta
+    - Favourite -> BaseEntityUserWithMeta
+    - UserWheel -> BaseEntityUserWithMeta
+  - Metadata fields (CreatedAt, UpdatedAt, CreatedBy, UpdatedBy) come from the Base*WithMeta base classes;
+    do not redeclare them
+  - Domain entities currently include:
+    - AppUser
+    - Restaurant
+    - OfferProvider
+    - DiningEnvironment
+    - EnvironmentRestaurant
+    - Favourite
+    - UserWheel
+    - EOfferProviderType (enum: Html, Api, Manual)
+  - The offer cache row (RestaurantId, Offers, Timestamp) is NOT a Domain entity. It is a
+    DataAccess-only, SQLite-only model with its own DbContext (OfferCacheDbContext), no Base*
+    inheritance, no ownership, and no audit metadata - it is disposable, TTL-bound data, not a
+    business record
+
+  Business rules
+  - An AppUser is provisioned exclusively from a Keycloak "user.created" event on the food realm,
+    consumed via alaasmagi.Base.Keycloak.Events.UserEventContent over RabbitMQ; the app never creates
+    an AppUser from a login request or any other path
+  - A Restaurant is shared reference data: name, city, coordinates, static display info (OfferTimeInfo,
+    ParkingInfo, OpeningInfo), a HasOffers flag (whether this restaurant conceptually publishes daily
+    offers at all), an IsFastFood flag, and a reference to the OfferProvider that knows how to fetch its
+    offers
+  - An OfferProvider is shared parsing configuration for one real external source (one HTML site or one
+    JSON API), identified by EOfferProviderType and three locator fields (OfferLocator, OfferTextLocator,
+    OfferPriceLocator) that mean "CSS selector / regex" for Html and "JSONPath" for Api; multiple
+    restaurants may reference the same OfferProvider
+  - A DiningEnvironment is a user-defined grouping of restaurants (e.g. "Work", "Home")
+  - An EnvironmentRestaurant is the membership relation between one DiningEnvironment and one Restaurant,
+    owned by the user; it carries no offer/wheel flags - those concerns moved to Restaurant.HasOffers
+    and UserWheel respectively
+  - A Favourite is a user's personal rating (1-5) and optional note for a Restaurant, independent of any
+    DiningEnvironment - a restaurant is rated once per user, not once per environment
+  - A UserWheel is a saved, optionally public/shareable random-restaurant picker; RestaurantNames is a
+    deliberately frozen JSON array of restaurant name strings captured at save time, not a foreign-key
+    list - renaming or deleting a Restaurant later must not change a previously saved wheel
+  - Daily offers are fetched lazily, only when a user requests them, never on a fixed schedule
+  - The offer cache holds at most one row per restaurant (latest snapshot only, no history) with a
+    configurable TTL (default 1 hour); on cache miss or expiry the configured OfferProvider is invoked
+    and the row is overwritten
+  - The system must support ownership scoping so each Keycloak-identity user sees only their own
+    DiningEnvironment, EnvironmentRestaurant, Favourite, and UserWheel records; Restaurant and
+    OfferProvider are visible to all authenticated users but only mutable by users with the admin role
+  - A scheduled process builds a "daily.lunch.recommendation" email event per opted-in user (recommendation
+    rows sourced from the user's environments/favourites and the current offer cache) and publishes it
+    over RabbitMQ for the email hub to render and send
+
+  Identity and ownership rules
+  - Keycloak is the sole authentication provider (alaasmagi.Base.Keycloak); there is no ASP.NET Core
+    Identity and no AppIdentityDbContext - do not introduce one
+  - The Web project configures two Keycloak auth schemes side by side:
+    - AddKeycloakOidc for the MVC/Identity surface (cookie-based, Duende token management, login/logout
+      pages that Challenge()/SignOut() against Keycloak)
+    - AddKeycloakJwtBearer for the API surface (bearer JWT validation for programmatic/API clients)
+  - AppUser.Id equals the Keycloak "sub" claim (Guid) exactly - do not introduce a separate
+    KeycloakSubject column; look users up by primary key, not by a secondary string field
+  - Domain data owned by a user (DiningEnvironment, EnvironmentRestaurant, Favourite, UserWheel)
+    implements IBaseEntityUserId so alaasmagi.Base.DataAccess.EF automatically scopes reads to the
+    current actor and rejects cross-user writes with FORBIDDEN
+  - Restaurant and OfferProvider writes (create/update/delete) require the admin realm role; reads are
+    open to any authenticated user
+  - Queries must not expose another user's DiningEnvironment, EnvironmentRestaurant, Favourite, or
+    UserWheel records
+  - Write operations must verify ownership before update or delete (handled by BaseRepository's actor
+    scoping - do not bypass it with direct DbContext access)
+
+  Entity Framework Core rules
+  - EF Core 10, PostgreSQL for AppDbContext (Npgsql), SQLite for OfferCacheDbContext
+  - Use explicit entity relationships and foreign keys
+  - Configure delete behavior deliberately (e.g. deleting a Restaurant should be blocked or cascaded
+    into EnvironmentRestaurant/Favourite deliberately, not left to the provider default)
+  - Create migrations separately for AppDbContext and OfferCacheDbContext
+  - Do not merge migration history between the two contexts
+  - Repositories already exist for AppUser and should remain the pattern - extend
+    alaasmagi.Base.DataAccess.EF.BaseRepository<TDomain, TEf, TMapper> for every new entity
+  - Application services must use repository CRUD methods, not direct DbContext access, unless a
+    query genuinely cannot be expressed through the repository contract
+  - The offer cache repository is the one deliberate exception: it may use a lightweight custom
+    interface (get-by-restaurant-id, upsert) instead of IBaseRepository, since it has no ownership,
+    soft-delete, or concurrency concerns
+
+  Code style
+  - Nullable reference types are enabled
+  - Treat warnings seriously and keep code clean
+  - Prefer file-scoped namespaces
+  - Use `default!` for required string properties in entities
+  - Keep classes small and focused
+  - Use explicit code over reflection-heavy abstractions
+  - Do not use `ViewBag` or `ViewData`
+  - Use ViewModels whenever a view needs more than a single domain entity
+  - Simple views that only need one entity may use the domain entity directly
+  - Prefer the alaasmagi.Base.DTO result pattern (IMethodResponse<T>) over throwing exceptions for
+    expected failures; reserve exceptions for truly exceptional conditions
+
+  DTO and mapper rules
+  - DTO classes already exist for AppUser (DataAccess and Web) and should be created for every other
+    entity following the same split
+  - Create or complete mapper classes for Domain <-> DataAccess DTO and Domain <-> Web DTO conversions
+  - Keep mapping explicit and easy to read
+  - Do not use AutoMapper
+  - Where the Application and Domain models are the same type, write a trivial identity mapper rather
+    than skipping the mapper layer
+  - Mapper methods must never silently drop a field; a mapper returning null is treated by the base
+    layers as MAP_FAILED
+
+  Application service rules
+  - Application services already exist as the main use-case layer (AppUserService is the reference)
+  - Extend alaasmagi.Base.Application.BaseService/BaseServiceSoftDelete for each entity's service
+  - Services must cover, at minimum:
+    - RestaurantService (admin-only writes, open reads)
+    - OfferProviderService (admin-only writes, open reads)
+    - DiningEnvironmentService
+    - EnvironmentRestaurantService
+    - FavouriteService
+    - UserWheelService
+    - OfferFetchService (orchestrates: check OfferCacheDbContext freshness -> invoke the matching
+      OfferProvider strategy -> upsert the cache row -> return offers)
+    - DailyRecommendationNotificationService (builds and publishes the "daily.lunch.recommendation"
+      event per opted-in user)
+  - Services should contain business orchestration, not low-level persistence logic
+  - Do not bypass repositories with direct DbContext access from services unless necessary for a
+    special query (the offer cache repository is the documented exception)
+
+  Messaging rules
+  - Inbound: consume Keycloak "user.created" / "user.updated" / "user.deleted" events using
+    alaasmagi.Base.Keycloak.Events.UserEventContent over the existing
+    External/RabbitMQ/RabbitMqEventConsumer.cs + RabbitMqEventHandler.cs, provisioning, updating, or
+    deactivating the matching AppUser by Id (= the event's userId)
+  - Outbound: publish a "daily.lunch.recommendation" event (type "email", source "food") using
+    IBaseEventPublisher and a custom content DTO (DailyLunchRecommendationContent, living under
+    DTO/Messaging) matching the food-app email hub contract; do not reuse Base.Keycloak.Events DTOs
+    for this - they are for Keycloak-sourced events only
+  - Custom event actions that are not covered by DefaultMessageActions (e.g.
+    "daily.lunch.recommendation") are defined as local constants in the food-app codebase, following
+    the same naming convention as DefaultMessageActions
+
+  Web rules
+  - Web is both a REST API (for a Vue frontend arriving later) and an MVC surface for Keycloak
+    OIDC login/logout
+  - Generate scaffolding first using the ASP.NET Core code generator against AppDbContext, then adapt
+    generated pages/controllers to the ownership and admin-role rules above
+  - API controllers live under Web/API/Controllers, one per entity, following AppUsersController as
+    the reference
+  - MVC controllers under Web/MVC/Controllers handle only Keycloak OIDC challenge/callback/sign-out
+    and any minimal Identity-adjacent pages - they must not reimplement authentication logic that
+    AddKeycloakOidc already provides
+  - Web controllers should call Application services instead of direct repository or DbContext access
+  - Translate IMethodResponse<T> failures to HTTP responses using ErrorDefaults codes (e.g. FORBIDDEN
+    -> 403, NOT_FOUND -> 404, CONCURRENCY_CONFLICT -> 409)
+
+  Output expectations
+  - Prefer incremental, minimal changes that fit the current solution structure
+  - Do not rename the existing projects
+  - Do not introduce unnecessary architecture layers
+  - When implementing a feature, produce all required interfaces, service methods, DTOs, mappers,
+    context configuration, and scaffolding needed for that feature
+  - Keep the solution consistent with the current Contracts/DataAccess/DTO/Domain/Application/External/
+    Web separation
+  - All specs and prompts for this project are written in English
