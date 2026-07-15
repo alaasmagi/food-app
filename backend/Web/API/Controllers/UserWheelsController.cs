@@ -15,6 +15,7 @@ namespace Web.API.Controllers;
 [EnableRateLimiting(RateLimitPolicies.Api)]
 [Route("api/v{version:apiVersion}/user-wheels")]
 [Produces("application/json")]
+[ApiBearerAuthorize]
 public class UserWheelsController(
     IUserWheelService userWheelService,
     ICurrentActorAccessor currentActorAccessor,

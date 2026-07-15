@@ -29,16 +29,38 @@ public class AppUserRepository : BaseRepository<AppUser, AppUserEntity, IMapper<
         return _mapper.Map(entity);
     }
 
-    public async Task<IReadOnlyList<AppUser>> GetDailyLunchRecommendationSubscribersAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<AppUser>> GetNotificationSubscribersAsync(CancellationToken ct = default)
     {
         var entities = await _context.AppUsers
             .AsNoTracking()
-            .Where(user => user.DailyLunchRecommendationsEnabled)
+            .Where(user => user.SendNotifications)
             .ToListAsync(ct);
 
         return entities
             .Select(entity => _mapper.Map(entity)!)
             .ToList();
+    }
+
+    public async Task ClearNotificationEnvironmentAsync(Guid environmentId, CancellationToken ct = default)
+    {
+        // Null the notification scope of every user that pointed at this environment so a deleted
+        // environment never leaves a dangling reference. The DB FK is also configured SetNull; this keeps
+        // the behavior observable through the repository layer (and provider-agnostic for tests).
+        var referencing = await _context.AppUsers
+            .Where(user => user.NotificationEnvironmentId == environmentId)
+            .ToListAsync(ct);
+
+        if (referencing.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var user in referencing)
+        {
+            user.NotificationEnvironmentId = null;
+        }
+
+        await _context.SaveChangesAsync(ct);
     }
 
     public async Task<AppUser> UpsertFromIdentityEventAsync(
@@ -61,8 +83,8 @@ public class AppUserRepository : BaseRepository<AppUser, AppUserEntity, IMapper<
                 Username = Normalize(username),
                 FullName = Normalize(fullName),
                 Locale = NormalizeLocale(locale),
-                // New identity-created users are not subscribed to daily lunch recommendations.
-                DailyLunchRecommendationsEnabled = false
+                // New identity-created users are not subscribed to notifications.
+                SendNotifications = false
             };
             StampNew(entity);
             _context.AppUsers.Add(entity);
@@ -70,7 +92,7 @@ public class AppUserRepository : BaseRepository<AppUser, AppUserEntity, IMapper<
         else
         {
             // Identity events update identity-sourced fields only and must preserve the
-            // user's DailyLunchRecommendationsEnabled product preference.
+            // user's SendNotifications and NotificationEnvironmentId product preferences.
             entity.Email = Normalize(email);
             entity.Username = Normalize(username);
             entity.FullName = Normalize(fullName);

@@ -16,6 +16,7 @@ namespace Web.API.Controllers;
 [EnableRateLimiting(RateLimitPolicies.Api)]
 [Route("api/v{version:apiVersion}/offer-providers")]
 [Produces("application/json")]
+[ApiBearerAuthorize]
 public class OfferProvidersController(
     IOfferProviderService offerProviderService,
     IMapper mapper) : ControllerBase

@@ -1,0 +1,11 @@
+/* ============================================================
+   ALAASMAGI — WEBFONTS
+   No font files were provided, so this system uses the nearest
+   Google Fonts matches, loaded from Google's CDN:
+     - Figtree        → display/headings AND body/UI text
+     - JetBrains Mono → code + technical accents
+   Flagged in readme.md as a substitution — swap in real brand
+   font files (as @font-face + local src) if/when available.
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");

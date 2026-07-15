@@ -24,7 +24,7 @@ public class DailyRecommendationNotificationService(
 
     public async Task RunAsync(CancellationToken ct = default)
     {
-        var subscribers = await appUserRepository.GetDailyLunchRecommendationSubscribersAsync(ct);
+        var subscribers = await appUserRepository.GetNotificationSubscribersAsync(ct);
         logger.LogInformation("Publishing daily lunch recommendations for {SubscriberCount} opted-in users.", subscribers.Count);
 
         foreach (var user in subscribers)
@@ -41,7 +41,7 @@ public class DailyRecommendationNotificationService(
     private async Task<DailyLunchRecommendationContent> BuildContentAsync(AppUser user, CancellationToken ct)
     {
         var candidates = await environmentRestaurantRepository
-            .GetDailyRecommendationRestaurantCandidatesAsync(user.Id, ct);
+            .GetDailyRecommendationRestaurantCandidatesAsync(user.Id, user.NotificationEnvironmentId, ct);
 
         var rows = new List<RecommendationRow>();
         foreach (var candidate in candidates)

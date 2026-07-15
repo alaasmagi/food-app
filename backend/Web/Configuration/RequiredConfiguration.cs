@@ -44,6 +44,14 @@ public static class RequiredConfiguration
         };
     }
 
+    public static string FrontendOrigin()
+    {
+        return Required(
+            Environment.GetEnvironmentVariable("FRONTEND_ORIGIN"),
+            "Frontend origin",
+            "FRONTEND_ORIGIN");
+    }
+
     public static RabbitMqOptions RabbitMqOptions()
     {
         var uri = new Uri(Required(

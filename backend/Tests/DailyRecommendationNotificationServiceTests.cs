@@ -184,7 +184,7 @@ public class DailyRecommendationNotificationServiceTests
             Username = id.ToString("N"),
             FullName = "Test User",
             Locale = "et",
-            DailyLunchRecommendationsEnabled = enabled
+            SendNotifications = enabled
         };
         Stamp(user);
         context.AppUsers.Add(user);

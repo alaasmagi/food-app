@@ -42,9 +42,6 @@ namespace DataAccess.Migrations.AppDb
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.Property<bool>("DailyLunchRecommendationsEnabled")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -59,6 +56,12 @@ namespace DataAccess.Migrations.AppDb
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
+
+                    b.Property<Guid?>("NotificationEnvironmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("SendNotifications")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -76,6 +79,8 @@ namespace DataAccess.Migrations.AppDb
                     b.HasKey("Id");
 
                     b.HasIndex("Email");
+
+                    b.HasIndex("NotificationEnvironmentId");
 
                     b.HasIndex("Username");
 
@@ -412,6 +417,14 @@ namespace DataAccess.Migrations.AppDb
                     b.HasIndex("UserId");
 
                     b.ToTable("UserWheels", "app");
+                });
+
+            modelBuilder.Entity("DTO.DataAccess.AppUserEntity", b =>
+                {
+                    b.HasOne("DTO.DataAccess.DiningEnvironmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("NotificationEnvironmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("DTO.DataAccess.EnvironmentRestaurantEntity", b =>

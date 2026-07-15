@@ -15,6 +15,7 @@ namespace Web.API.Controllers;
 [EnableRateLimiting(RateLimitPolicies.Api)]
 [Route("api/v{version:apiVersion}/app-users")]
 [Produces("application/json")]
+[ApiBearerAuthorize]
 public class AppUsersController(
     IAppUserService appUserService,
     IMapper mapper) : ControllerBase

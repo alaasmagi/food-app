@@ -1,0 +1,138 @@
+/* ============================================================
+   ALAASMAGI — COLOR TOKENS
+   Dark-mode-first. Cool-neutral base (near-black / near-white,
+   both nudged blue at low chroma) + a single cyan-blue accent.
+   All accent variants share hue ~229; only lightness/chroma vary
+   for hover/press/muted states.
+   ============================================================ */
+
+:root {
+  /* ---- Base neutrals (raw scale, dark end = low L) ---- */
+  --neutral-0: oklch(17% 0.010 250);   /* app background */
+  --neutral-1: oklch(20% 0.011 250);   /* raised surface */
+  --neutral-2: oklch(24% 0.012 250);   /* card surface */
+  --neutral-3: oklch(29% 0.013 250);   /* hover surface */
+  --neutral-4: oklch(32% 0.014 250);   /* border, subtle */
+  --neutral-5: oklch(40% 0.015 250);   /* border, strong */
+  --neutral-6: oklch(52% 0.014 250);   /* disabled text */
+  --neutral-7: oklch(66% 0.012 250);   /* secondary text */
+  --neutral-8: oklch(80% 0.010 250);   /* primary text (soft) */
+  --neutral-9: oklch(95% 0.006 250);   /* primary text (bright) */
+
+  /* ---- Accent: cyan-blue, single hue family ---- */
+  --accent-9: oklch(78% 0.15 229);     /* accent, bright (on dark) */
+  --accent-7: oklch(68% 0.16 229);     /* accent, default */
+  --accent-6: oklch(60% 0.165 229);    /* accent, hover */
+  --accent-5: oklch(52% 0.16 229);     /* accent, press */
+  --accent-3: oklch(30% 0.09 229);     /* accent, subtle fill */
+  --accent-2: oklch(24% 0.06 229);     /* accent, faint fill */
+
+  /* ---- Semantic status hues (same L/C recipe as accent, hue swapped) ---- */
+  --success-7: oklch(68% 0.15 149);
+  --success-3: oklch(28% 0.07 149);
+  --warning-7: oklch(74% 0.15 76);
+  --warning-3: oklch(30% 0.07 76);
+  --danger-7: oklch(66% 0.18 25);
+  --danger-3: oklch(29% 0.09 25);
+
+  /* ---- Semantic aliases: surfaces ---- */
+  --surface-app: var(--neutral-0);
+  --surface-raised: var(--neutral-1);
+  --surface-card: var(--neutral-2);
+  --surface-hover: var(--neutral-3);
+  --surface-overlay: oklch(17% 0.010 250 / 0.72);
+
+  /* ---- Semantic aliases: borders ---- */
+  --border-subtle: var(--neutral-4);
+  --border-strong: var(--neutral-5);
+  --border-focus: var(--accent-7);
+
+  /* ---- Semantic aliases: text ---- */
+  --text-primary: var(--neutral-9);
+  --text-secondary: var(--neutral-7);
+  --text-disabled: var(--neutral-6);
+  --text-on-accent: oklch(14% 0.02 229);
+  --text-link: var(--accent-9);
+  --text-link-hover: oklch(85% 0.13 229);
+
+  /* ---- Semantic aliases: actions ---- */
+  --action-primary: var(--accent-7);
+  --action-primary-hover: var(--accent-6);
+  --action-primary-press: var(--accent-5);
+  --action-primary-text: var(--text-on-accent);
+
+  /* ---- Status ---- */
+  --status-success: var(--success-7);
+  --status-success-bg: var(--success-3);
+  --status-warning: var(--warning-7);
+  --status-warning-bg: var(--warning-3);
+  --status-danger: var(--danger-7);
+  --status-danger-bg: var(--danger-3);
+}
+
+/* ============================================================
+   LIGHT THEME
+   Same structure and same accent hue (229) as dark — every alias
+   below just repoints to a light-appropriate value. Opt in with
+   `<html data-theme="light">` (or toggle the attribute at runtime).
+   Everything else in the system (components, spacing, type) is
+   theme-agnostic and needs no changes.
+   ============================================================ */
+:root[data-theme="light"] {
+  /* ---- Base neutrals (light end = high L) ---- */
+  --neutral-0: oklch(99% 0.004 250);
+  --neutral-1: oklch(97% 0.005 250);
+  --neutral-2: oklch(94% 0.006 250);
+  --neutral-3: oklch(90% 0.007 250);
+  --neutral-4: oklch(84% 0.008 250);
+  --neutral-5: oklch(74% 0.010 250);
+  --neutral-6: oklch(60% 0.012 250);
+  --neutral-7: oklch(46% 0.014 250);
+  --neutral-8: oklch(30% 0.014 250);
+  --neutral-9: oklch(16% 0.012 250);
+
+  /* ---- Accent: same hue 229, re-tuned for contrast on light ---- */
+  --accent-9: oklch(45% 0.17 229);
+  --accent-7: oklch(53% 0.17 229);
+  --accent-6: oklch(48% 0.17 229);
+  --accent-5: oklch(43% 0.165 229);
+  --accent-3: oklch(90% 0.05 229);
+  --accent-2: oklch(95% 0.03 229);
+
+  /* ---- Semantic status hues, same recipe re-tuned for light ---- */
+  --success-7: oklch(45% 0.15 149);
+  --success-3: oklch(93% 0.04 149);
+  --warning-7: oklch(48% 0.14 76);
+  --warning-3: oklch(93% 0.05 76);
+  --danger-7: oklch(48% 0.19 25);
+  --danger-3: oklch(93% 0.05 25);
+
+  --surface-app: var(--neutral-0);
+  --surface-raised: var(--neutral-1);
+  --surface-card: var(--neutral-2);
+  --surface-hover: var(--neutral-3);
+  --surface-overlay: oklch(20% 0.01 250 / 0.4);
+
+  --border-subtle: var(--neutral-4);
+  --border-strong: var(--neutral-5);
+  --border-focus: var(--accent-7);
+
+  --text-primary: var(--neutral-9);
+  --text-secondary: var(--neutral-7);
+  --text-disabled: var(--neutral-6);
+  --text-on-accent: oklch(99% 0.003 229);
+  --text-link: var(--accent-9);
+  --text-link-hover: oklch(38% 0.17 229);
+
+  --action-primary: var(--accent-7);
+  --action-primary-hover: var(--accent-6);
+  --action-primary-press: var(--accent-5);
+  --action-primary-text: var(--text-on-accent);
+
+  --status-success: var(--success-7);
+  --status-success-bg: var(--success-3);
+  --status-warning: var(--warning-7);
+  --status-warning-bg: var(--warning-3);
+  --status-danger: var(--danger-7);
+  --status-danger-bg: var(--danger-3);
+}

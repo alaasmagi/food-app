@@ -9,9 +9,11 @@ context: |
     memberships, favourites, user wheels, and a short-lived daily offer cache
   - Daily offers are fetched on-demand (never on a schedule) and cached with a short TTL, then re-fetched
   - A scheduled process assembles and publishes a "daily lunch recommendation" email event per opted-in user
+  - A separate Vue 3 frontend (own repository, own openspec config) consumes this backend's Web API;
+    this backend brokers all authentication for that frontend - see Identity and ownership rules
 
   Tech stack
-  - ASP.NET Core 10 (Web API + MVC for Identity/OIDC pages)
+  - ASP.NET Core 10 (Web API + MVC for the Identity/admin console)
   - Entity Framework Core 10
   - PostgreSQL for domain data (AppDbContext)
   - SQLite for the offer cache (OfferCacheDbContext) - separate DbContext, separate connection, separate
@@ -22,7 +24,7 @@ context: |
     notification events
   - Redis (External/Cache/RedisCache.cs, alaasmagi.Base.Cache) is reserved for other caching needs; it is
     NOT used for the offer cache, which lives in its own SQLite database/table instead
-  - Bootstrap via wwwroot libs, Razor views for the MVC/Identity surface
+  - Bootstrap via wwwroot libs, Razor views for the MVC/admin console surface
   - alaasmagi.Base.* NuGet packages (Domain, DataAccess.EF, Application, DTO, Exception, Message,
     Message.RabbitMQ, Keycloak) are mandatory building blocks; do not reimplement what they already provide
 
@@ -41,8 +43,8 @@ context: |
   - DataAccess contains repository implementations and DbContexts (AppDbContext, OfferCacheDbContext)
   - Application contains use-case services
   - External contains RabbitMQ publisher/consumer/handler wiring and cache implementations
-  - Web contains both API controllers (Web/API/Controllers) and MVC controllers/views for Keycloak
-    OIDC login/logout and any Identity-adjacent pages (Web/MVC)
+  - Web contains both API controllers (Web/API/Controllers) and MVC controllers/views for the admin
+    console and the Vue frontend's authentication bridge (Web/MVC)
 
   Reference implementation (authoritative)
   - The existing AppUser vertical slice already present in this repository - Domain/AppUser.cs,
@@ -85,18 +87,14 @@ context: |
     - Favourite: BaseEntityUserWithConcurrency -> BaseEntityUserWithMetaConcurrency
     - UserWheel: BaseEntityUserWithConcurrency -> BaseEntityUserWithMetaConcurrency
     - EOfferProviderType (enum: Html, Api, Manual)
-  - The offer cache row is NOT a Domain entity - DataAccess-only, its own OfferCacheDbContext (SQLite),
-    no Base* inheritance, no ownership, no metadata, no concurrency (disposable, TTL-bound data)
-  - AppUser gains two additional fields for notification preferences:
+  - AppUser additionally carries notification preferences:
     - SendNotifications (bool, default false) - whether this user receives the daily lunch
       recommendation email at all
     - NotificationEnvironmentId (Guid?, nullable FK to DiningEnvironment) - optional filter; when set,
       the daily email includes only that environment's restaurants; when null, it includes all of the
-      user's DiningEnvironments combined (the previous default behavior)
-    - Setting NotificationEnvironmentId to a DiningEnvironment owned by a different user must be
-      rejected - validate ownership before saving, same as any other cross-user write
-    - If the referenced DiningEnvironment is later deleted, NotificationEnvironmentId must be cleared
-      (set to null) rather than left dangling or blocking the delete
+      user's DiningEnvironments combined
+  - The offer cache row is NOT a Domain entity - DataAccess-only, its own OfferCacheDbContext (SQLite),
+    no Base* inheritance, no ownership, no metadata, no concurrency (disposable, TTL-bound data)
 
   Business rules
   - An AppUser is provisioned exclusively from a Keycloak "user.created" event on the food realm,
@@ -104,6 +102,10 @@ context: |
     an AppUser from a login request or any other path
   - AppUser.Id equals the Keycloak "sub" claim (Guid) exactly - there is no separate KeycloakSubject
     column; users are looked up by primary key, not by a secondary string field
+  - Setting AppUser.NotificationEnvironmentId to a DiningEnvironment owned by a different user must be
+    rejected - validate ownership before saving, same as any other cross-user write
+  - If a DiningEnvironment referenced by NotificationEnvironmentId is deleted, NotificationEnvironmentId
+    must be cleared (set to null) rather than left dangling or blocking the delete
   - A Restaurant is shared reference data: name, city, coordinates, static display info (OfferTimeText,
     ParkingInfo, OpeningInfo), a HasOffers flag (whether this restaurant conceptually publishes daily
     offers at all), an IsFastFood flag, an OffersResourceUrl (the full URL used to fetch this specific
@@ -140,39 +142,34 @@ context: |
   - The system must support ownership scoping so each Keycloak-identity user sees only their own
     DiningEnvironment, EnvironmentRestaurant, Favourite, and UserWheel records; Restaurant and
     OfferProvider are visible to all authenticated users but only mutable by users with the admin role
-  - A scheduled process builds a "daily.lunch.recommendation" email event per opted-in user (recommendation
-    rows sourced from the user's environments/favourites and the current offer cache) and publishes it
-    over RabbitMQ for the email hub to render and send
+  - A scheduled process builds a "daily.lunch.recommendation" email event for each AppUser with
+    SendNotifications == true (recommendation rows sourced from NotificationEnvironmentId if set,
+    otherwise all of the user's environments combined, cross-referenced with the current offer cache)
+    and publishes it over RabbitMQ for the email hub to render and send
 
   Identity and ownership rules
-    - Keycloak is the sole authentication provider (alaasmagi.Base.Keycloak); there is no ASP.NET Core
+  - Keycloak is the sole authentication provider (alaasmagi.Base.Keycloak); there is no ASP.NET Core
     Identity and no AppIdentityDbContext - do not introduce one
-    - This is a Backend-for-Frontend (BFF) setup: the Vue frontend never receives a Keycloak token
-    directly. All authentication happens through the backend; the frontend only ever holds a
-    same-site session cookie issued by this backend
-  - AddKeycloakOidc (cookie-based, Duende token management) is the ONE authentication scheme used by
-    both the MVC/Identity surface AND the Web API surface - do not add AddKeycloakJwtBearer for the
-    Vue frontend's traffic; the frontend never sends an Authorization header
-  - Login flow: the frontend does a full-page browser navigation (not an XHR/fetch) to
-    `GET /account/login?returnUrl=...` on the API host, which issues Challenge() against Keycloak;
-    Keycloak redirects back to the API's OIDC callback, the backend sets its auth cookie
+  - Two authentication schemes coexist for two different consumers:
+    - AddKeycloakOidc (cookie-based, Duende token management) - used directly by the MVC admin
+      console, and as the login front-door / token-issuing mechanism for the Vue frontend
+    - AddKeycloakJwtBearer - used to authorize the Web API endpoints that the Vue frontend calls
+  - Login flow for the Vue frontend: a full-page browser navigation (never fetch/XHR) to
+    `GET /account/login?returnUrl=...`, which Challenge()s against Keycloak via the cookie scheme;
+    Keycloak redirects back to the OIDC callback, the backend sets its auth cookie
     (Domain=.<registered-parent-domain>, Secure, HttpOnly, SameSite=Lax), then redirects the browser
     back to the frontend's returnUrl
+  - Token exchange endpoint: `GET /api/v1/account/token`, authorized via the cookie scheme only,
+    returns `{ accessToken, expiresAtUtc }` sourced from the Duende-managed token for the current
+    cookie session - this is the sole bridge between the cookie session and the bearer token the
+    frontend uses; it must never be reachable via the JWT bearer scheme (that would be circular)
   - Logout flow: `GET /account/logout` clears the local cookie and redirects to Keycloak's
     end-session endpoint, then back to the frontend
-  - Session check endpoint: `GET /api/v1/account/me` returns the current AppUser (or 401 if
-    unauthenticated) - this is what the frontend calls on app load to determine auth state, since it
-    has no client-side way to inspect the cookie
-  - CSRF/antiforgery: since the cookie is sent automatically by the browser on every request to the
-    API's origin, all state-changing endpoints (POST/PUT/PATCH/DELETE) require the ASP.NET Core
-    antiforgery double-submit pattern - issue a readable `XSRF-TOKEN` cookie alongside the auth
-    cookie, require the frontend to echo its value back in an `X-XSRF-TOKEN` header, validated via
-    IAntiforgery. GET endpoints are exempt
-  - CORS: allow exactly the frontend's origin (e.g. `https://app.<domain>`), with
-    AllowCredentials() enabled - do not use a wildcard origin, credentialed CORS requests forbid it
-  - AddKeycloakJwtBearer may still be registered as an additional scheme for future non-browser API
-    consumers (scripts, mobile apps), but it is not what the Vue frontend uses and must not be
-    required on endpoints the frontend calls
+  - CSRF/antiforgery is required only for the MVC admin console's own state-changing actions
+    (covered by ASP.NET Core's built-in Razor/MVC antiforgery by default) - it is NOT required on the
+    Web API endpoints, since those are authorized via stateless Bearer tokens, not cookies
+  - CORS: allow exactly the frontend's origin (e.g. `https://app.<domain>`); AllowCredentials() is
+    only needed for the `/account/*` cookie-based endpoints, not for the Bearer-authorized API
   - Domain data owned by a user (DiningEnvironment, EnvironmentRestaurant, Favourite, UserWheel)
     implements IBaseEntityUserId so alaasmagi.Base.DataAccess.EF automatically scopes reads to the
     current actor and rejects cross-user writes with FORBIDDEN
@@ -187,7 +184,8 @@ context: |
   - EF Core 10, PostgreSQL for AppDbContext (Npgsql), SQLite for OfferCacheDbContext
   - Use explicit entity relationships and foreign keys
   - Configure delete behavior deliberately (e.g. OfferProvider deletion is Restrict while any Restaurant
-    references it; do not leave delete behavior to the provider default)
+    references it; NotificationEnvironmentId is SetNull on DiningEnvironment delete; do not leave delete
+    behavior to the provider default)
   - Create migrations separately for AppDbContext and OfferCacheDbContext
   - Do not merge migration history between the two contexts
   - Repositories already exist for AppUser and should remain the pattern - extend
@@ -237,6 +235,8 @@ context: |
       matching Html/Api/Manual fetch strategy -> normalize offers -> upsert the cache row -> return offers)
     - DailyRecommendationNotificationService (builds and publishes the "daily.lunch.recommendation"
       event per opted-in user)
+    - AccountService (backs the /account/login, /account/logout, /api/v1/account/token endpoints -
+      bridges the cookie session to a bearer token for the Vue frontend)
   - Services should contain business orchestration, not low-level persistence logic
   - Do not bypass repositories with direct DbContext access from services unless necessary for a
     special query (the offer cache repository is the documented exception)
@@ -255,15 +255,19 @@ context: |
     the same naming convention as DefaultMessageActions
 
   Web rules
-  - Web is both a REST API (for a Vue frontend arriving later) and an MVC surface for Keycloak
-    OIDC login/logout
+  - Web is both a REST API (Bearer-authorized, consumed by the Vue frontend) and an MVC surface for
+    the admin console and the Keycloak OIDC login bridge
   - Generate scaffolding first using the ASP.NET Core code generator against AppDbContext, then adapt
     generated pages/controllers to the ownership and admin-role rules above
   - API controllers live under Web/API/Controllers, one per entity, following AppUsersController as
-    the reference
-  - MVC controllers under Web/MVC/Controllers handle only Keycloak OIDC challenge/callback/sign-out
-    and any minimal Identity-adjacent pages - they must not reimplement authentication logic that
+    the reference; all are authorized via the JWT bearer scheme
+  - MVC controllers under Web/MVC/Controllers handle the admin console pages plus a small
+    AccountController with three actions: Login (Challenge against the cookie scheme), Logout
+    (SignOut + Keycloak end-session redirect), and nothing else related to authentication logic that
     AddKeycloakOidc already provides
+  - The token-exchange endpoint (`GET /api/v1/account/token`) lives under Web/API/Controllers but is
+    authorized via the cookie scheme specifically, not the default Bearer scheme - this is the one
+    deliberate exception to "API controllers use Bearer"
   - Web controllers should call Application services instead of direct repository or DbContext access
   - Translate IMethodResponse<T> failures to HTTP responses using ErrorDefaults codes (e.g. FORBIDDEN
     -> 403, NOT_FOUND -> 404, CONCURRENCY_CONFLICT -> 409)

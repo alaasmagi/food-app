@@ -99,6 +99,28 @@ public class EnvironmentRestaurantRepositoryTests
         Assert.Equal(mine.Id, candidates[0].RestaurantId);
     }
 
+    [Fact]
+    public async Task GetDailyRecommendationRestaurantCandidatesAsync_ScopedToEnvironment_ReturnsOnlyThatEnvironmentsRestaurants()
+    {
+        await using var context = TestAppDbContextFactory.CreateInMemory();
+        var userId = Guid.NewGuid();
+
+        var inScope = AddRestaurant(context, "In Scope", hasOffers: true);
+        var outOfScope = AddRestaurant(context, "Out Of Scope", hasOffers: true);
+        var envA = AddEnvironment(context, userId, "Env A");
+        var envB = AddEnvironment(context, userId, "Env B");
+        AddMembership(context, userId, envA, inScope);
+        AddMembership(context, userId, envB, outOfScope);
+        await context.SaveChangesAsync();
+
+        var candidates = await CreateRepository(context)
+            .GetDailyRecommendationRestaurantCandidatesAsync(userId, envA.Id);
+
+        Assert.Single(candidates);
+        Assert.Equal(inScope.Id, candidates[0].RestaurantId);
+        Assert.DoesNotContain(candidates, c => c.RestaurantId == outOfScope.Id);
+    }
+
     private static EnvironmentRestaurantRepository CreateRepository(AppDbContext context)
     {
         return new EnvironmentRestaurantRepository(context, new EnvironmentRestaurantEntityMapper());

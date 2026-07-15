@@ -1,0 +1,46 @@
+/* ============================================================
+   ALAASMAGI — SPACING, RADIUS, SHADOW, MOTION TOKENS
+   4px base grid. Radii stay small (technical, not soft/bubbly).
+   Shadows are near-invisible on dark surfaces — depth mostly
+   comes from surface-color steps, not shadow.
+   ============================================================ */
+
+:root {
+  /* ---- Spacing (4px base) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ---- Radius ---- */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-full: 999px;
+
+  /* ---- Shadow (subtle, cool-tinted) ---- */
+  --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.4);
+  --shadow-md: 0 4px 12px oklch(0% 0 0 / 0.45), 0 1px 2px oklch(0% 0 0 / 0.5);
+  --shadow-lg: 0 12px 32px oklch(0% 0 0 / 0.5), 0 2px 4px oklch(0% 0 0 / 0.4);
+  --shadow-focus-ring: 0 0 0 3px var(--accent-3);
+
+  /* ---- Border widths ---- */
+  --border-thin: 1px;
+  --border-thick: 1.5px;
+
+  /* ---- Motion ---- */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --duration-slow: 280ms;
+}

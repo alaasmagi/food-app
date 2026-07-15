@@ -15,6 +15,7 @@ namespace Web.API.Controllers;
 [EnableRateLimiting(RateLimitPolicies.Api)]
 [Route("api/v{version:apiVersion}/favourites")]
 [Produces("application/json")]
+[ApiBearerAuthorize]
 public class FavouritesController(
     IFavouriteService favouriteService,
     ICurrentActorAccessor currentActorAccessor,

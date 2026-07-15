@@ -15,7 +15,8 @@ public class AppUserEntityMapper : IMapper<AppUser, AppUserEntity>
             Username = entity.Username,
             FullName = entity.FullName,
             Locale = entity.Locale,
-            DailyLunchRecommendationsEnabled = entity.DailyLunchRecommendationsEnabled,
+            SendNotifications = entity.SendNotifications,
+            NotificationEnvironmentId = entity.NotificationEnvironmentId,
         };
     }
 
@@ -34,7 +35,8 @@ public class AppUserEntityMapper : IMapper<AppUser, AppUserEntity>
             Username = entity.Username,
             FullName = entity.FullName,
             Locale = entity.Locale,
-            DailyLunchRecommendationsEnabled = entity.DailyLunchRecommendationsEnabled,
+            SendNotifications = entity.SendNotifications,
+            NotificationEnvironmentId = entity.NotificationEnvironmentId,
         };
     }
 

@@ -1,20 +1,156 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Project overview
+  - Vue 3 SPA frontend for the food dashboard: daily lunch offers, personal restaurant environments,
+    favourites, and the random-restaurant wheel
+  - Consumes the existing ASP.NET Core backend REST API (see the backend's own openspec/config.yaml
+    for the full API domain model) - this frontend does not duplicate backend business rules, it
+    only renders and orchestrates calls to them
+  - Deployed separately from the backend (e.g. Vercel), under the same registered parent domain as
+    the backend (e.g. frontend at app.<domain>, backend at api.<domain>)
+  - Authentication is entirely brokered by the backend - see Auth rules. This app never talks to
+    Keycloak directly
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Tech stack
+  - Vue 3, Composition API only (`<script setup lang="ts">`), no Options API
+  - TypeScript, strict mode
+  - Vite as build tool and dev server
+  - Pinia for state management (no Vuex)
+  - Vue Router for client-side routing
+  - Vitest + Vue Test Utils for unit/component tests
+  - No Keycloak client library of any kind (no keycloak-js, no oidc-client-ts) - all auth goes
+    through the backend's own endpoints, see Auth rules
+
+  Design system (authoritative source: alaasmagi-design-system/, at the frontend project root)
+  - This is a framework-agnostic token system with a React reference implementation - it is NOT a
+    Vue library and must never be imported or copy-pasted as-is
+  - CRITICAL: this folder is a temporary authoring reference only, kept at the project root during
+    development. It is NOT a runtime or build-time dependency of this app, and it will be deleted
+    once the frontend is complete. Nothing in src/ may ever import, @import, or relative-path into
+    alaasmagi-design-system/ - if such a reference exists anywhere in src/, that is a bug to fix
+    immediately, not a pattern to follow
+  - Every token and every component behavior this app needs must be physically copied into this
+    project's own src/ tree during the change that first needs it - not referenced in place
+  - `styles.css` and `tokens/*.css` (fonts.css, colors.css, typography.css, spacing.css) are pure CSS
+    custom properties - copy these files verbatim into src/assets/tokens/, import them once from
+    main.ts using a path inside this project (e.g. `./assets/tokens/styles.css`), never from
+    alaasmagi-design-system/ directly
+  - For every component (Button, Input, Select, Checkbox, Radio, Switch, Card, Badge, Tag, Tabs,
+    Dialog, Toast, Tooltip, plus the Icon primitive), the source of truth is the COMBINATION of:
+    - `<Component>.d.ts` - the authoritative prop contract (names, types, defaults) - port prop names
+      and variants 1:1 into the Vue component's `defineProps<...>()`
+    - `<Component>.prompt.md` - the authoritative usage examples, variant meanings, and when-to-use
+      guidance
+    - `<component>.card.html` - the authoritative static markup/visual reference
+    - `<Component>.jsx` is a REFERENCE ONLY for structure and token usage - do not copy React idioms:
+      - Re-implement hover/press/focus states as native CSS (`:hover`, `:active`, `:focus-visible`)
+        in a `<style scoped>` block, not JS mouseenter/mouseleave/mousedown handlers
+      - Re-implement `children`/slots as native Vue `<slot />`
+      - Re-implement `onClick` props as native `@click` emit or pass-through, following Vue convention
+      - Keep every `var(--token-name)` reference exactly as-is - the visual result must match the
+        React reference pixel-for-pixel; only the implementation mechanics change
+  - Do NOT bulk-port all components upfront. Port one component into
+    `src/components/design-system/<Category>/<Component>.vue` only when a feature proposal actually
+    needs it, always starting from that component's four source files above, and always by copying
+    the result into src/, never by referencing alaasmagi-design-system/ from src/
+  - The Icon component (`components/icons/Icon.jsx` + `Icon.d.ts`) must be ported early since most
+    other components depend on it (icon prop on Button, Input, etc.) - preserve the `IconName` union
+    type and the 24x24 stroke-icon rendering approach
+  - Content/copy rules from the design system's own readme apply to all UI text in this app:
+    - Sentence case everywhere (buttons, headings, labels, nav items) - never Title Case, never ALL
+      CAPS (except the deliberate uppercase treatment already built into the Badge component)
+    - No exclamation points, no hype adjectives ("revolutionary", "seamless")
+    - No em-dashes in UI copy - use periods or line breaks
+    - Numerals as digits ("3 restaurants", not "three restaurants")
+    - No emoji anywhere in the UI
+  - Dark-mode-first: the app's default/only theme is dark, matching the design system's default
+    token values. Do not build a light-mode toggle unless a future change explicitly asks for it -
+    the token system supports it (`data-theme="light"`) but it is out of scope until requested
+
+  Solution architecture
+  - src/
+    - components/
+      - design-system/ - ported Vue primitives (Button, Input, Card, ...), one subfolder per design
+        system category (forms/, data-display/, navigation/, feedback/), mirroring the design
+        system's own folder names
+      - <feature>/ - feature-specific composed components (e.g. RestaurantCard.vue built out of
+        design-system Card + Badge + Tag), one folder per feature area
+    - views/ - route-level page components (one per Vue Router route)
+    - stores/ - Pinia stores, one per domain concept (restaurants, environments, favourites, wheels,
+      auth)
+    - composables/ - reusable composition functions (e.g. useOfferFetch)
+    - api/ - typed API client functions, one module per backend capability (restaurants.ts,
+      offerProviders.ts, environments.ts, favourites.ts, wheels.ts, account.ts), all going through a
+      single shared fetch wrapper that attaches the bearer token and handles 401 uniformly
+    - router/ - Vue Router configuration and navigation guards (redirect to the backend login flow
+      when unauthenticated)
+    - types/ - TypeScript interfaces matching the backend's Web DTOs (not the backend's Domain
+      entities - the frontend only ever talks to the Web DTO shape)
+    - assets/tokens/ - the design system's styles.css and tokens/*.css, imported once in main.ts
+
+  Auth rules
+  - This app never talks to Keycloak directly. Authentication is brokered entirely through the
+    backend: a cookie is used only transiently to obtain a real bearer token, which this app then
+    uses directly against the Web API
+  - Login: navigate the whole browser window (`window.location.href`, never fetch/XHR) to
+    `https://api.<domain>/account/login?returnUrl=<current-url>`
+  - After the browser is redirected back post-login, call `GET /api/v1/account/token` with
+    `credentials: "include"` to obtain `{ accessToken, expiresAtUtc }`. This is the ONLY call in this
+    app that uses `credentials: "include"` - every other API call uses the Bearer token instead
+  - Store the token in memory only (a Pinia store), never in localStorage/sessionStorage - it does
+    not survive a full page reload by design; on app startup, silently re-call
+    `GET /api/v1/account/token` to re-establish it from the still-valid backend cookie, no visible
+    login prompt needed unless that call itself returns 401
+  - Every other API call attaches `Authorization: Bearer <token>` in the shared fetch wrapper -
+    do not set `credentials: "include"` on these, and do not send any CSRF header on them, since
+    Bearer-authorized endpoints are not vulnerable to CSRF
+  - Logout: navigate the whole browser window to `https://api.<domain>/account/logout`, then clear
+    the in-memory token from the Pinia store
+  - A Pinia `auth` store holds the current token, the current AppUser, `isAuthenticated`, and a
+    `hasRole(role)` helper for admin-only views
+  - Token refresh: on a 401 from any API call, or proactively when `expiresAtUtc` is near, silently
+    re-call `GET /api/v1/account/token`; if that also 401s, the backend cookie session has expired -
+    redirect to the login navigation flow
+  - Router navigation guards check `auth.isAuthenticated` (triggering the silent token fetch first if
+    the store is empty) per route; admin-only routes also check `auth.hasRole("admin")`
+
+  API integration rules
+  - All backend calls go through the `api/` layer - components and stores never call `fetch` directly
+  - The shared fetch wrapper attaches `Authorization: Bearer <token>` from the auth store on every
+    call, except the one token-exchange call described in Auth rules, which uses
+    `credentials: "include"` instead
+  - Every API module's request/response types are hand-written TypeScript interfaces matching the
+    backend's Web DTOs; if the backend DTO shape changes, update the corresponding frontend type in
+    the same change
+  - Handle `IMethodResponse<T>`-shaped backend responses uniformly in the shared fetch wrapper:
+    unwrap `value` on success, surface `error.code`/`error.message` on failure using the design
+    system's Toast component for user-facing errors
+  - A 401 response from any endpoint (other than the token-exchange call itself) triggers a silent
+    token refresh attempt before surfacing an error to the user
+  - Concurrency tokens (`ConcurrencyToken` / `If-Match`) returned by the backend must be round-tripped
+    on every update call for entities that require them - store the token alongside the entity in the
+    relevant Pinia store, not discarded after read
+
+  Code style
+  - `<script setup lang="ts">` in every component, no Options API, no class components
+  - Explicit prop types via `defineProps<{ ... }>()`, no runtime-only prop declarations
+  - No inline `style` objects for anything the design system already tokenizes - use scoped CSS
+    classes referencing `var(--token)`, matching the design system's variable names exactly
+  - Composables for any logic reused across 2+ components; do not duplicate fetch/formatting logic
+  - Keep components small and focused; a view composes design-system + feature components, it does
+    not contain business logic itself - that belongs in composables or Pinia stores
+
+  Testing rules
+  - Vitest for logic (composables, stores, api layer) and component tests (Vue Test Utils)
+  - Ported design-system components get at least one test verifying each variant/size renders without
+    error - not full visual regression testing, just a smoke test per prop combination
+  - Do not test the design system's CSS token values themselves - those are the design system's
+    concern, not this app's
+
+  Output expectations
+  - Prefer incremental, minimal changes - one feature area per OpenSpec change, matching the backend's
+    change sequence (auth bootstrap -> restaurant/offers browsing -> environments -> favourites -> wheel)
+  - Port design-system components lazily, only when a feature change needs them, always from the
+    component's own `.d.ts` + `.prompt.md` + `.card.html`, never by copying the `.jsx`
+  - All specs and prompts for this project are written in English

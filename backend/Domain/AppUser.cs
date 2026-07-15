@@ -8,5 +8,6 @@ public class AppUser : BaseEntityWithConcurrency
     public string Username { get; set; } = default!;
     public string FullName { get; set; } = default!;
     public string Locale { get; set; } = "en";
-    public bool DailyLunchRecommendationsEnabled { get; set; }
+    public bool SendNotifications { get; set; }
+    public Guid? NotificationEnvironmentId { get; set; }
 }

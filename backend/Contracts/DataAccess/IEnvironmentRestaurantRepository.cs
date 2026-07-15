@@ -9,5 +9,6 @@ public interface IEnvironmentRestaurantRepository : IBaseRepository<EnvironmentR
 
     Task<IReadOnlyList<DailyRecommendationRestaurantCandidate>> GetDailyRecommendationRestaurantCandidatesAsync(
         Guid userId,
+        Guid? environmentId = null,
         CancellationToken ct = default);
 }

@@ -15,6 +15,7 @@ namespace Web.API.Controllers;
 [EnableRateLimiting(RateLimitPolicies.Api)]
 [Route("api/v{version:apiVersion}/dining-environments")]
 [Produces("application/json")]
+[ApiBearerAuthorize]
 public class DiningEnvironmentsController(
     IDiningEnvironmentService diningEnvironmentService,
     ICurrentActorAccessor currentActorAccessor,

@@ -29,6 +29,15 @@ public class AppDbContext : DbContext
             entity.ToTable("AppUsers");
             entity.HasIndex(e => e.Email);
             entity.HasIndex(e => e.Username);
+            entity.HasIndex(e => e.NotificationEnvironmentId);
+
+            // Optional notification scope. No navigation on AppUserEntity (kept lean); deleting the
+            // referenced DiningEnvironment sets this FK to null rather than blocking the delete.
+            entity
+                .HasOne<DiningEnvironmentEntity>()
+                .WithMany()
+                .HasForeignKey(e => e.NotificationEnvironmentId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<OfferProviderEntity>(entity =>

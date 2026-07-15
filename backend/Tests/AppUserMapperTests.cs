@@ -20,14 +20,14 @@ public class AppUserMapperTests
             Username = "user",
             FullName = "User",
             Locale = "et",
-            DailyLunchRecommendationsEnabled = true
+            SendNotifications = true
         });
         Assert.NotNull(domain);
-        Assert.True(domain!.DailyLunchRecommendationsEnabled);
+        Assert.True(domain!.SendNotifications);
 
-        var entity = mapper.Map(new AppUser { DailyLunchRecommendationsEnabled = true });
+        var entity = mapper.Map(new AppUser { SendNotifications = true });
         Assert.NotNull(entity);
-        Assert.True(entity!.DailyLunchRecommendationsEnabled);
+        Assert.True(entity!.SendNotifications);
     }
 
     [Fact]
@@ -35,9 +35,9 @@ public class AppUserMapperTests
     {
         var mapper = new AppUserDtoMapper();
 
-        var dto = mapper.Map(new AppUser { DailyLunchRecommendationsEnabled = true });
+        var dto = mapper.Map(new AppUser { SendNotifications = true });
         Assert.NotNull(dto);
-        Assert.True(dto!.DailyLunchRecommendationsEnabled);
+        Assert.True(dto!.SendNotifications);
 
         var domain = mapper.Map(new AppUserDto
         {
@@ -45,9 +45,9 @@ public class AppUserMapperTests
             Username = "user",
             FullName = "User",
             Locale = "et",
-            DailyLunchRecommendationsEnabled = true
+            SendNotifications = true
         });
         Assert.NotNull(domain);
-        Assert.True(domain!.DailyLunchRecommendationsEnabled);
+        Assert.True(domain!.SendNotifications);
     }
 }

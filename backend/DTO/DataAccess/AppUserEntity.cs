@@ -21,5 +21,7 @@ public class AppUserEntity : BaseEntityWithMetaConcurrency
     [MaxLength(16)]
     public string Locale { get; set; } = "en";
 
-    public bool DailyLunchRecommendationsEnabled { get; set; }
+    public bool SendNotifications { get; set; }
+
+    public Guid? NotificationEnvironmentId { get; set; }
 }

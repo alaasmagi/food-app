@@ -7,7 +7,9 @@ public interface IAppUserRepository : IBaseRepository<AppUser>
 {
     Task<AppUser?> GetByIdAsync(Guid id, CancellationToken ct = default);
 
-    Task<IReadOnlyList<AppUser>> GetDailyLunchRecommendationSubscribersAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<AppUser>> GetNotificationSubscribersAsync(CancellationToken ct = default);
+
+    Task ClearNotificationEnvironmentAsync(Guid environmentId, CancellationToken ct = default);
 
     Task<AppUser> UpsertFromIdentityEventAsync(
         Guid id,

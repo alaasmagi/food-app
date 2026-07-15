@@ -24,14 +24,17 @@ public class DiningEnvironmentService
     : BaseService<DiningEnvironment, DiningEnvironment, IDiningEnvironmentRepository>, IDiningEnvironmentService
 {
     private readonly IDiningEnvironmentRepository _diningEnvironmentRepository;
+    private readonly IAppUserRepository _appUserRepository;
 
     public DiningEnvironmentService(
         IDiningEnvironmentRepository diningEnvironmentRepository,
+        IAppUserRepository appUserRepository,
         Base.Contracts.DataAccess.IBaseUow uow,
         IMapper<DiningEnvironment, DiningEnvironment> mapper)
         : base(uow, diningEnvironmentRepository, mapper)
     {
         _diningEnvironmentRepository = diningEnvironmentRepository;
+        _appUserRepository = appUserRepository;
     }
 
     public override async Task<IMethodResponse<DiningEnvironment>> GetByIdAsync(Guid id, Guid actor = default)
@@ -71,7 +74,14 @@ public class DiningEnvironmentService
             return MethodResponse<bool>.Failure(ownershipError);
         }
 
-        return await base.RemoveAsync(id, expectedConcurrencyToken, actor);
+        var removeResult = await base.RemoveAsync(id, expectedConcurrencyToken, actor);
+        if (removeResult.Successful && removeResult.Value)
+        {
+            // Clear the notification scope of any user that pointed at this environment.
+            await _appUserRepository.ClearNotificationEnvironmentAsync(id);
+        }
+
+        return removeResult;
     }
 
     /// <summary>

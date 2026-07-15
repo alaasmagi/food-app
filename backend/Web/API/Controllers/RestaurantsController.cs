@@ -16,6 +16,7 @@ namespace Web.API.Controllers;
 [EnableRateLimiting(RateLimitPolicies.Api)]
 [Route("api/v{version:apiVersion}/restaurants")]
 [Produces("application/json")]
+[ApiBearerAuthorize]
 public class RestaurantsController(
     IRestaurantService restaurantService,
     IOfferFetchService offerFetchService,

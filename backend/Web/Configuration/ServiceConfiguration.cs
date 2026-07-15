@@ -40,6 +40,7 @@ public static class ServiceConfiguration
         var offerCacheOptions = RequiredConfiguration.OfferCacheOptions(builder.Configuration);
         var recommendationScheduleOptions = RequiredConfiguration.DailyRecommendationScheduleOptions();
         var recommendationNotificationOptions = RequiredConfiguration.DailyRecommendationNotificationOptions();
+        var frontendOriginProvider = new FrontendOriginProvider(RequiredConfiguration.FrontendOrigin());
 
         builder.ConfigureApplicationLogging();
         builder.ConfigureGlitchtip();
@@ -48,6 +49,7 @@ public static class ServiceConfiguration
             .AddDataAccess(offerCacheConnectionString)
             .AddApplicationServices(offerCacheOptions)
             .AddApplicationAuthentication(keycloakOptions)
+            .AddApplicationCors(frontendOriginProvider)
             .AddApplicationCache(redisConnectionString, baseCacheOptions)
             .AddApplicationMessaging(rabbitMqOptions, appMessagingOptions)
             .AddDailyRecommendationNotifications(recommendationScheduleOptions, recommendationNotificationOptions)
@@ -143,7 +145,10 @@ public static class ServiceConfiguration
         KeycloakOptions keycloakOptions)
     {
         services.AddHttpContextAccessor();
+        // OIDC cookie stays the default scheme (MVC admin console + login front-door); the JWT bearer
+        // scheme authorizes the Web API surface the Vue frontend calls with a token.
         services.AddKeycloakOidc(keycloakOptions);
+        services.AddKeycloakJwtBearer(keycloakOptions);
         services.AddAuthorization(options =>
         {
             options.AddPolicy(AuthorizationPolicies.Admin, policy =>
@@ -155,6 +160,26 @@ public static class ServiceConfiguration
             options.FallbackPolicy = new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()
                 .Build();
+        });
+
+        return services;
+    }
+
+    private static IServiceCollection AddApplicationCors(
+        this IServiceCollection services,
+        FrontendOriginProvider frontendOriginProvider)
+    {
+        // One source of the allowed frontend origin: the same provider validates login/logout return
+        // urls (injected into the MVC AccountController), so CORS and redirect validation cannot drift.
+        services.AddSingleton(frontendOriginProvider);
+        services.AddCors(options =>
+        {
+            // Credentialed and origin-specific (never a wildcard, which credentialed CORS forbids).
+            options.AddPolicy(CorsPolicies.Frontend, policy => policy
+                .WithOrigins(frontendOriginProvider.Origin)
+                .AllowCredentials()
+                .AllowAnyHeader()
+                .AllowAnyMethod());
         });
 
         return services;

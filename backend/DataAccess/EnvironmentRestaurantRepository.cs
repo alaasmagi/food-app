@@ -35,13 +35,17 @@ public class EnvironmentRestaurantRepository
 
     public async Task<IReadOnlyList<DailyRecommendationRestaurantCandidate>> GetDailyRecommendationRestaurantCandidatesAsync(
         Guid userId,
+        Guid? environmentId = null,
         CancellationToken ct = default)
     {
-        // Flatten all of the user's environment memberships to their restaurants, keep only
-        // offer-capable restaurants, and mark whether each can be refreshed through a provider.
+        // Flatten the user's environment memberships to their restaurants, keep only offer-capable
+        // restaurants, and mark whether each can be refreshed through a provider. When environmentId
+        // is set, scope to that one environment; otherwise combine all of the user's environments.
         var candidates = await _context.EnvironmentRestaurants
             .AsNoTracking()
             .Where(environmentRestaurant => environmentRestaurant.UserId == userId)
+            .Where(environmentRestaurant =>
+                environmentId == null || environmentRestaurant.EnvironmentId == environmentId)
             .Select(environmentRestaurant => environmentRestaurant.Restaurant!)
             .Where(restaurant => restaurant.HasOffers)
             .Select(restaurant => new DailyRecommendationRestaurantCandidate
