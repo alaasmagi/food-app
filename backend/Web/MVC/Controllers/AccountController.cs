@@ -20,9 +20,11 @@ public class AccountController(FrontendOriginProvider frontendOriginProvider) : 
             OpenIdConnectDefaults.AuthenticationScheme);
     }
 
+    // GET so the SPA can trigger sign-out via a full-page redirect, mirroring Login. A cross-origin
+    // SPA navigation cannot carry the MVC antiforgery token, so it is not required here; the endpoint
+    // only ends the caller's own session and redirects to a validated return url.
     [Authorize]
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpGet]
     public IActionResult Logout(string? returnUrl = null)
     {
         return SignOut(

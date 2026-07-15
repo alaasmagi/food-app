@@ -20,6 +20,9 @@ using DTO.Web.Mappers;
 using External.Cache;
 using External.Offers;
 using External.RabbitMQ;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -149,6 +152,18 @@ public static class ServiceConfiguration
         // scheme authorizes the Web API surface the Vue frontend calls with a token.
         services.AddKeycloakOidc(keycloakOptions);
         services.AddKeycloakJwtBearer(keycloakOptions);
+
+        // AddKeycloakJwtBearer registers via AddAuthentication("Bearer"), which sets DefaultScheme =
+        // Bearer and (running after AddKeycloakOidc) overwrites the cookie default. That leaves the
+        // OIDC callback's sign-in resolving to the JWT handler, which cannot SignInAsync. Pin the
+        // schemes back explicitly so the fix does not depend on registration order.
+        services.Configure<AuthenticationOptions>(options =>
+        {
+            options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+        });
+
         services.AddAuthorization(options =>
         {
             options.AddPolicy(AuthorizationPolicies.Admin, policy =>

@@ -1,0 +1,34 @@
+services:
+  app:
+    image: ${IMAGE_NAME}:${IMAGE_TAG}
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${HOST_PORT}:${APP_PORT}"
+    volumes:
+      - offer-cache-data:/data
+    depends_on:
+      redis:
+        condition: service_started
+    networks:
+      - proxy
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - internal
+
+networks:
+  proxy:
+    external: true
+  internal:
+    driver: bridge
+
+volumes:
+  redis-data:
+  offer-cache-data:

@@ -1,0 +1,196 @@
+name: Build and Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-food-app-backend
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: food-app-backend
+  REMOTE_APP_DIR: /opt/food-app-backend
+  APP_PORT: "8080"
+  HOST_PORT: "8080"
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+       github.ref == 'refs/heads/main' &&
+       contains(github.event.head_commit.message, '[DEPLOY]'))
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          set -euo pipefail
+          docker build --pull -t "${IMAGE_NAME}:${GITHUB_SHA}" .
+
+      - name: Save Docker image
+        run: |
+          set -euo pipefail
+          docker save "${IMAGE_NAME}:${GITHUB_SHA}" | gzip > image.tar.gz
+
+      - name: Create runtime env file from GitHub secrets
+        env:
+          APP_PORT: ${{ secrets.APP_PORT || env.APP_PORT }}
+          HOST_PORT: ${{ secrets.HOST_PORT || env.HOST_PORT }}
+          DATABASE_CONNECTION_STRING: ${{ secrets.DATABASE_CONNECTION_STRING }}
+          RABBITMQ_URI: ${{ secrets.RABBITMQ_URI }}
+          RABBITMQ_QUEUE: ${{ secrets.RABBITMQ_QUEUE }}
+          RABBITMQ_EXCHANGE: ${{ secrets.RABBITMQ_EXCHANGE }}
+          RABBITMQ_CONSUMER_ROUTING_KEYS: ${{ secrets.RABBITMQ_CONSUMER_ROUTING_KEYS || 'user.*' }}
+          GLITCHTIP_DSN: ${{ secrets.GLITCHTIP_DSN }}
+          GLITCHTIP_RELEASE: ${{ secrets.GLITCHTIP_RELEASE || 'food-app-backend' }}
+          KEYCLOAK_AUTHORITY: ${{ secrets.KEYCLOAK_AUTHORITY }}
+          KEYCLOAK_CLIENT_ID: ${{ secrets.KEYCLOAK_CLIENT_ID }}
+          KEYCLOAK_CLIENT_SECRET: ${{ secrets.KEYCLOAK_CLIENT_SECRET }}
+          FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
+        run: |
+          set -euo pipefail
+
+          : "${DATABASE_CONNECTION_STRING:?DATABASE_CONNECTION_STRING is required}"
+          : "${RABBITMQ_URI:?RABBITMQ_URI is required}"
+          : "${RABBITMQ_QUEUE:?RABBITMQ_QUEUE is required}"
+          : "${RABBITMQ_EXCHANGE:?RABBITMQ_EXCHANGE is required}"
+          : "${KEYCLOAK_AUTHORITY:?KEYCLOAK_AUTHORITY is required}"
+          : "${KEYCLOAK_CLIENT_ID:?KEYCLOAK_CLIENT_ID is required}"
+          : "${KEYCLOAK_CLIENT_SECRET:?KEYCLOAK_CLIENT_SECRET is required}"
+          : "${FRONTEND_ORIGIN:?FRONTEND_ORIGIN is required}"
+
+          # Fixed values for services that only exist inside this compose stack -
+          # not secrets, since they never resolve outside this docker network / volume.
+          REDIS_CONNECTION_STRING="redis:6379"
+          OFFER_CACHE_CONNECTION_STRING="Data Source=/data/offer-cache.db"
+          CACHE_KEY_PREFIX="food-app-backend"
+          APP_EVENT_SOURCE="food"
+
+          {
+            printf 'ASPNETCORE_ENVIRONMENT=%s\n' 'Production'
+            printf 'APP_PORT=%s\n' "${APP_PORT}"
+            printf 'HOST_PORT=%s\n' "${HOST_PORT}"
+
+            printf 'DATABASE_CONNECTION_STRING=%s\n' "${DATABASE_CONNECTION_STRING}"
+
+            printf 'REDIS_CONNECTION_STRING=%s\n' "${REDIS_CONNECTION_STRING}"
+            printf 'CACHE_KEY_PREFIX=%s\n' "${CACHE_KEY_PREFIX}"
+            printf 'CACHE_DEFAULT_ABSOLUTE_EXPIRATION_SECONDS=%s\n' "300"
+
+            printf 'OFFER_CACHE_CONNECTION_STRING=%s\n' "${OFFER_CACHE_CONNECTION_STRING}"
+
+            printf 'RABBITMQ_URI=%s\n' "${RABBITMQ_URI}"
+            printf 'RABBITMQ_QUEUE=%s\n' "${RABBITMQ_QUEUE}"
+            printf 'RABBITMQ_EXCHANGE=%s\n' "${RABBITMQ_EXCHANGE}"
+            printf 'RABBITMQ_CONSUMER_ROUTING_KEYS=%s\n' "${RABBITMQ_CONSUMER_ROUTING_KEYS}"
+            printf 'APP_EVENT_SOURCE=%s\n' "${APP_EVENT_SOURCE}"
+
+            printf 'GLITCHTIP_DSN=%s\n' "${GLITCHTIP_DSN}"
+            printf 'GLITCHTIP_RELEASE=%s\n' "${GLITCHTIP_RELEASE}"
+
+            printf 'RATE_LIMIT_PERMIT_LIMIT=%s\n' "100"
+            printf 'RATE_LIMIT_WINDOW_SECONDS=%s\n' "60"
+            printf 'RATE_LIMIT_QUEUE_LIMIT=%s\n' "0"
+
+            printf 'KEYCLOAK_AUTHORITY=%s\n' "${KEYCLOAK_AUTHORITY}"
+            printf 'KEYCLOAK_CLIENT_ID=%s\n' "${KEYCLOAK_CLIENT_ID}"
+            printf 'KEYCLOAK_CLIENT_SECRET=%s\n' "${KEYCLOAK_CLIENT_SECRET}"
+
+            printf 'FRONTEND_ORIGIN=%s\n' "${FRONTEND_ORIGIN}"
+          } > .env
+
+          chmod 600 .env
+
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${VPS_SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H -p "${VPS_PORT:-22}" "${VPS_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Upload image and compose files to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+
+          PORT="${VPS_PORT:-22}"
+
+          ssh -i ~/.ssh/deploy_key -p "${PORT}" "${VPS_USER}@${VPS_HOST}" \
+            "mkdir -p '${REMOTE_APP_DIR}' && chown '${VPS_USER}:${VPS_USER}' '${REMOTE_APP_DIR}'"
+
+          scp -i ~/.ssh/deploy_key -P "${PORT}" \
+            image.tar.gz .env docker-compose.yml \
+            "${VPS_USER}@${VPS_HOST}:${REMOTE_APP_DIR}/"
+
+      - name: Run docker compose on VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          APP_PORT: ${{ secrets.APP_PORT || env.APP_PORT }}
+          HOST_PORT: ${{ secrets.HOST_PORT || env.HOST_PORT }}
+        run: |
+          set -euo pipefail
+
+          PORT="${VPS_PORT:-22}"
+
+          ssh -i ~/.ssh/deploy_key -p "${PORT}" "${VPS_USER}@${VPS_HOST}" \
+            IMAGE_NAME="${IMAGE_NAME}" \
+            IMAGE_TAG="${GITHUB_SHA}" \
+            REMOTE_APP_DIR="${REMOTE_APP_DIR}" \
+            APP_PORT="${APP_PORT}" \
+            HOST_PORT="${HOST_PORT}" \
+            'bash -s' <<'EOF_REMOTE'
+          set -euo pipefail
+
+          if docker info >/dev/null 2>&1; then
+            DOCKER="docker"
+          else
+            DOCKER="sudo docker"
+          fi
+
+          if $DOCKER compose version >/dev/null 2>&1; then
+            COMPOSE_CMD=($DOCKER compose)
+          elif command -v docker-compose >/dev/null 2>&1; then
+            COMPOSE_CMD=(docker-compose)
+          else
+            echo "Docker Compose is required on the target host." >&2
+            exit 1
+          fi
+
+          cd "$REMOTE_APP_DIR"
+
+          gunzip -c image.tar.gz | $DOCKER load
+
+          chmod 600 .env
+
+          $DOCKER network inspect proxy >/dev/null 2>&1 || $DOCKER network create proxy
+
+          export IMAGE_NAME IMAGE_TAG APP_PORT HOST_PORT
+          "${COMPOSE_CMD[@]}" --env-file .env -f docker-compose.yml up -d --remove-orphans
+
+          $DOCKER image prune -f
+          EOF_REMOTE

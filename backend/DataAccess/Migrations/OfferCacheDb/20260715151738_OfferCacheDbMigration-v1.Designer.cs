@@ -3,16 +3,19 @@ using System;
 using DataAccess.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace DataAccess.Migrations.OfferCache
+namespace DataAccess.Migrations.OfferCacheDb
 {
     [DbContext(typeof(OfferCacheDbContext))]
-    partial class OfferCacheDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260715151738_OfferCacheDbMigration-v1")]
+    partial class OfferCacheDbMigrationv1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");

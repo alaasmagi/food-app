@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace DataAccess.Migrations.OfferCache
+namespace DataAccess.Migrations.OfferCacheDb
 {
     /// <inheritdoc />
-    public partial class AddOfferCache : Migration
+    public partial class OfferCacheDbMigrationv1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

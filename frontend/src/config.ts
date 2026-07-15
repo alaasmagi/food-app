@@ -22,5 +22,7 @@ export function loginUrl(returnUrl: string): string {
   return `${API_BASE_URL}/account/login?returnUrl=${encodeURIComponent(returnUrl)}`
 }
 
-/** Backend logout flow. The whole browser window navigates here. */
-export const LOGOUT_URL = `${API_BASE_URL}/account/logout`
+/** Backend logout flow, returning to the given frontend url. The whole window navigates here. */
+export function logoutUrl(returnUrl: string): string {
+  return `${API_BASE_URL}/account/logout?returnUrl=${encodeURIComponent(returnUrl)}`
+}

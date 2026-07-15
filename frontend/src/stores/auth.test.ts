@@ -104,8 +104,20 @@ describe('auth store', () => {
     )
   })
 
+  it('login uses an explicit returnTo path resolved against the current origin', () => {
+    const location = { href: 'https://app.test.local/login', origin: 'https://app.test.local' }
+    Object.defineProperty(window, 'location', { value: location, writable: true })
+
+    useAuthStore().login('/wheel')
+
+    expect(location.href).toBe(
+      'https://api.test.local/account/login?returnUrl=' +
+        encodeURIComponent('https://app.test.local/wheel'),
+    )
+  })
+
   it('logout clears the token then navigates to the backend logout flow', () => {
-    const location = { href: 'https://app.test.local/dashboard' }
+    const location = { href: 'https://app.test.local/dashboard', origin: 'https://app.test.local' }
     Object.defineProperty(window, 'location', { value: location, writable: true })
 
     const auth = useAuthStore()
@@ -113,6 +125,9 @@ describe('auth store', () => {
     auth.logout()
 
     expect(auth.token).toBeNull()
-    expect(location.href).toBe('https://api.test.local/account/logout')
+    expect(location.href).toBe(
+      'https://api.test.local/account/logout?returnUrl=' +
+        encodeURIComponent('https://app.test.local/login'),
+    )
   })
 })

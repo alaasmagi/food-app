@@ -26,7 +26,9 @@ export async function authGuard(to: RouteLocationNormalized) {
     await auth.fetchToken()
   }
 
-  return auth.isAuthenticated ? true : { name: 'login' as const }
+  return auth.isAuthenticated
+    ? true
+    : { name: 'login' as const, query: { redirect: to.fullPath } }
 }
 
 export const router = createRouter({

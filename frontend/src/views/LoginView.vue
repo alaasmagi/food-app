@@ -1,8 +1,20 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import Button from '../components/design-system/forms/Button.vue'
 
 const auth = useAuthStore()
+const route = useRoute()
+
+// The guarded route that bounced us here, so login returns straight to it (its guard
+// then completes the token exchange). Defaults to the dashboard. Only same-app absolute
+// paths are honored - reject protocol-relative "//host" values as an open-redirect guard.
+const redirectTarget = computed(() => {
+  const raw = route.query.redirect
+  const path = typeof raw === 'string' ? raw : null
+  return path && path.startsWith('/') && !path.startsWith('//') ? path : '/'
+})
 </script>
 
 <template>
@@ -10,7 +22,7 @@ const auth = useAuthStore()
     <div class="login__panel">
       <h1 class="login__title">Sign in</h1>
       <p class="login__body">Sign in with your account to continue.</p>
-      <Button variant="primary" size="lg" icon="arrow-right" iconPosition="right" @click="auth.login()">
+      <Button variant="primary" size="lg" icon="arrow-right" iconPosition="right" @click="auth.login(redirectTarget)">
         Log in
       </Button>
     </div>

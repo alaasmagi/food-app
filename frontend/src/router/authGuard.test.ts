@@ -6,8 +6,8 @@ import { useAuthStore } from '../stores/auth'
 
 const FUTURE = '2999-01-01T00:00:00.000Z'
 
-function route(meta: Record<string, unknown> = {}): RouteLocationNormalized {
-  return { meta } as unknown as RouteLocationNormalized
+function route(meta: Record<string, unknown> = {}, fullPath = '/'): RouteLocationNormalized {
+  return { meta, fullPath } as unknown as RouteLocationNormalized
 }
 
 function tokenResponse(accessToken: string) {
@@ -52,9 +52,9 @@ describe('authGuard', () => {
   it('redirects to the login view when still unauthenticated after the fetch', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 401 })))
 
-    const result = await authGuard(route())
+    const result = await authGuard(route({}, '/wheel'))
 
-    expect(result).toEqual({ name: 'login' })
+    expect(result).toEqual({ name: 'login', query: { redirect: '/wheel' } })
   })
 
   it('always allows public routes without a token fetch', async () => {

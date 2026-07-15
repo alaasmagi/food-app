@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { fetchToken as exchangeToken, getCurrentUser } from '../api/account'
-import { loginUrl, LOGOUT_URL } from '../config'
+import { loginUrl, logoutUrl } from '../config'
 import type { TokenResponse } from '../types/account'
 import type { AppUser } from '../types/appUser'
 
@@ -87,15 +87,27 @@ export const useAuthStore = defineStore('auth', () => {
     currentUser.value = user
   }
 
-  /** Full-page navigation to the backend login flow, returning to the current URL. */
-  function login(): void {
-    window.location.href = loginUrl(window.location.href)
+  /**
+   * Full-page navigation to the backend login flow. Pass the in-app path to land on
+   * after login (resolved against the current origin); it must be a guarded route so
+   * its navigation guard performs the silent token exchange. Defaults to the current
+   * URL - do NOT rely on that default from the public login page, which would loop
+   * back to login and never reach the app.
+   */
+  function login(returnTo?: string): void {
+    const returnUrl = returnTo
+      ? new URL(returnTo, window.location.origin).toString()
+      : window.location.href
+    window.location.href = loginUrl(returnUrl)
   }
 
-  /** Clear the in-memory token, then full-page navigate to the backend logout flow. */
+  /**
+   * Clear the in-memory token, then full-page navigate to the backend logout flow,
+   * returning to the app's login page once the backend/Keycloak session is ended.
+   */
   function logout(): void {
     clear()
-    window.location.href = LOGOUT_URL
+    window.location.href = logoutUrl(new URL('/login', window.location.origin).toString())
   }
 
   return {

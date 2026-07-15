@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+**/.vs/
+Tests/
+openspec/
+README.md
+.env
+.env.example
+*.db

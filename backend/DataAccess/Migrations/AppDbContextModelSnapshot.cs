@@ -3,20 +3,17 @@ using System;
 using DataAccess.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace DataAccess.Migrations.AppDb
+namespace DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260715050627_AddUserWheel")]
-    partial class AddUserWheel
+    partial class AppDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -60,6 +57,12 @@ namespace DataAccess.Migrations.AppDb
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
 
+                    b.Property<Guid?>("NotificationEnvironmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("SendNotifications")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -76,6 +79,8 @@ namespace DataAccess.Migrations.AppDb
                     b.HasKey("Id");
 
                     b.HasIndex("Email");
+
+                    b.HasIndex("NotificationEnvironmentId");
 
                     b.HasIndex("Username");
 
@@ -412,6 +417,14 @@ namespace DataAccess.Migrations.AppDb
                     b.HasIndex("UserId");
 
                     b.ToTable("UserWheels", "app");
+                });
+
+            modelBuilder.Entity("DTO.DataAccess.AppUserEntity", b =>
+                {
+                    b.HasOne("DTO.DataAccess.DiningEnvironmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("NotificationEnvironmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("DTO.DataAccess.EnvironmentRestaurantEntity", b =>
