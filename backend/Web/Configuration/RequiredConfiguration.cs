@@ -1,4 +1,6 @@
+using System.Globalization;
 using Base.Cache;
+using Contracts.Application;
 using Base.Keycloak.Authentication;
 using Base.Message.RabbitMQ;
 using External.RabbitMQ;
@@ -125,6 +127,57 @@ public static class RequiredConfiguration
         };
     }
 
+    public static string OfferCacheConnectionString(IConfiguration configuration)
+    {
+        return Optional("OFFER_CACHE_CONNECTION_STRING") ??
+               OptionalConfiguration(configuration, "OfferCache:ConnectionString") ??
+               "Data Source=offer-cache.db";
+    }
+
+    public static OfferCacheOptions OfferCacheOptions(IConfiguration configuration)
+    {
+        var ttlSeconds = OptionalPositiveInt(
+            "OFFER_CACHE_TTL_SECONDS",
+            OptionalConfigurationPositiveInt(configuration, "OfferCache:TtlSeconds", 3600));
+
+        return new OfferCacheOptions
+        {
+            Ttl = TimeSpan.FromSeconds(ttlSeconds)
+        };
+    }
+
+    public static DailyRecommendationScheduleOptions DailyRecommendationScheduleOptions()
+    {
+        var defaults = new DailyRecommendationScheduleOptions();
+
+        var runTime = defaults.RunTime;
+        var runTimeRaw = Optional("DAILY_RECOMMENDATION_RUN_TIME");
+        if (runTimeRaw != null &&
+            !TimeOnly.TryParse(runTimeRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out runTime))
+        {
+            throw new InvalidOperationException("DAILY_RECOMMENDATION_RUN_TIME must be a valid time, for example 08:00.");
+        }
+
+        return new DailyRecommendationScheduleOptions
+        {
+            RunTime = runTime,
+            TimeZone = Optional("DAILY_RECOMMENDATION_TIME_ZONE") ?? defaults.TimeZone
+        };
+    }
+
+    public static DailyRecommendationNotificationOptions DailyRecommendationNotificationOptions()
+    {
+        var defaults = new DailyRecommendationNotificationOptions();
+
+        return new DailyRecommendationNotificationOptions
+        {
+            AppBaseUrl = Optional("DAILY_RECOMMENDATION_APP_BASE_URL") ?? defaults.AppBaseUrl,
+            RestaurantPathTemplate = Optional("DAILY_RECOMMENDATION_RESTAURANT_PATH_TEMPLATE") ?? defaults.RestaurantPathTemplate,
+            WheelPath = Optional("DAILY_RECOMMENDATION_WHEEL_PATH") ?? defaults.WheelPath,
+            Currency = Optional("DAILY_RECOMMENDATION_CURRENCY") ?? defaults.Currency
+        };
+    }
+
     private static string? Optional(string key)
     {
         var value = Environment.GetEnvironmentVariable(key);
@@ -150,6 +203,28 @@ public static class RequiredConfiguration
     private static int OptionalPositiveInt(string key, int fallback)
     {
         var value = Optional(key);
+        if (value == null)
+        {
+            return fallback;
+        }
+
+        if (int.TryParse(value, out var parsed) && parsed > 0)
+        {
+            return parsed;
+        }
+
+        throw new InvalidOperationException($"{key} must be a positive integer.");
+    }
+
+    private static string? OptionalConfiguration(IConfiguration configuration, string key)
+    {
+        var value = configuration[key];
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static int OptionalConfigurationPositiveInt(IConfiguration configuration, string key, int fallback)
+    {
+        var value = OptionalConfiguration(configuration, key);
         if (value == null)
         {
             return fallback;

@@ -18,6 +18,7 @@ using DTO.DataAccess.Mappers;
 using DTO.Web;
 using DTO.Web.Mappers;
 using External.Cache;
+using External.Offers;
 using External.RabbitMQ;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -35,16 +36,21 @@ public static class ServiceConfiguration
         var appMessagingOptions = RequiredConfiguration.AppMessagingOptions(keycloakOptions);
         var redisConnectionString = RequiredConfiguration.RedisConnectionString();
         var baseCacheOptions = RequiredConfiguration.BaseCacheOptions();
+        var offerCacheConnectionString = RequiredConfiguration.OfferCacheConnectionString(builder.Configuration);
+        var offerCacheOptions = RequiredConfiguration.OfferCacheOptions(builder.Configuration);
+        var recommendationScheduleOptions = RequiredConfiguration.DailyRecommendationScheduleOptions();
+        var recommendationNotificationOptions = RequiredConfiguration.DailyRecommendationNotificationOptions();
 
         builder.ConfigureApplicationLogging();
         builder.ConfigureGlitchtip();
 
         builder.Services
-            .AddDataAccess()
-            .AddApplicationServices()
+            .AddDataAccess(offerCacheConnectionString)
+            .AddApplicationServices(offerCacheOptions)
             .AddApplicationAuthentication(keycloakOptions)
             .AddApplicationCache(redisConnectionString, baseCacheOptions)
             .AddApplicationMessaging(rabbitMqOptions, appMessagingOptions)
+            .AddDailyRecommendationNotifications(recommendationScheduleOptions, recommendationNotificationOptions)
             .AddApplicationMvc();
 
         builder.Services.ConfigureForwardedHeaders();
@@ -66,26 +72,68 @@ public static class ServiceConfiguration
         return services;
     }
 
-    private static IServiceCollection AddDataAccess(this IServiceCollection services)
+    private static IServiceCollection AddDataAccess(this IServiceCollection services, string offerCacheConnectionString)
     {
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(RequiredConfiguration.AppConnectionString()));
+        services.AddDbContext<OfferCacheDbContext>(options =>
+            options.UseSqlite(offerCacheConnectionString, sqlite =>
+                sqlite.MigrationsHistoryTable("__OfferCacheMigrationsHistory")));
         services.AddScoped<DbContext>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddDatabaseDeveloperPageExceptionFilter();
 
         services.AddScoped<IMapper<AppUser, AppUserEntity>, AppUserEntityMapper>();
         services.AddScoped<IMapper<AppUser, AppUser>, AppUserIdentityMapper>();
         services.AddScoped<IMapper<AppUserDto, AppUser>, AppUserDtoMapper>();
+        services.AddScoped<IMapper<OfferProvider, OfferProviderEntity>, OfferProviderEntityMapper>();
+        services.AddScoped<IMapper<OfferProvider, OfferProvider>, OfferProviderIdentityMapper>();
+        services.AddScoped<IMapper<OfferProviderDto, OfferProvider>, OfferProviderDtoMapper>();
+        services.AddScoped<IMapper<Restaurant, RestaurantEntity>, RestaurantEntityMapper>();
+        services.AddScoped<IMapper<Restaurant, Restaurant>, RestaurantIdentityMapper>();
+        services.AddScoped<IMapper<RestaurantDto, Restaurant>, RestaurantDtoMapper>();
+        services.AddScoped<IMapper<DiningEnvironment, DiningEnvironmentEntity>, DiningEnvironmentEntityMapper>();
+        services.AddScoped<IMapper<DiningEnvironment, DiningEnvironment>, DiningEnvironmentIdentityMapper>();
+        services.AddScoped<IMapper<DiningEnvironmentDto, DiningEnvironment>, DiningEnvironmentDtoMapper>();
+        services.AddScoped<IMapper<EnvironmentRestaurant, EnvironmentRestaurantEntity>, EnvironmentRestaurantEntityMapper>();
+        services.AddScoped<IMapper<EnvironmentRestaurant, EnvironmentRestaurant>, EnvironmentRestaurantIdentityMapper>();
+        services.AddScoped<IMapper<EnvironmentRestaurantDto, EnvironmentRestaurant>, EnvironmentRestaurantDtoMapper>();
+        services.AddScoped<IMapper<Favourite, FavouriteEntity>, FavouriteEntityMapper>();
+        services.AddScoped<IMapper<Favourite, Favourite>, FavouriteIdentityMapper>();
+        services.AddScoped<IMapper<FavouriteDto, Favourite>, FavouriteDtoMapper>();
+        services.AddScoped<IMapper<UserWheel, UserWheelEntity>, UserWheelEntityMapper>();
+        services.AddScoped<IMapper<UserWheel, UserWheel>, UserWheelIdentityMapper>();
+        services.AddScoped<IMapper<UserWheelDto, UserWheel>, UserWheelDtoMapper>();
 
         services.AddScoped<IAppUserRepository, AppUserRepository>();
+        services.AddScoped<IOfferProviderRepository, OfferProviderRepository>();
+        services.AddScoped<IOfferCacheRepository, OfferCacheRepository>();
+        services.AddScoped<IRestaurantRepository, RestaurantRepository>();
+        services.AddScoped<IDiningEnvironmentRepository, DiningEnvironmentRepository>();
+        services.AddScoped<IEnvironmentRestaurantRepository, EnvironmentRestaurantRepository>();
+        services.AddScoped<IFavouriteRepository, FavouriteRepository>();
+        services.AddScoped<IUserWheelRepository, UserWheelRepository>();
         services.AddScoped<IBaseUow, DataAccessUow>();
 
         return services;
     }
 
-    private static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    private static IServiceCollection AddApplicationServices(this IServiceCollection services, OfferCacheOptions offerCacheOptions)
     {
+        services.AddSingleton(offerCacheOptions);
         services.AddScoped<IAppUserService, AppUserService>();
+        services.AddScoped<IOfferFetchService, OfferFetchService>();
+        services.AddScoped<IOfferProviderService, OfferProviderService>();
+        services.AddScoped<IRestaurantService, RestaurantService>();
+        services.AddScoped<IDiningEnvironmentService, DiningEnvironmentService>();
+        services.AddScoped<IEnvironmentRestaurantService, EnvironmentRestaurantService>();
+        services.AddScoped<IFavouriteService, FavouriteService>();
+        services.AddScoped<IUserWheelService, UserWheelService>();
+        services.AddScoped<ICurrentActorAccessor, CurrentActorAccessor>();
+        services.AddHttpClient<HtmlOfferProviderFetcher>();
+        services.AddHttpClient<ApiOfferProviderFetcher>();
+        services.AddScoped<IOfferProviderFetcher>(provider => provider.GetRequiredService<HtmlOfferProviderFetcher>());
+        services.AddScoped<IOfferProviderFetcher>(provider => provider.GetRequiredService<ApiOfferProviderFetcher>());
+        services.AddScoped<IOfferProviderFetcherResolver, OfferProviderFetcherResolver>();
 
         return services;
     }
@@ -98,6 +146,12 @@ public static class ServiceConfiguration
         services.AddKeycloakOidc(keycloakOptions);
         services.AddAuthorization(options =>
         {
+            options.AddPolicy(AuthorizationPolicies.Admin, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole(AuthorizationPolicies.AdminRealmRole);
+            });
+
             options.FallbackPolicy = new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()
                 .Build();
@@ -121,6 +175,19 @@ public static class ServiceConfiguration
         services.AddSingleton<IAppEventPublisher, External.RabbitMQ.RabbitMqEventPublisher>();
         services.AddSingleton<IBaseEventHandler<JsonElement>, RabbitMqEventHandler>();
         services.AddRabbitMqConsumer<RabbitMqEventConsumer>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddDailyRecommendationNotifications(
+        this IServiceCollection services,
+        DailyRecommendationScheduleOptions scheduleOptions,
+        DailyRecommendationNotificationOptions notificationOptions)
+    {
+        services.AddSingleton(scheduleOptions);
+        services.AddSingleton(notificationOptions);
+        services.AddScoped<IDailyRecommendationNotificationService, DailyRecommendationNotificationService>();
+        services.AddHostedService<DailyRecommendationSchedulerHostedService>();
 
         return services;
     }

@@ -7,10 +7,13 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="AngleSharp" Version="1.5.2" />
       <PackageReference Include="alaasmagi.Base.Cache" Version="1.1.9" />
+      <PackageReference Include="alaasmagi.Base.DTO" Version="1.1.9" />
       <PackageReference Include="alaasmagi.Base.Keycloak" Version="1.1.9" />
       <PackageReference Include="alaasmagi.Base.Message" Version="1.1.9" />
       <PackageReference Include="alaasmagi.Base.Message.RabbitMQ" Version="1.1.9" />
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
       <PackageReference Include="StackExchange.Redis" Version="2.9.32" />
     </ItemGroup>
 
@@ -20,6 +23,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Contracts\Contracts.csproj" />
+      <ProjectReference Include="..\Domain\Domain.csproj" />
     </ItemGroup>
 
 </Project>

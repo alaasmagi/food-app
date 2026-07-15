@@ -29,6 +29,18 @@ public class AppUserRepository : BaseRepository<AppUser, AppUserEntity, IMapper<
         return _mapper.Map(entity);
     }
 
+    public async Task<IReadOnlyList<AppUser>> GetDailyLunchRecommendationSubscribersAsync(CancellationToken ct = default)
+    {
+        var entities = await _context.AppUsers
+            .AsNoTracking()
+            .Where(user => user.DailyLunchRecommendationsEnabled)
+            .ToListAsync(ct);
+
+        return entities
+            .Select(entity => _mapper.Map(entity)!)
+            .ToList();
+    }
+
     public async Task<AppUser> UpsertFromIdentityEventAsync(
         Guid id,
         string? email,
@@ -48,13 +60,17 @@ public class AppUserRepository : BaseRepository<AppUser, AppUserEntity, IMapper<
                 Email = Normalize(email),
                 Username = Normalize(username),
                 FullName = Normalize(fullName),
-                Locale = NormalizeLocale(locale)
+                Locale = NormalizeLocale(locale),
+                // New identity-created users are not subscribed to daily lunch recommendations.
+                DailyLunchRecommendationsEnabled = false
             };
             StampNew(entity);
             _context.AppUsers.Add(entity);
         }
         else
         {
+            // Identity events update identity-sourced fields only and must preserve the
+            // user's DailyLunchRecommendationsEnabled product preference.
             entity.Email = Normalize(email);
             entity.Username = Normalize(username);
             entity.FullName = Normalize(fullName);

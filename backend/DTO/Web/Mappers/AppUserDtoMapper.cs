@@ -15,6 +15,7 @@ public class AppUserDtoMapper : IMapper<AppUserDto, AppUser>
             Username = entity.Username,
             FullName = entity.FullName,
             Locale = entity.Locale,
+            DailyLunchRecommendationsEnabled = entity.DailyLunchRecommendationsEnabled,
         };
     }
 
@@ -33,6 +34,7 @@ public class AppUserDtoMapper : IMapper<AppUserDto, AppUser>
             Username = entity.Username,
             FullName = entity.FullName,
             Locale = entity.Locale,
+            DailyLunchRecommendationsEnabled = entity.DailyLunchRecommendationsEnabled,
         };
     }
 

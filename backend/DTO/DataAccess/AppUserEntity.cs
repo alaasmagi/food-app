@@ -20,4 +20,6 @@ public class AppUserEntity : BaseEntityWithMetaConcurrency
     [Required]
     [MaxLength(16)]
     public string Locale { get; set; } = "en";
+
+    public bool DailyLunchRecommendationsEnabled { get; set; }
 }

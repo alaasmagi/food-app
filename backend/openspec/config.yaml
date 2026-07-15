@@ -87,6 +87,16 @@ context: |
     - EOfferProviderType (enum: Html, Api, Manual)
   - The offer cache row is NOT a Domain entity - DataAccess-only, its own OfferCacheDbContext (SQLite),
     no Base* inheritance, no ownership, no metadata, no concurrency (disposable, TTL-bound data)
+  - AppUser gains two additional fields for notification preferences:
+    - SendNotifications (bool, default false) - whether this user receives the daily lunch
+      recommendation email at all
+    - NotificationEnvironmentId (Guid?, nullable FK to DiningEnvironment) - optional filter; when set,
+      the daily email includes only that environment's restaurants; when null, it includes all of the
+      user's DiningEnvironments combined (the previous default behavior)
+    - Setting NotificationEnvironmentId to a DiningEnvironment owned by a different user must be
+      rejected - validate ownership before saving, same as any other cross-user write
+    - If the referenced DiningEnvironment is later deleted, NotificationEnvironmentId must be cleared
+      (set to null) rather than left dangling or blocking the delete
 
   Business rules
   - An AppUser is provisioned exclusively from a Keycloak "user.created" event on the food realm,
@@ -135,12 +145,34 @@ context: |
     over RabbitMQ for the email hub to render and send
 
   Identity and ownership rules
-  - Keycloak is the sole authentication provider (alaasmagi.Base.Keycloak); there is no ASP.NET Core
+    - Keycloak is the sole authentication provider (alaasmagi.Base.Keycloak); there is no ASP.NET Core
     Identity and no AppIdentityDbContext - do not introduce one
-  - The Web project configures two Keycloak auth schemes side by side:
-    - AddKeycloakOidc for the MVC/Identity surface (cookie-based, Duende token management, login/logout
-      pages that Challenge()/SignOut() against Keycloak)
-    - AddKeycloakJwtBearer for the API surface (bearer JWT validation for programmatic/API clients)
+    - This is a Backend-for-Frontend (BFF) setup: the Vue frontend never receives a Keycloak token
+    directly. All authentication happens through the backend; the frontend only ever holds a
+    same-site session cookie issued by this backend
+  - AddKeycloakOidc (cookie-based, Duende token management) is the ONE authentication scheme used by
+    both the MVC/Identity surface AND the Web API surface - do not add AddKeycloakJwtBearer for the
+    Vue frontend's traffic; the frontend never sends an Authorization header
+  - Login flow: the frontend does a full-page browser navigation (not an XHR/fetch) to
+    `GET /account/login?returnUrl=...` on the API host, which issues Challenge() against Keycloak;
+    Keycloak redirects back to the API's OIDC callback, the backend sets its auth cookie
+    (Domain=.<registered-parent-domain>, Secure, HttpOnly, SameSite=Lax), then redirects the browser
+    back to the frontend's returnUrl
+  - Logout flow: `GET /account/logout` clears the local cookie and redirects to Keycloak's
+    end-session endpoint, then back to the frontend
+  - Session check endpoint: `GET /api/v1/account/me` returns the current AppUser (or 401 if
+    unauthenticated) - this is what the frontend calls on app load to determine auth state, since it
+    has no client-side way to inspect the cookie
+  - CSRF/antiforgery: since the cookie is sent automatically by the browser on every request to the
+    API's origin, all state-changing endpoints (POST/PUT/PATCH/DELETE) require the ASP.NET Core
+    antiforgery double-submit pattern - issue a readable `XSRF-TOKEN` cookie alongside the auth
+    cookie, require the frontend to echo its value back in an `X-XSRF-TOKEN` header, validated via
+    IAntiforgery. GET endpoints are exempt
+  - CORS: allow exactly the frontend's origin (e.g. `https://app.<domain>`), with
+    AllowCredentials() enabled - do not use a wildcard origin, credentialed CORS requests forbid it
+  - AddKeycloakJwtBearer may still be registered as an additional scheme for future non-browser API
+    consumers (scripts, mobile apps), but it is not what the Vue frontend uses and must not be
+    required on endpoints the frontend calls
   - Domain data owned by a user (DiningEnvironment, EnvironmentRestaurant, Favourite, UserWheel)
     implements IBaseEntityUserId so alaasmagi.Base.DataAccess.EF automatically scopes reads to the
     current actor and rejects cross-user writes with FORBIDDEN

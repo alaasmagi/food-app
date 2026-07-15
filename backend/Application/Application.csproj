@@ -7,12 +7,18 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
       <PackageReference Include="alaasmagi.Base.Application" Version="1.1.9" />
+      <PackageReference Include="alaasmagi.Base.Contracts.Message" Version="1.1.9" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Contracts\Contracts.csproj" />
       <ProjectReference Include="..\Domain\Domain.csproj" />
+      <ProjectReference Include="..\DTO\DTO.csproj" />
     </ItemGroup>
 
 </Project>

@@ -20,4 +20,6 @@ public class AppUserDto : BaseEntityWithConcurrency
     [Required]
     [StringLength(16)]
     public string Locale { get; set; } = "en";
+
+    public bool DailyLunchRecommendationsEnabled { get; set; }
 }

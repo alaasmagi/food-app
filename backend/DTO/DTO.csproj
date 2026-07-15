@@ -7,6 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="alaasmagi.Base.Contracts.Message" Version="1.1.9" />
       <PackageReference Include="alaasmagi.Base.Domain" Version="1.1.9" />
       <PackageReference Include="alaasmagi.Base.DTO" Version="1.1.9" />
     </ItemGroup>
