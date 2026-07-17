@@ -86,7 +86,7 @@ const mapRestaurants = useEnvironmentFilteredRestaurants()
 .dashboard {
   max-width: 720px;
   margin: 0 auto;
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-10) var(--space-6) var(--space-16);
 }
 
 .dashboard__header {
@@ -94,7 +94,7 @@ const mapRestaurants = useEnvironmentFilteredRestaurants()
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .dashboard__title {
@@ -107,7 +107,11 @@ const mapRestaurants = useEnvironmentFilteredRestaurants()
 }
 
 .dashboard__tabs {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
+}
+
+.dashboard__view-tabs {
+  margin-bottom: var(--space-8);
 }
 
 .dashboard__list {

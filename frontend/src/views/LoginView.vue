@@ -42,13 +42,14 @@ const redirectTarget = computed(() => {
 .login__panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
   align-items: flex-start;
-  max-width: 360px;
-  padding: var(--space-8);
+  width: 100%;
+  max-width: 380px;
+  padding: var(--space-10);
   background: var(--surface-raised);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
 }
 
 .login__title {
@@ -61,7 +62,7 @@ const redirectTarget = computed(() => {
 }
 
 .login__body {
-  margin: 0;
+  margin: 0 0 var(--space-4);
   font-family: var(--font-body);
   font-size: var(--text-base);
   line-height: var(--leading-normal);

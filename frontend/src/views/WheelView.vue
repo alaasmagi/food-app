@@ -115,7 +115,7 @@ function onResult(name: string): void {
 .wheels {
   max-width: 900px;
   margin: 0 auto;
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-10) var(--space-6) var(--space-16);
 }
 
 .wheels__header {
@@ -166,7 +166,7 @@ function onResult(name: string): void {
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .wheels__card-name {

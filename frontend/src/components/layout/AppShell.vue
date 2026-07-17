@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useAuthStore } from '../../stores/auth'
+import { useTheme } from '../../composables/useTheme'
 import Button from '../design-system/forms/Button.vue'
 
 const auth = useAuthStore()
+const { theme, toggleTheme } = useTheme()
 </script>
 
 <template>
@@ -16,15 +18,25 @@ const auth = useAuthStore()
           <RouterLink to="/settings" class="shell__nav-link">Settings</RouterLink>
         </nav>
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        icon="arrow-right"
-        iconPosition="right"
-        @click="auth.logout()"
-      >
-        Log out
-      </Button>
+      <div class="shell__actions">
+        <Button
+          variant="ghost"
+          size="sm"
+          :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+          @click="toggleTheme"
+        >
+          {{ theme === 'dark' ? 'Light' : 'Dark' }}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon="arrow-right"
+          iconPosition="right"
+          @click="auth.logout()"
+        >
+          Log out
+        </Button>
+      </div>
     </header>
     <main class="shell__main">
       <slot />
@@ -42,7 +54,8 @@ const auth = useAuthStore()
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-6);
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
   background: var(--surface-raised);
   border-bottom: 1px solid var(--border-subtle);
 }
@@ -50,7 +63,7 @@ const auth = useAuthStore()
 .shell__lead {
   display: flex;
   align-items: center;
-  gap: var(--space-6);
+  gap: var(--space-8);
 }
 
 .shell__brand {
@@ -61,9 +74,15 @@ const auth = useAuthStore()
   color: var(--text-primary);
 }
 
+.shell__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .shell__nav {
   display: flex;
-  gap: var(--space-4);
+  gap: var(--space-5);
 }
 
 .shell__nav-link {

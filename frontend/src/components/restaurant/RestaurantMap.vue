@@ -4,6 +4,7 @@ import L from 'leaflet'
 import Button from '../design-system/forms/Button.vue'
 import OfferList from './OfferList.vue'
 import { useRestaurantsStore } from '../../stores/restaurants'
+import { useTheme, type Theme } from '../../composables/useTheme'
 import type { Restaurant } from '../../types/restaurant'
 import { markerableRestaurants } from './mapMarkers'
 
@@ -12,6 +13,13 @@ import { markerableRestaurants } from './mapMarkers'
 const props = defineProps<{ restaurants: Restaurant[] }>()
 
 const store = useRestaurantsStore()
+const { theme } = useTheme()
+
+// CARTO basemaps matched to the app theme, so the map reads with the rest of the UI.
+const TILE_URL: Record<Theme, string> = {
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+}
 
 const mapEl = ref<HTMLElement | null>(null)
 // Restaurants that carry a usable location; the rest are silently excluded.
@@ -24,6 +32,7 @@ const DEFAULT_ZOOM = 11
 let map: L.Map | null = null
 let markerLayer: L.LayerGroup | null = null
 let popup: L.Popup | null = null
+let tileLayer: L.TileLayer | null = null
 
 // Vue owns the popup body; Leaflet just displays this detached host element, so
 // the "See offers" action reuses the same store and OfferList as RestaurantCard.
@@ -39,10 +48,14 @@ const markerIcon = L.divIcon({
   iconAnchor: [9, 9],
 })
 
-function openPopupFor(restaurant: Restaurant, latlng: L.LatLng): void {
+async function openPopupFor(restaurant: Restaurant, latlng: L.LatLng): Promise<void> {
   if (!map || !popup) return
   selectedRestaurant.value = restaurant
   offersExpanded.value = false
+  // Wait for Vue to teleport the body into the host so Leaflet measures the real
+  // content - it sizes and centres the popup on the host's width at open time.
+  await nextTick()
+  if (!map || !popup) return
   popup.setLatLng(latlng).setContent(popupHost).openOn(map)
 }
 
@@ -50,8 +63,13 @@ async function toggleOffers(): Promise<void> {
   const restaurant = selectedRestaurant.value
   if (!restaurant) return
   offersExpanded.value = !offersExpanded.value
+  // Re-measure/re-position after the height change from expanding or collapsing.
+  await nextTick()
+  popup?.update()
   if (offersExpanded.value) {
     await store.loadOffers(restaurant.id)
+    await nextTick()
+    popup?.update()
   }
 }
 
@@ -80,7 +98,7 @@ function fitToMarkers(): void {
 onMounted(async () => {
   if (!mapEl.value) return
   map = L.map(mapEl.value, { zoomControl: true, attributionControl: true })
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  tileLayer = L.tileLayer(TILE_URL[theme.value], {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
@@ -105,11 +123,17 @@ watch(markerable, () => {
   fitToMarkers()
 })
 
+// Swap the basemap in place when the app theme changes.
+watch(theme, (value) => {
+  tileLayer?.setUrl(TILE_URL[value])
+})
+
 onUnmounted(() => {
   map?.remove()
   map = null
   markerLayer = null
   popup = null
+  tileLayer = null
 })
 </script>
 
@@ -126,6 +150,7 @@ onUnmounted(() => {
         <Button
           variant="secondary"
           size="sm"
+          full-width
           :icon="offersExpanded ? 'chevron-up' : 'chevron-down'"
           iconPosition="right"
           @click="toggleOffers"
@@ -192,7 +217,7 @@ onUnmounted(() => {
   background: var(--surface-raised);
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }
 
@@ -202,19 +227,51 @@ onUnmounted(() => {
 }
 
 .restaurant-map__popup-wrap .leaflet-popup-content {
-  margin: var(--space-3) var(--space-4);
+  margin: var(--space-4);
 }
 
 .restaurant-map__popup-wrap a.leaflet-popup-close-button {
+  top: var(--space-2);
+  right: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
   color: var(--text-secondary);
+  font-size: var(--text-md);
+  border-radius: var(--radius-sm);
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard);
+}
+
+.restaurant-map__popup-wrap a.leaflet-popup-close-button:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.restaurant-map__popup-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 176px;
+}
+
+/* Keep the action label on one line even in the narrow popup column. */
+.restaurant-map__popup-body button {
+  white-space: nowrap;
 }
 
 .restaurant-map__popup-name {
-  margin: 0 0 var(--space-3);
+  margin: 0;
+  padding-right: var(--space-5);
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--text-md);
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-snug);
   color: var(--text-primary);
 }
 

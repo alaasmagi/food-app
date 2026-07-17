@@ -91,7 +91,7 @@ async function save(): Promise<void> {
 .settings {
   max-width: 480px;
   margin: 0 auto;
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-10) var(--space-6) var(--space-16);
 }
 
 .settings__title {
