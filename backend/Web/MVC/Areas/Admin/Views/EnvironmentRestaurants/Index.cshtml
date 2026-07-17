@@ -1,0 +1,38 @@
+@model IEnumerable<EnvironmentRestaurantDto>
+@{
+    ViewData["Title"] = "Environment restaurants";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Environment restaurants</h1>
+    <a class="btn btn-primary" asp-action="Create">Create new</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Environment</th>
+                <th>Restaurant</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.EnvironmentId</td>
+                <td>@item.RestaurantId</td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@item.Id">Details</a>
+                    <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+@if (!Model.Any())
+{
+    <p class="text-muted">No environment restaurants yet.</p>
+}

@@ -234,12 +234,22 @@ public static class ServiceConfiguration
 
     private static IServiceCollection AddApplicationMvc(this IServiceCollection services)
     {
-        services.AddControllersWithViews()
+        services.AddControllersWithViews(options =>
+            {
+                options.ModelMetadataDetailsProviders.Add(new ConcurrencyTokenValidationMetadataProvider());
+            })
             .AddRazorOptions(options =>
             {
                 options.ViewLocationFormats.Clear();
                 options.ViewLocationFormats.Add("/MVC/Views/{1}/{0}.cshtml");
                 options.ViewLocationFormats.Add("/MVC/Views/Shared/{0}.cshtml");
+
+                // {2} = area, {1} = controller, {0} = action. Admin console views live under
+                // /MVC/Areas/{area}/Views/... and fall back to the shared MVC views for layout/partials.
+                options.AreaViewLocationFormats.Clear();
+                options.AreaViewLocationFormats.Add("/MVC/Areas/{2}/Views/{1}/{0}.cshtml");
+                options.AreaViewLocationFormats.Add("/MVC/Areas/{2}/Views/Shared/{0}.cshtml");
+                options.AreaViewLocationFormats.Add("/MVC/Views/Shared/{0}.cshtml");
             });
 
         return services;

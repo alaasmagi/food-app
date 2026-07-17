@@ -1,0 +1,77 @@
+@model RestaurantDto
+@{
+    ViewData["Title"] = "Edit restaurant";
+}
+
+<h1 class="h3 mb-3">Edit restaurant</h1>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" class="col-lg-8">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="ConcurrencyToken" />
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="City" class="form-label"></label>
+        <input asp-for="City" class="form-control" />
+        <span asp-validation-for="City" class="text-danger"></span>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="Latitude" class="form-label"></label>
+            <input asp-for="Latitude" class="form-control" />
+            <span asp-validation-for="Latitude" class="text-danger"></span>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="Longitude" class="form-label"></label>
+            <input asp-for="Longitude" class="form-control" />
+            <span asp-validation-for="Longitude" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label asp-for="OfferTimeText" class="form-label"></label>
+        <input asp-for="OfferTimeText" class="form-control" />
+        <span asp-validation-for="OfferTimeText" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="ParkingInfo" class="form-label"></label>
+        <textarea asp-for="ParkingInfo" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="ParkingInfo" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="OpeningInfo" class="form-label"></label>
+        <textarea asp-for="OpeningInfo" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="OpeningInfo" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="OffersResourceUrl" class="form-label"></label>
+        <input asp-for="OffersResourceUrl" class="form-control" />
+        <span asp-validation-for="OffersResourceUrl" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="OfferProviderId" class="form-label">Offer provider</label>
+        <select asp-for="OfferProviderId" asp-items="ViewBag.OfferProviders" class="form-select">
+            <option value="">— None —</option>
+        </select>
+        <span asp-validation-for="OfferProviderId" class="text-danger"></span>
+    </div>
+    <div class="form-check mb-2">
+        <input asp-for="HasOffers" class="form-check-input" />
+        <label asp-for="HasOffers" class="form-check-label"></label>
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="IsFastFood" class="form-check-input" />
+        <label asp-for="IsFastFood" class="form-check-label"></label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a class="btn btn-link" asp-action="Index">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

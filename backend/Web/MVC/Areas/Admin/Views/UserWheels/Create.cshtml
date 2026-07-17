@@ -1,0 +1,37 @@
+@model UserWheelDto
+@{
+    ViewData["Title"] = "Create user wheel";
+}
+
+<h1 class="h3 mb-3">Create user wheel</h1>
+
+<form asp-action="Create" class="col-lg-8">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label class="form-label">Owner</label>
+        <select name="OwnerId" asp-items="ViewBag.Owners" class="form-select">
+            <option value="">— Select owner —</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Restaurant names (one per line)</label>
+        <textarea name="RestaurantNamesText" class="form-control" rows="4"></textarea>
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="IsPublic" class="form-check-input" />
+        <label asp-for="IsPublic" class="form-check-label"></label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a class="btn btn-link" asp-action="Index">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

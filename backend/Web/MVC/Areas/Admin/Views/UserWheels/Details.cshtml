@@ -1,0 +1,29 @@
+@model UserWheelDto
+@{
+    ViewData["Title"] = "User wheel details";
+}
+
+<h1 class="h3 mb-3">@Model.Name</h1>
+
+<dl class="row col-lg-8">
+    <dt class="col-sm-3">Public</dt><dd class="col-sm-9">@(Model.IsPublic ? "Yes" : "No")</dd>
+    <dt class="col-sm-3">Restaurants</dt>
+    <dd class="col-sm-9">
+        @if (Model.RestaurantNames.Any())
+        {
+            <ul class="mb-0">
+                @foreach (var name in Model.RestaurantNames)
+                {
+                    <li>@name</li>
+                }
+            </ul>
+        }
+        else
+        {
+            <span class="text-muted">—</span>
+        }
+    </dd>
+</dl>
+
+<a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
+<a class="btn btn-link" asp-action="Index">Back to list</a>

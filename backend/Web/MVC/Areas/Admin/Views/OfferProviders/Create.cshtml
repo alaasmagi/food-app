@@ -1,0 +1,43 @@
+@model OfferProviderDto
+@{
+    ViewData["Title"] = "Create offer provider";
+}
+
+<h1 class="h3 mb-3">Create offer provider</h1>
+
+<form asp-action="Create" class="col-lg-8">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="ProviderType" class="form-label"></label>
+        <select asp-for="ProviderType" asp-items="ViewBag.ProviderTypes" class="form-select"></select>
+        <span asp-validation-for="ProviderType" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="OfferLocator" class="form-label"></label>
+        <input asp-for="OfferLocator" class="form-control" />
+        <span asp-validation-for="OfferLocator" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="OfferTextLocator" class="form-label"></label>
+        <input asp-for="OfferTextLocator" class="form-control" />
+        <span asp-validation-for="OfferTextLocator" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="OfferPriceLocator" class="form-label"></label>
+        <input asp-for="OfferPriceLocator" class="form-control" />
+        <span asp-validation-for="OfferPriceLocator" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a class="btn btn-link" asp-action="Index">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

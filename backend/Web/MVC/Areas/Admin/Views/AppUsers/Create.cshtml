@@ -1,0 +1,49 @@
+@model AppUserDto
+@{
+    ViewData["Title"] = "Create app user";
+}
+
+<h1 class="h3 mb-3">Create app user</h1>
+
+<form asp-action="Create" class="col-lg-8">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" class="form-control" />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Username" class="form-label"></label>
+        <input asp-for="Username" class="form-control" />
+        <span asp-validation-for="Username" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="FullName" class="form-label"></label>
+        <input asp-for="FullName" class="form-control" />
+        <span asp-validation-for="FullName" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Locale" class="form-label"></label>
+        <input asp-for="Locale" class="form-control" />
+        <span asp-validation-for="Locale" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="NotificationEnvironmentId" class="form-label">Notification environment</label>
+        <select asp-for="NotificationEnvironmentId" asp-items="ViewBag.Environments" class="form-select">
+            <option value="">— None —</option>
+        </select>
+        <span asp-validation-for="NotificationEnvironmentId" class="text-danger"></span>
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="SendNotifications" class="form-check-input" />
+        <label asp-for="SendNotifications" class="form-check-label"></label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a class="btn btn-link" asp-action="Index">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

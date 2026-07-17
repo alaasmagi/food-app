@@ -1,0 +1,13 @@
+@model RestaurantDto
+@{
+    ViewData["Title"] = "Delete restaurant";
+}
+
+<h1 class="h3 mb-3 text-danger">Delete restaurant</h1>
+<p>Are you sure you want to delete <strong>@Model.Name</strong> (@Model.City)?</p>
+
+<form asp-action="Delete" asp-route-id="@Model.Id">
+    <input type="hidden" name="concurrencyToken" value="@Model.ConcurrencyToken" />
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a class="btn btn-link" asp-action="Index">Cancel</a>
+</form>

@@ -1,0 +1,31 @@
+@{
+    ViewData["Title"] = "Admin";
+    var sections = new (string Controller, string Title, string Blurb)[]
+    {
+        ("Restaurants", "Restaurants", "Catalog of restaurants and their offer settings."),
+        ("OfferProviders", "Offer providers", "External sources offers are fetched from."),
+        ("DiningEnvironments", "Dining environments", "User-owned environments (groupings)."),
+        ("EnvironmentRestaurants", "Environment links", "Which restaurants belong to which environment."),
+        ("Favourites", "Favourites", "User-owned favourite restaurants and ratings."),
+        ("UserWheels", "User wheels", "User-owned random-picker wheels."),
+        ("AppUsers", "Users", "Application user records and notification settings."),
+    };
+}
+
+<h1>Admin console</h1>
+<p class="text-muted">Manage application data. All changes go through the same services and validation the API uses.</p>
+
+<div class="row row-cols-1 row-cols-md-3 g-3 mt-1">
+    @foreach (var entry in sections)
+    {
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">@entry.Title</h5>
+                    <p class="card-text text-muted">@entry.Blurb</p>
+                    <a class="btn btn-outline-primary btn-sm" asp-area="Admin" asp-controller="@entry.Controller" asp-action="Index">Manage</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,18 @@
+@model AppUserDto
+@{
+    ViewData["Title"] = "App user details";
+}
+
+<h1 class="h3 mb-3">@Model.Username</h1>
+
+<dl class="row col-lg-8">
+    <dt class="col-sm-3">Email</dt><dd class="col-sm-9">@Model.Email</dd>
+    <dt class="col-sm-3">Username</dt><dd class="col-sm-9">@Model.Username</dd>
+    <dt class="col-sm-3">Full name</dt><dd class="col-sm-9">@Model.FullName</dd>
+    <dt class="col-sm-3">Locale</dt><dd class="col-sm-9">@Model.Locale</dd>
+    <dt class="col-sm-3">Send notifications</dt><dd class="col-sm-9">@(Model.SendNotifications ? "Yes" : "No")</dd>
+    <dt class="col-sm-3">Notification environment</dt><dd class="col-sm-9">@(Model.NotificationEnvironmentId?.ToString() ?? "—")</dd>
+</dl>
+
+<a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
+<a class="btn btn-link" asp-action="Index">Back to list</a>

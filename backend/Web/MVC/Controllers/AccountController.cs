@@ -25,6 +25,7 @@ public class AccountController(FrontendOriginProvider frontendOriginProvider) : 
     // only ends the caller's own session and redirects to a validated return url.
     [Authorize]
     [HttpGet]
+    [HttpPost]
     public IActionResult Logout(string? returnUrl = null)
     {
         return SignOut(

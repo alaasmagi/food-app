@@ -1,0 +1,16 @@
+@model OfferProviderDto
+@{
+    ViewData["Title"] = "Offer provider details";
+}
+
+<h1 class="h3 mb-3">@Model.Name</h1>
+
+<dl class="row col-lg-8">
+    <dt class="col-sm-3">Provider type</dt><dd class="col-sm-9">@Model.ProviderType</dd>
+    <dt class="col-sm-3">Offer locator</dt><dd class="col-sm-9">@Model.OfferLocator</dd>
+    <dt class="col-sm-3">Offer text locator</dt><dd class="col-sm-9">@Model.OfferTextLocator</dd>
+    <dt class="col-sm-3">Offer price locator</dt><dd class="col-sm-9">@Model.OfferPriceLocator</dd>
+</dl>
+
+<a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
+<a class="btn btn-link" asp-action="Index">Back to list</a>

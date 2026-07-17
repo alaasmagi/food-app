@@ -1,0 +1,15 @@
+@model FavouriteDto
+@{
+    ViewData["Title"] = "Favourite details";
+}
+
+<h1 class="h3 mb-3">Favourite details</h1>
+
+<dl class="row col-lg-8">
+    <dt class="col-sm-3">Restaurant</dt><dd class="col-sm-9">@Model.RestaurantId</dd>
+    <dt class="col-sm-3">Rating</dt><dd class="col-sm-9">@Model.Rating</dd>
+    <dt class="col-sm-3">Note</dt><dd class="col-sm-9">@(Model.Note ?? "—")</dd>
+</dl>
+
+<a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
+<a class="btn btn-link" asp-action="Index">Back to list</a>

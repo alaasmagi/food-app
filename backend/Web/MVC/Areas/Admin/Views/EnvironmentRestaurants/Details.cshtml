@@ -1,0 +1,14 @@
+@model EnvironmentRestaurantDto
+@{
+    ViewData["Title"] = "Environment restaurant details";
+}
+
+<h1 class="h3 mb-3">Environment restaurant</h1>
+
+<dl class="row col-lg-8">
+    <dt class="col-sm-3">Environment</dt><dd class="col-sm-9">@Model.EnvironmentId</dd>
+    <dt class="col-sm-3">Restaurant</dt><dd class="col-sm-9">@Model.RestaurantId</dd>
+</dl>
+
+<a class="btn btn-outline-danger" asp-action="Delete" asp-route-id="@Model.Id">Delete</a>
+<a class="btn btn-link" asp-action="Index">Back to list</a>

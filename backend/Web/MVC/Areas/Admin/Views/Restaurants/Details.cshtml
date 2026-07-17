@@ -1,0 +1,22 @@
+@model RestaurantDto
+@{
+    ViewData["Title"] = "Restaurant details";
+}
+
+<h1 class="h3 mb-3">@Model.Name</h1>
+
+<dl class="row col-lg-8">
+    <dt class="col-sm-3">City</dt><dd class="col-sm-9">@Model.City</dd>
+    <dt class="col-sm-3">Latitude</dt><dd class="col-sm-9">@Model.Latitude</dd>
+    <dt class="col-sm-3">Longitude</dt><dd class="col-sm-9">@Model.Longitude</dd>
+    <dt class="col-sm-3">Offer time</dt><dd class="col-sm-9">@Model.OfferTimeText</dd>
+    <dt class="col-sm-3">Parking</dt><dd class="col-sm-9">@Model.ParkingInfo</dd>
+    <dt class="col-sm-3">Opening</dt><dd class="col-sm-9">@Model.OpeningInfo</dd>
+    <dt class="col-sm-3">Has offers</dt><dd class="col-sm-9">@(Model.HasOffers ? "Yes" : "No")</dd>
+    <dt class="col-sm-3">Fast food</dt><dd class="col-sm-9">@(Model.IsFastFood ? "Yes" : "No")</dd>
+    <dt class="col-sm-3">Offers URL</dt><dd class="col-sm-9">@Model.OffersResourceUrl</dd>
+    <dt class="col-sm-3">Offer provider</dt><dd class="col-sm-9">@(Model.OfferProviderId?.ToString() ?? "—")</dd>
+</dl>
+
+<a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
+<a class="btn btn-link" asp-action="Index">Back to list</a>
