@@ -1,5 +1,7 @@
 using Asp.Versioning;
+using DataAccess.Context;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 using Web.Configuration;
 
@@ -8,6 +10,7 @@ DotEnvConfiguration.ConfigureAspNetCoreUrls();
 
 var builder = WebApplication.CreateBuilder(args);
 var apiRateLimitOptions = RequiredConfiguration.ApiRateLimitOptions();
+var publicApiRateLimitOptions = RequiredConfiguration.PublicApiRateLimitOptions();
 
 builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();
@@ -35,10 +38,29 @@ builder.Services.AddRateLimiter(options =>
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         limiterOptions.QueueLimit = apiRateLimitOptions.QueueLimit;
     });
+    // Unauthenticated public read surface: partition the fixed window by client IP (UseForwardedHeaders
+    // runs before UseRateLimiter, so RemoteIpAddress reflects the real client) so one caller cannot
+    // exhaust the window for everyone.
+    options.AddPolicy(RateLimitPolicies.PublicApi, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = publicApiRateLimitOptions.PermitLimit,
+                Window = TimeSpan.FromSeconds(publicApiRateLimitOptions.WindowSeconds),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = publicApiRateLimitOptions.QueueLimit,
+            }));
 });
 builder.ConfigureApplicationServices();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
+    scope.ServiceProvider.GetRequiredService<OfferCacheDbContext>().Database.Migrate();
+}
 
 app.UseForwardedHeaders();
 

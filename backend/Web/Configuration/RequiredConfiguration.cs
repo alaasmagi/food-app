@@ -114,6 +114,16 @@ public static class RequiredConfiguration
             QueueLimit: OptionalNonNegativeInt("RATE_LIMIT_QUEUE_LIMIT", 0));
     }
 
+    public static ApiRateLimitOptions PublicApiRateLimitOptions()
+    {
+        // Stricter defaults than the authenticated policy (100/60s): the public read has no per-user
+        // accounting, so the per-IP budget is kept low.
+        return new ApiRateLimitOptions(
+            PermitLimit: OptionalPositiveInt("PUBLIC_RATE_LIMIT_PERMIT_LIMIT", 20),
+            WindowSeconds: OptionalPositiveInt("PUBLIC_RATE_LIMIT_WINDOW_SECONDS", 60),
+            QueueLimit: OptionalNonNegativeInt("PUBLIC_RATE_LIMIT_QUEUE_LIMIT", 0));
+    }
+
     public static string RedisConnectionString()
     {
         return Required(
