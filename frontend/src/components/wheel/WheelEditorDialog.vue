@@ -8,6 +8,7 @@ import Button from '../design-system/forms/Button.vue'
 import { useWheelsStore } from '../../stores/wheels'
 import { useRestaurantsStore } from '../../stores/restaurants'
 import { useToastsStore } from '../../stores/toasts'
+import { useShareWheelLink } from '../../composables/useShareWheelLink'
 import type { UserWheel } from '../../types/wheel'
 
 const props = defineProps<{ open: boolean; wheel?: UserWheel | null }>()
@@ -16,6 +17,10 @@ const emit = defineEmits<{ close: [] }>()
 const wheels = useWheelsStore()
 const restaurants = useRestaurantsStore()
 const toasts = useToastsStore()
+const { copyShareLink } = useShareWheelLink()
+
+// A share link is meaningful only once the wheel is saved (has an id) and public.
+const canShare = computed(() => Boolean(props.wheel?.id) && isPublic.value)
 
 const name = ref('')
 const isPublic = ref(false)
@@ -102,7 +107,18 @@ async function save(): Promise<void> {
         <p v-if="checkedCount < 2" class="wheel-editor__hint">Select at least 2 restaurants.</p>
       </div>
 
-      <Switch v-model="isPublic" label="Public" />
+      <div class="wheel-editor__public">
+        <Switch v-model="isPublic" label="Public" />
+        <Button
+          v-if="canShare"
+          variant="ghost"
+          size="sm"
+          icon="link"
+          @click="copyShareLink(props.wheel!.id)"
+        >
+          Copy share link
+        </Button>
+      </div>
     </div>
 
     <template #footer>
@@ -122,6 +138,13 @@ async function save(): Promise<void> {
 .wheel-editor__restaurants {
   display: flex;
   flex-direction: column;
+  gap: var(--space-3);
+}
+
+.wheel-editor__public {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
 }
 

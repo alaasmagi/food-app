@@ -8,11 +8,13 @@ import WheelEditorDialog from '../components/wheel/WheelEditorDialog.vue'
 import { useWheelsStore } from '../stores/wheels'
 import { useRestaurantsStore } from '../stores/restaurants'
 import { useToastsStore } from '../stores/toasts'
+import { useShareWheelLink } from '../composables/useShareWheelLink'
 import type { UserWheel } from '../types/wheel'
 
 const wheels = useWheelsStore()
 const restaurants = useRestaurantsStore()
 const toasts = useToastsStore()
+const { copyShareLink } = useShareWheelLink()
 const { list } = storeToRefs(wheels)
 
 const selectedId = ref<string | null>(null)
@@ -81,6 +83,14 @@ function onResult(name: string): void {
           <div class="wheels__card-actions">
             <Button variant="secondary" size="sm" @click="selectForSpin(wheel)">Spin</Button>
             <Button variant="ghost" size="sm" @click="openEdit(wheel)">Edit</Button>
+            <Button
+              v-if="wheel.isPublic"
+              variant="ghost"
+              size="sm"
+              icon="link"
+              aria-label="Copy share link"
+              @click="copyShareLink(wheel.id)"
+            />
             <template v-if="confirmingDeleteId === wheel.id">
               <Button variant="danger" size="sm" @click="remove(wheel)">Confirm delete</Button>
               <Button variant="ghost" size="sm" @click="confirmingDeleteId = null">Cancel</Button>

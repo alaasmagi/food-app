@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import WheelView from '../views/WheelView.vue'
+import SharedWheelView from '../views/SharedWheelView.vue'
 import SettingsView from '../views/SettingsView.vue'
 
 declare module 'vue-router' {
@@ -35,6 +36,7 @@ export const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
+    { path: '/w/:id', name: 'shared-wheel', component: SharedWheelView, meta: { public: true } },
     { path: '/', name: 'dashboard', component: DashboardView },
     { path: '/wheel', name: 'wheel', component: WheelView },
     { path: '/settings', name: 'settings', component: SettingsView },

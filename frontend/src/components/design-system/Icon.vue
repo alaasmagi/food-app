@@ -17,6 +17,7 @@ export type IconName =
   | 'check-circle'
   | 'arrow-right'
   | 'spinner'
+  | 'link'
 </script>
 
 <script setup lang="ts">
@@ -59,6 +60,7 @@ const PATHS: Record<IconName, string> = {
   'check-circle': '<circle cx="12" cy="12" r="10" /><polyline points="8 12.5 11 15.5 16 9" />',
   'arrow-right': '<line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />',
   spinner: '<circle cx="12" cy="12" r="9" opacity="0.25" /><path d="M21 12a9 9 0 0 0-9-9" />',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />',
 }
 
 const glyph = computed(() => PATHS[props.name])

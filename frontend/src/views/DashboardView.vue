@@ -5,9 +5,12 @@ import { useRestaurantsStore } from '../stores/restaurants'
 import { useEnvironmentsStore } from '../stores/environments'
 import { useFavouritesStore } from '../stores/favourites'
 import RestaurantCard from '../components/restaurant/RestaurantCard.vue'
+import RestaurantMap from '../components/restaurant/RestaurantMap.vue'
 import EnvironmentTabs from '../components/environment/EnvironmentTabs.vue'
 import EnvironmentEditorDialog from '../components/environment/EnvironmentEditorDialog.vue'
 import Button from '../components/design-system/forms/Button.vue'
+import Tabs, { type TabItem } from '../components/design-system/navigation/Tabs.vue'
+import { useEnvironmentFilteredRestaurants } from '../composables/useEnvironmentFilteredRestaurants'
 
 const store = useRestaurantsStore()
 const environments = useEnvironmentsStore()
@@ -16,6 +19,14 @@ const { list, listLoading, listError, listLoaded } = storeToRefs(store)
 
 const editorOpen = ref(false)
 
+// List vs map are two views of the same already-loaded catalog. Typed as a
+// plain string to match the Tabs v-model contract (see EnvironmentTabs).
+const view = ref('list')
+const viewTabs: TabItem[] = [
+  { value: 'list', label: 'List' },
+  { value: 'map', label: 'Map' },
+]
+
 onMounted(() => {
   store.loadRestaurants()
   environments.loadEnvironments()
@@ -23,12 +34,17 @@ onMounted(() => {
   favourites.loadFavourites()
 })
 
-// Client-side filter of the already-loaded catalog by the selected environment.
-// "All" (null selection) shows the full catalog with no extra fetch.
-const visibleRestaurants = computed(() => {
-  if (environments.selectedEnvironmentId === null) return list.value
-  return list.value.filter((restaurant) => environments.isMember(restaurant.id))
-})
+// The list always shows the full catalog, regardless of the selected environment.
+// Selecting an environment tab does NOT filter the list — it puts every card
+// into "manage membership" mode for that environment, exposing the Add/Remove
+// actions (see RestaurantCard). Filtering to current members here would hide
+// every non-member card, making "Add to environment" — the only membership-add
+// UI — permanently unreachable.
+const visibleRestaurants = computed(() => list.value)
+
+// The map has no add/remove workflow, so it can safely honour the environment
+// filter: "All" shows everything, a specific environment shows its members only.
+const mapRestaurants = useEnvironmentFilteredRestaurants()
 </script>
 
 <template>
@@ -42,20 +58,25 @@ const visibleRestaurants = computed(() => {
 
     <EnvironmentTabs class="dashboard__tabs" />
 
+    <Tabs v-model="view" :tabs="viewTabs" class="dashboard__view-tabs" />
+
     <p v-if="listLoading" class="dashboard__status">Loading restaurants.</p>
     <p v-else-if="listError" class="dashboard__status dashboard__status--error">
       Restaurants could not be loaded.
     </p>
-    <p v-else-if="listLoaded && !visibleRestaurants.length" class="dashboard__status">
-      No restaurants in this environment.
-    </p>
-    <div v-else class="dashboard__list">
-      <RestaurantCard
-        v-for="restaurant in visibleRestaurants"
-        :key="restaurant.id"
-        :restaurant="restaurant"
-      />
-    </div>
+    <template v-else-if="view === 'list'">
+      <p v-if="listLoaded && !visibleRestaurants.length" class="dashboard__status">
+        No restaurants available.
+      </p>
+      <div v-else class="dashboard__list">
+        <RestaurantCard
+          v-for="restaurant in visibleRestaurants"
+          :key="restaurant.id"
+          :restaurant="restaurant"
+        />
+      </div>
+    </template>
+    <RestaurantMap v-else :restaurants="mapRestaurants" class="dashboard__map" />
 
     <EnvironmentEditorDialog :open="editorOpen" @close="editorOpen = false" />
   </section>

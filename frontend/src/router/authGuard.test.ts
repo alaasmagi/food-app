@@ -64,4 +64,12 @@ describe('authGuard', () => {
     expect(await authGuard(route({ public: true }))).toBe(true)
     expect(fetchMock).not.toHaveBeenCalled()
   })
+
+  it('allows the public shared-wheel route (/w/:id) without a token fetch', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await authGuard(route({ public: true }, '/w/w1'))).toBe(true)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
 })

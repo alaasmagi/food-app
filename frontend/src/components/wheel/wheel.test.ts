@@ -9,6 +9,11 @@ import { useRestaurantsStore } from '../../stores/restaurants'
 import type { Restaurant } from '../../types/restaurant'
 import type { UserWheel } from '../../types/wheel'
 
+const copyShareLink = vi.fn()
+vi.mock('../../composables/useShareWheelLink', () => ({
+  useShareWheelLink: () => ({ copyShareLink }),
+}))
+
 function restaurant(id: string, name: string): Restaurant {
   return {
     id,
@@ -30,7 +35,10 @@ function restaurant(id: string, name: string): Restaurant {
 const RouterLinkStub = { template: '<a><slot /></a>' }
 
 describe('WheelEditorDialog', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    copyShareLink.mockClear()
+  })
 
   function seedCatalog() {
     const restaurants = useRestaurantsStore()
@@ -72,6 +80,39 @@ describe('WheelEditorDialog', () => {
       isPublic: false,
     })
   })
+
+  it('shows a "Copy share link" action for a saved public wheel and copies on click', async () => {
+    seedCatalog()
+    const wheel: UserWheel = {
+      id: 'w1',
+      concurrencyToken: 't',
+      name: 'Lunch',
+      restaurantNames: ['Alpha', 'Beta'],
+      isPublic: true,
+    }
+
+    // Mount closed, then open so the dialog hydrates isPublic from the wheel.
+    const wrapper = mount(WheelEditorDialog, { props: { open: false, wheel } })
+    await wrapper.setProps({ open: true })
+
+    const shareButton = wrapper.findAll('button').find((b) => b.text() === 'Copy share link')!
+    expect(shareButton).toBeTruthy()
+
+    await shareButton.trigger('click')
+    expect(copyShareLink).toHaveBeenCalledWith('w1')
+  })
+
+  it('shows no share action for a new, unsaved wheel even with the public switch on', async () => {
+    seedCatalog()
+
+    const wrapper = mount(WheelEditorDialog, { props: { open: false, wheel: null } })
+    await wrapper.setProps({ open: true })
+    // Turn the public switch on.
+    await wrapper.find('.wheel-editor__public input').setValue(true)
+
+    const shareButton = wrapper.findAll('button').find((b) => b.text() === 'Copy share link')
+    expect(shareButton).toBeUndefined()
+  })
 })
 
 describe('WheelSpinner', () => {
@@ -99,7 +140,10 @@ describe('WheelSpinner', () => {
 })
 
 describe('WheelView', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    copyShareLink.mockClear()
+  })
 
   it('lists wheels and opens the editor on "New wheel"', async () => {
     const wheels = useWheelsStore()
@@ -115,6 +159,28 @@ describe('WheelView', () => {
     const newButton = wrapper.findAll('button').find((b) => b.text() === 'New wheel')!
     await newButton.trigger('click')
     expect(wrapper.find('.ds-dialog__overlay').exists()).toBe(true)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('shows a share action only on public wheel cards and copies on click', async () => {
+    const wheels = useWheelsStore()
+    wheels.list = [
+      { id: 'w1', concurrencyToken: 't', name: 'Public wheel', restaurantNames: ['A', 'B'], isPublic: true } as UserWheel,
+      { id: 'w2', concurrencyToken: 't', name: 'Private wheel', restaurantNames: ['A', 'B'], isPublic: false } as UserWheel,
+    ]
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('[]', { status: 200 })))
+
+    const wrapper = mount(WheelView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+
+    const shareButtons = wrapper
+      .findAll('button')
+      .filter((b) => b.attributes('aria-label') === 'Copy share link')
+    // Exactly one card (the public one) offers a share action.
+    expect(shareButtons).toHaveLength(1)
+
+    await shareButtons[0].trigger('click')
+    expect(copyShareLink).toHaveBeenCalledWith('w1')
 
     vi.unstubAllGlobals()
   })

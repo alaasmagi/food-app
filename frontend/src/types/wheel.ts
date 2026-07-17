@@ -7,3 +7,12 @@ export interface UserWheel {
   restaurantNames: string[]
   isPublic: boolean
 }
+
+// Minimal public projection returned by GET /api/v1/public/wheels/{id}.
+// Intentionally omits concurrencyToken and isPublic: the public endpoint exposes
+// only what a logged-out shared-wheel view needs to render.
+export interface PublicWheel {
+  id: string
+  name: string
+  restaurantNames: string[]
+}
