@@ -12,11 +12,11 @@ namespace DataAccess.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.EnsureSchema(
-                name: "app");
+                name: "food");
 
             migrationBuilder.CreateTable(
                 name: "DiningEnvironments",
-                schema: "app",
+                schema: "food",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -36,7 +36,7 @@ namespace DataAccess.Migrations
 
             migrationBuilder.CreateTable(
                 name: "OfferProviders",
-                schema: "app",
+                schema: "food",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -58,7 +58,7 @@ namespace DataAccess.Migrations
 
             migrationBuilder.CreateTable(
                 name: "UserWheels",
-                schema: "app",
+                schema: "food",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -79,7 +79,7 @@ namespace DataAccess.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AppUsers",
-                schema: "app",
+                schema: "food",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -101,7 +101,7 @@ namespace DataAccess.Migrations
                     table.ForeignKey(
                         name: "FK_AppUsers_DiningEnvironments_NotificationEnvironmentId",
                         column: x => x.NotificationEnvironmentId,
-                        principalSchema: "app",
+                        principalSchema: "food",
                         principalTable: "DiningEnvironments",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
@@ -109,7 +109,7 @@ namespace DataAccess.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Restaurants",
-                schema: "app",
+                schema: "food",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -136,7 +136,7 @@ namespace DataAccess.Migrations
                     table.ForeignKey(
                         name: "FK_Restaurants_OfferProviders_OfferProviderId",
                         column: x => x.OfferProviderId,
-                        principalSchema: "app",
+                        principalSchema: "food",
                         principalTable: "OfferProviders",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -144,7 +144,7 @@ namespace DataAccess.Migrations
 
             migrationBuilder.CreateTable(
                 name: "EnvironmentRestaurants",
-                schema: "app",
+                schema: "food",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -163,14 +163,14 @@ namespace DataAccess.Migrations
                     table.ForeignKey(
                         name: "FK_EnvironmentRestaurants_DiningEnvironments_EnvironmentId",
                         column: x => x.EnvironmentId,
-                        principalSchema: "app",
+                        principalSchema: "food",
                         principalTable: "DiningEnvironments",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_EnvironmentRestaurants_Restaurants_RestaurantId",
                         column: x => x.RestaurantId,
-                        principalSchema: "app",
+                        principalSchema: "food",
                         principalTable: "Restaurants",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -178,7 +178,7 @@ namespace DataAccess.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Favourites",
-                schema: "app",
+                schema: "food",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -198,7 +198,7 @@ namespace DataAccess.Migrations
                     table.ForeignKey(
                         name: "FK_Favourites_Restaurants_RestaurantId",
                         column: x => x.RestaurantId,
-                        principalSchema: "app",
+                        principalSchema: "food",
                         principalTable: "Restaurants",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -206,87 +206,87 @@ namespace DataAccess.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_AppUsers_Email",
-                schema: "app",
+                schema: "food",
                 table: "AppUsers",
                 column: "Email");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AppUsers_NotificationEnvironmentId",
-                schema: "app",
+                schema: "food",
                 table: "AppUsers",
                 column: "NotificationEnvironmentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AppUsers_Username",
-                schema: "app",
+                schema: "food",
                 table: "AppUsers",
                 column: "Username");
 
             migrationBuilder.CreateIndex(
                 name: "IX_DiningEnvironments_UserId",
-                schema: "app",
+                schema: "food",
                 table: "DiningEnvironments",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_EnvironmentRestaurants_EnvironmentId",
-                schema: "app",
+                schema: "food",
                 table: "EnvironmentRestaurants",
                 column: "EnvironmentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_EnvironmentRestaurants_RestaurantId",
-                schema: "app",
+                schema: "food",
                 table: "EnvironmentRestaurants",
                 column: "RestaurantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_EnvironmentRestaurants_UserId_EnvironmentId_RestaurantId",
-                schema: "app",
+                schema: "food",
                 table: "EnvironmentRestaurants",
                 columns: new[] { "UserId", "EnvironmentId", "RestaurantId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Favourites_RestaurantId",
-                schema: "app",
+                schema: "food",
                 table: "Favourites",
                 column: "RestaurantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Favourites_UserId_RestaurantId",
-                schema: "app",
+                schema: "food",
                 table: "Favourites",
                 columns: new[] { "UserId", "RestaurantId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_OfferProviders_Name",
-                schema: "app",
+                schema: "food",
                 table: "OfferProviders",
                 column: "Name");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Restaurants_City",
-                schema: "app",
+                schema: "food",
                 table: "Restaurants",
                 column: "City");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Restaurants_Name",
-                schema: "app",
+                schema: "food",
                 table: "Restaurants",
                 column: "Name");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Restaurants_OfferProviderId",
-                schema: "app",
+                schema: "food",
                 table: "Restaurants",
                 column: "OfferProviderId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserWheels_UserId",
-                schema: "app",
+                schema: "food",
                 table: "UserWheels",
                 column: "UserId");
         }
@@ -296,31 +296,31 @@ namespace DataAccess.Migrations
         {
             migrationBuilder.DropTable(
                 name: "AppUsers",
-                schema: "app");
+                schema: "food");
 
             migrationBuilder.DropTable(
                 name: "EnvironmentRestaurants",
-                schema: "app");
+                schema: "food");
 
             migrationBuilder.DropTable(
                 name: "Favourites",
-                schema: "app");
+                schema: "food");
 
             migrationBuilder.DropTable(
                 name: "UserWheels",
-                schema: "app");
+                schema: "food");
 
             migrationBuilder.DropTable(
                 name: "DiningEnvironments",
-                schema: "app");
+                schema: "food");
 
             migrationBuilder.DropTable(
                 name: "Restaurants",
-                schema: "app");
+                schema: "food");
 
             migrationBuilder.DropTable(
                 name: "OfferProviders",
-                schema: "app");
+                schema: "food");
         }
     }
 }

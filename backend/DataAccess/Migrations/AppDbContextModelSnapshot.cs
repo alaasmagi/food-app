@@ -17,7 +17,7 @@ namespace DataAccess.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("app")
+                .HasDefaultSchema("food")
                 .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -84,7 +84,7 @@ namespace DataAccess.Migrations
 
                     b.HasIndex("Username");
 
-                    b.ToTable("AppUsers", "app");
+                    b.ToTable("AppUsers", "food");
                 });
 
             modelBuilder.Entity("DTO.DataAccess.DiningEnvironmentEntity", b =>
@@ -130,7 +130,7 @@ namespace DataAccess.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("DiningEnvironments", "app");
+                    b.ToTable("DiningEnvironments", "food");
                 });
 
             modelBuilder.Entity("DTO.DataAccess.EnvironmentRestaurantEntity", b =>
@@ -178,7 +178,7 @@ namespace DataAccess.Migrations
                     b.HasIndex("UserId", "EnvironmentId", "RestaurantId")
                         .IsUnique();
 
-                    b.ToTable("EnvironmentRestaurants", "app");
+                    b.ToTable("EnvironmentRestaurants", "food");
                 });
 
             modelBuilder.Entity("DTO.DataAccess.FavouriteEntity", b =>
@@ -228,7 +228,7 @@ namespace DataAccess.Migrations
                     b.HasIndex("UserId", "RestaurantId")
                         .IsUnique();
 
-                    b.ToTable("Favourites", "app");
+                    b.ToTable("Favourites", "food");
                 });
 
             modelBuilder.Entity("DTO.DataAccess.OfferProviderEntity", b =>
@@ -285,7 +285,7 @@ namespace DataAccess.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("OfferProviders", "app");
+                    b.ToTable("OfferProviders", "food");
                 });
 
             modelBuilder.Entity("DTO.DataAccess.RestaurantEntity", b =>
@@ -367,7 +367,7 @@ namespace DataAccess.Migrations
 
                     b.HasIndex("OfferProviderId");
 
-                    b.ToTable("Restaurants", "app");
+                    b.ToTable("Restaurants", "food");
                 });
 
             modelBuilder.Entity("DTO.DataAccess.UserWheelEntity", b =>
@@ -416,7 +416,7 @@ namespace DataAccess.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserWheels", "app");
+                    b.ToTable("UserWheels", "food");
                 });
 
             modelBuilder.Entity("DTO.DataAccess.AppUserEntity", b =>
