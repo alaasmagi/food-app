@@ -1,46 +1,50 @@
 /* ============================================================
    ALAASMAGI — COLOR TOKENS
-   Dark-mode-first. Cool-neutral base (near-black / near-white,
-   both nudged blue at low chroma) + a single cyan-blue accent.
-   All accent variants share hue ~229; only lightness/chroma vary
-   for hover/press/muted states.
+   Dark-mode-first. Near-black cool-neutral base (nudged blue at
+   low chroma) + a mint-green accent. Accent variants share hue
+   ~169; only lightness/chroma vary for hover/press/muted states.
+   Price/warning/error carry their own brand hues.
    ============================================================ */
 
 :root {
   /* ---- Base neutrals (raw scale, dark end = low L) ---- */
-  --neutral-0: oklch(17% 0.010 250);   /* app background */
-  --neutral-1: oklch(20% 0.011 250);   /* raised surface */
-  --neutral-2: oklch(24% 0.012 250);   /* card surface */
-  --neutral-3: oklch(29% 0.013 250);   /* hover surface */
-  --neutral-4: oklch(32% 0.014 250);   /* border, subtle */
-  --neutral-5: oklch(40% 0.015 250);   /* border, strong */
-  --neutral-6: oklch(52% 0.014 250);   /* disabled text */
-  --neutral-7: oklch(66% 0.012 250);   /* secondary text */
-  --neutral-8: oklch(80% 0.010 250);   /* primary text (soft) */
-  --neutral-9: oklch(95% 0.006 250);   /* primary text (bright) */
+  --neutral-0: oklch(13.9% 0.008 250);   /* app background  (#07090c) */
+  --neutral-1: oklch(17.5% 0.012 250);   /* raised surface */
+  --neutral-2: oklch(20.1% 0.015 249);   /* card surface / panel (#11171d) */
+  --neutral-3: oklch(24% 0.015 250);     /* hover surface */
+  --neutral-4: oklch(28% 0.014 250);     /* border, subtle */
+  --neutral-5: oklch(36% 0.015 250);     /* border, strong */
+  --neutral-6: oklch(50% 0.016 248);     /* disabled text */
+  --neutral-7: oklch(67.3% 0.022 244);   /* secondary text  (#8b98a3) */
+  --neutral-8: oklch(82% 0.012 240);     /* primary text (soft) */
+  --neutral-9: oklch(96.8% 0.004 236);   /* primary text (bright) (#f2f5f7) */
 
-  /* ---- Accent: cyan-blue, single hue family ---- */
-  --accent-9: oklch(78% 0.15 229);     /* accent, bright (on dark) */
-  --accent-7: oklch(68% 0.16 229);     /* accent, default */
-  --accent-6: oklch(60% 0.165 229);    /* accent, hover */
-  --accent-5: oklch(52% 0.16 229);     /* accent, press */
-  --accent-3: oklch(30% 0.09 229);     /* accent, subtle fill */
-  --accent-2: oklch(24% 0.06 229);     /* accent, faint fill */
+  /* ---- Accent: mint-green, single hue family ---- */
+  --accent-9: oklch(87% 0.150 169);      /* accent, bright (on dark) */
+  --accent-7: oklch(82.7% 0.155 169);    /* accent, default (#35e6b5) */
+  --accent-6: oklch(76% 0.150 169);      /* accent, hover */
+  --accent-5: oklch(68% 0.140 169);      /* accent, press */
+  --accent-3: oklch(34% 0.075 169);      /* accent, subtle fill */
+  --accent-2: oklch(26% 0.050 169);      /* accent, faint fill */
 
-  /* ---- Semantic status hues (same L/C recipe as accent, hue swapped) ---- */
-  --success-7: oklch(68% 0.15 149);
-  --success-3: oklch(28% 0.07 149);
-  --warning-7: oklch(74% 0.15 76);
-  --warning-3: oklch(30% 0.07 76);
-  --danger-7: oklch(66% 0.18 25);
-  --danger-3: oklch(29% 0.09 25);
+  /* ---- Semantic status hues ---- */
+  --success-7: oklch(72% 0.15 150);
+  --success-3: oklch(30% 0.075 150);
+  --warning-7: oklch(82.4% 0.141 70);    /* (#ffb454) */
+  --warning-3: oklch(30% 0.07 70);
+  --danger-7: oklch(69.7% 0.198 13);     /* error (#ff5c7a) */
+  --danger-3: oklch(30% 0.10 13);
+
+  /* ---- Data hues ---- */
+  --price-7: oklch(88.0% 0.135 86);      /* offer price (#ffd166) */
+  --price: var(--price-7);
 
   /* ---- Semantic aliases: surfaces ---- */
   --surface-app: var(--neutral-0);
   --surface-raised: var(--neutral-1);
   --surface-card: var(--neutral-2);
   --surface-hover: var(--neutral-3);
-  --surface-overlay: oklch(17% 0.010 250 / 0.72);
+  --surface-overlay: oklch(13.9% 0.008 250 / 0.72);
 
   /* ---- Semantic aliases: borders ---- */
   --border-subtle: var(--neutral-4);
@@ -51,9 +55,9 @@
   --text-primary: var(--neutral-9);
   --text-secondary: var(--neutral-7);
   --text-disabled: var(--neutral-6);
-  --text-on-accent: oklch(14% 0.02 229);
+  --text-on-accent: oklch(18% 0.03 169);
   --text-link: var(--accent-9);
-  --text-link-hover: oklch(85% 0.13 229);
+  --text-link-hover: oklch(91% 0.12 169);
 
   /* ---- Semantic aliases: actions ---- */
   --action-primary: var(--accent-7);
@@ -72,7 +76,7 @@
 
 /* ============================================================
    LIGHT THEME
-   Same structure and same accent hue (229) as dark — every alias
+   Same structure and same accent hue (169) as dark — every alias
    below just repoints to a light-appropriate value. Opt in with
    `<html data-theme="light">` (or toggle the attribute at runtime).
    Everything else in the system (components, spacing, type) is
@@ -91,21 +95,27 @@
   --neutral-8: oklch(30% 0.014 250);
   --neutral-9: oklch(16% 0.012 250);
 
-  /* ---- Accent: same hue 229, re-tuned for contrast on light ---- */
-  --accent-9: oklch(45% 0.17 229);
-  --accent-7: oklch(53% 0.17 229);
-  --accent-6: oklch(48% 0.17 229);
-  --accent-5: oklch(43% 0.165 229);
-  --accent-3: oklch(90% 0.05 229);
-  --accent-2: oklch(95% 0.03 229);
+  /* ---- Accent: same hue 169, re-tuned darker for contrast on light.
+         accent-9 is foreground text (darkest); accent-7 is the button
+         surface, carrying near-white text. ---- */
+  --accent-9: oklch(46% 0.15 169);
+  --accent-7: oklch(49% 0.15 169);
+  --accent-6: oklch(44% 0.15 169);
+  --accent-5: oklch(39% 0.14 169);
+  --accent-3: oklch(88% 0.06 169);
+  --accent-2: oklch(94% 0.035 169);
 
   /* ---- Semantic status hues, same recipe re-tuned for light ---- */
-  --success-7: oklch(45% 0.15 149);
-  --success-3: oklch(93% 0.04 149);
-  --warning-7: oklch(48% 0.14 76);
-  --warning-3: oklch(93% 0.05 76);
-  --danger-7: oklch(48% 0.19 25);
-  --danger-3: oklch(93% 0.05 25);
+  --success-7: oklch(50% 0.13 150);
+  --success-3: oklch(93% 0.04 150);
+  --warning-7: oklch(48% 0.13 70);
+  --warning-3: oklch(93% 0.05 70);
+  --danger-7: oklch(53% 0.19 13);
+  --danger-3: oklch(93% 0.05 13);
+
+  /* ---- Data hues ---- */
+  --price-7: oklch(60% 0.13 86);
+  --price: var(--price-7);
 
   --surface-app: var(--neutral-0);
   --surface-raised: var(--neutral-1);
@@ -120,9 +130,9 @@
   --text-primary: var(--neutral-9);
   --text-secondary: var(--neutral-7);
   --text-disabled: var(--neutral-6);
-  --text-on-accent: oklch(99% 0.003 229);
+  --text-on-accent: oklch(99% 0.01 169);
   --text-link: var(--accent-9);
-  --text-link-hover: oklch(38% 0.17 229);
+  --text-link-hover: oklch(40% 0.15 169);
 
   --action-primary: var(--accent-7);
   --action-primary-hover: var(--accent-6);

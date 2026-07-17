@@ -53,7 +53,7 @@ const entry = computed(() => store.offersFor(props.restaurantId))
   flex-shrink: 0;
   font-family: var(--font-mono);
   font-size: var(--text-sm);
-  color: var(--text-secondary);
+  color: var(--price);
 }
 
 .offers__status {

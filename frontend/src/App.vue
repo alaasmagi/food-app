@@ -18,8 +18,13 @@ const isPublic = computed(() => route.meta.public === true)
 </template>
 
 <style>
-:root {
+:root,
+:root[data-theme='dark'] {
   color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
 }
 
 html,
