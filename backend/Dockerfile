@@ -39,7 +39,11 @@ COPY --from=build /app/publish .
 
 USER app
 
-ENV ASPNETCORE_URLS=http://+:8080
-EXPOSE 8080
+# Listen port is driven by the APP_PORT build arg so the image, the compose
+# port mapping, and the reverse proxy all agree on one value. Pass it at build
+# time: `docker build --build-arg APP_PORT=4000 .`
+ARG APP_PORT=8080
+ENV ASPNETCORE_URLS=http://+:${APP_PORT}
+EXPOSE ${APP_PORT}
 
 ENTRYPOINT ["dotnet", "Web.dll"]
