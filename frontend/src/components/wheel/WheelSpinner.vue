@@ -22,6 +22,9 @@ const LABEL_RADIUS = 60
 const rotation = ref(0)
 const spinning = ref(false)
 const result = ref<string | null>(null)
+// Index of the settled winner, or null while idle/spinning. Drives dimming the other segments so
+// the chosen one stands out under the pointer.
+const winnerIndex = ref<number | null>(null)
 let chosenIndex = 0
 
 const canSpin = computed(() => props.names.length >= 2 && !spinning.value)
@@ -44,6 +47,7 @@ const segments = computed(() => {
     const path = `M ${CENTER} ${CENTER} L ${x1} ${y1} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${x2} ${y2} Z`
     const [lx, ly] = pointAt(a1 + seg / 2, LABEL_RADIUS)
     return {
+      index: i,
       name,
       path,
       color: PALETTE[i % PALETTE.length],
@@ -57,6 +61,9 @@ const segments = computed(() => {
 function spin(): void {
   if (!canSpin.value) return
   const n = props.names.length
+  // Clear the previous winner so all segments are lit again while the wheel turns.
+  winnerIndex.value = null
+  result.value = null
   chosenIndex = Math.floor(Math.random() * n)
   const seg = 360 / n
   const center = (chosenIndex + 0.5) * seg
@@ -72,6 +79,7 @@ function spin(): void {
 function onTransitionEnd(): void {
   if (!spinning.value) return
   spinning.value = false
+  winnerIndex.value = chosenIndex
   result.value = props.names[chosenIndex]
   emit('result', props.names[chosenIndex])
 }
@@ -87,7 +95,12 @@ function onTransitionEnd(): void {
           :style="{ transform: `rotate(${rotation}deg)` }"
           @transitionend="onTransitionEnd"
         >
-          <template v-for="seg in segments" :key="seg.name">
+          <g
+            v-for="seg in segments"
+            :key="seg.name"
+            class="spinner__seg"
+            :class="{ 'spinner__seg--dim': winnerIndex !== null && seg.index !== winnerIndex }"
+          >
             <path :d="seg.path" :fill="seg.color" stroke="var(--surface-app)" stroke-width="1" />
             <text
               :x="seg.lx"
@@ -98,15 +111,21 @@ function onTransitionEnd(): void {
             >
               {{ seg.label }}
             </text>
-          </template>
+          </g>
         </g>
-        <circle :cx="CENTER" :cy="CENTER" r="6" fill="var(--surface-raised)" stroke="var(--border-strong)" />
+        <!-- Outer rim + hub (static, drawn over the rotor) frame the wheel. -->
+        <circle :cx="CENTER" :cy="CENTER" r="93" fill="none" stroke="var(--border-subtle)" stroke-width="2" />
+        <circle :cx="CENTER" :cy="CENTER" r="10" fill="var(--surface-raised)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <circle :cx="CENTER" :cy="CENTER" r="3.5" fill="var(--accent-7)" />
       </svg>
     </div>
 
     <div class="spinner__controls">
       <Button variant="primary" :disabled="!canSpin" :loading="spinning" @click="spin">Spin</Button>
-      <p v-if="result" class="spinner__result">Winner: {{ result }}</p>
+      <p v-if="result" class="spinner__result">
+        <span class="spinner__result-tag">Winner</span>
+        <span class="spinner__result-name">{{ result }}</span>
+      </p>
       <p v-else-if="names.length < 2" class="spinner__hint">Add at least 2 restaurants to spin.</p>
     </div>
   </div>
@@ -130,11 +149,21 @@ function onTransitionEnd(): void {
   display: block;
   width: 100%;
   height: auto;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.12));
 }
 
 .spinner__rotor {
   transform-origin: 100px 100px;
   transition: transform 3.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* After the wheel settles, fade the losing segments so the winner under the pointer stands out. */
+.spinner__seg {
+  transition: opacity 0.35s var(--ease-standard);
+}
+
+.spinner__seg--dim {
+  opacity: 0.3;
 }
 
 .spinner__label {
@@ -165,9 +194,27 @@ function onTransitionEnd(): void {
 }
 
 .spinner__result {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
+}
+
+.spinner__result-tag {
+  padding: 2px var(--space-2);
   font-family: var(--font-body);
-  font-size: var(--text-md);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-on-accent);
+  background: var(--accent-7);
+  border-radius: var(--radius-full);
+}
+
+.spinner__result-name {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
 }

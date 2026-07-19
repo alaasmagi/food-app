@@ -137,6 +137,19 @@ describe('WheelSpinner', () => {
     await wrapper.find('.spinner__rotor').trigger('transitionend')
     expect(wrapper.emitted('result')).toBeUndefined()
   })
+
+  it('highlights the winner by dimming the other segments once settled', async () => {
+    const wrapper = mount(WheelSpinner, { props: { names: ['A', 'B', 'C'] } })
+    // Nothing dimmed before a spin.
+    expect(wrapper.findAll('.spinner__seg--dim')).toHaveLength(0)
+
+    await wrapper.find('button').trigger('click')
+    await wrapper.find('.spinner__rotor').trigger('transitionend')
+
+    // Every segment except the winner is dimmed, and the winner name is shown in the readout.
+    expect(wrapper.findAll('.spinner__seg--dim')).toHaveLength(2)
+    expect(wrapper.find('.spinner__result-name').text()).toBe(wrapper.emitted('result')![0][0])
+  })
 })
 
 describe('WheelView', () => {

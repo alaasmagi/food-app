@@ -75,34 +75,47 @@ function onResult(name: string): void {
 
     <div v-else class="wheels__grid">
       <div class="wheels__list">
-        <Card v-for="wheel in list" :key="wheel.id">
+        <Card
+          v-for="wheel in list"
+          :key="wheel.id"
+          :class="{ 'wheels__card--active': selectedId === wheel.id }"
+        >
           <div class="wheels__card-head">
             <h2 class="wheels__card-name">{{ wheel.name }}</h2>
             <span class="wheels__card-count">{{ wheel.restaurantNames.length }} restaurants</span>
           </div>
           <div class="wheels__card-actions">
-            <Button variant="secondary" size="sm" @click="selectForSpin(wheel)">Spin</Button>
-            <Button variant="ghost" size="sm" @click="openEdit(wheel)">Edit</Button>
-            <Button
-              v-if="wheel.isPublic"
-              variant="ghost"
-              size="sm"
-              icon="link"
-              aria-label="Copy share link"
-              @click="copyShareLink(wheel.id)"
-            />
+            <!-- Left cluster: open the wheel in the spinner, and the destructive delete next to it. -->
+            <Button variant="secondary" size="sm" @click="selectForSpin(wheel)">
+              {{ selectedId === wheel.id ? 'Opened' : 'Open' }}
+            </Button>
+
             <template v-if="confirmingDeleteId === wheel.id">
               <Button variant="danger" size="sm" @click="remove(wheel)">Confirm delete</Button>
               <Button variant="ghost" size="sm" @click="confirmingDeleteId = null">Cancel</Button>
             </template>
-            <Button v-else variant="ghost" size="sm" @click="confirmingDeleteId = wheel.id">
+            <Button v-else variant="danger" size="sm" @click="confirmingDeleteId = wheel.id">
               Delete
             </Button>
+
+            <!-- Quiet utilities, pushed to the right. -->
+            <div class="wheels__card-utils">
+              <Button variant="ghost" size="sm" @click="openEdit(wheel)">Edit</Button>
+              <Button
+                v-if="wheel.isPublic"
+                variant="ghost"
+                size="sm"
+                icon="link"
+                aria-label="Copy share link"
+                @click="copyShareLink(wheel.id)"
+              />
+            </div>
           </div>
         </Card>
       </div>
 
       <div v-if="selected" class="wheels__spinner">
+        <h2 class="wheels__spinner-title">{{ selected.name }}</h2>
         <WheelSpinner :names="selected.restaurantNames" @result="onResult" />
       </div>
     </div>
@@ -153,6 +166,12 @@ function onResult(name: string): void {
     grid-template-columns: 1fr 320px;
     align-items: start;
   }
+
+  /* Keep the spinner in view while scrolling a long list of wheels. */
+  .wheels__spinner {
+    position: sticky;
+    top: var(--space-6);
+  }
 }
 
 .wheels__list {
@@ -183,10 +202,27 @@ function onResult(name: string): void {
   color: var(--text-secondary);
 }
 
+/* Action footer with a divider and two clusters: open + delete on the left, utilities on the right. */
 .wheels__card-actions {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.wheels__card-utils {
+  display: flex;
+  align-items: center;
   gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* The wheel currently loaded into the spinner. A ring (rather than a border swap) marks it without
+   clashing with the card's own border; the parent scope id reaches the Card root, so this applies. */
+.wheels__card--active {
+  box-shadow: 0 0 0 2px var(--accent-7);
 }
 
 .wheels__spinner {
@@ -194,5 +230,15 @@ function onResult(name: string): void {
   background: var(--surface-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
+}
+
+.wheels__spinner-title {
+  margin: 0 0 var(--space-5);
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
 }
 </style>
