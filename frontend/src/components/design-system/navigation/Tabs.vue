@@ -34,8 +34,19 @@ const model = defineModel<string>()
 .ds-tabs {
   display: flex;
   gap: 4px;
+  /* Scroll horizontally when the tabs overflow, but never vertically: setting
+     overflow-x alone makes overflow-y compute to auto, and the active tab's 2px
+     underline overflows by a sub-pixel, which would surface a stray vertical
+     scrollbar. Chrome is hidden — the tab strip scrolls without a visible bar. */
   overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   border-bottom: 1px solid var(--border-subtle);
+}
+
+.ds-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .ds-tabs__tab {
