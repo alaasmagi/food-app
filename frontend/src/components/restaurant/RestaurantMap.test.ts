@@ -132,6 +132,35 @@ describe('RestaurantMap component', () => {
     expect(emitted![0][0]).toEqual({ minLat: 59.3, minLon: 24.55, maxLat: 59.58, maxLon: 24.95 })
   })
 
+  it('does not auto-fetch on a user move; it offers "Search this area" instead', async () => {
+    const wrapper = mount(RestaurantMap, {
+      props: { restaurants: [restaurant('a', { latitude: 59.43, longitude: 24.75 })] },
+    })
+    await flushPromises()
+
+    // Only the initial mount fetch so far, and no button yet.
+    expect(wrapper.emitted('boundsChange')).toHaveLength(1)
+    expect(wrapper.find('.restaurant-map__search-area').exists()).toBe(false)
+
+    // Simulate the user panning: fire the registered moveend handler.
+    const mapInstance = (L.map as unknown as { mock: { results: { value: { on: ReturnType<typeof vi.fn> } }[] } })
+      .mock.results[0].value
+    const moveEnd = mapInstance.on.mock.calls.find((c: unknown[]) => c[0] === 'moveend')![1] as () => void
+    moveEnd()
+    await flushPromises()
+
+    // The move surfaced the button but issued no new fetch.
+    expect(wrapper.find('.restaurant-map__search-area').exists()).toBe(true)
+    expect(wrapper.emitted('boundsChange')).toHaveLength(1)
+
+    // Clicking it fetches the current viewport and dismisses the button.
+    await wrapper.find('.restaurant-map__search-area button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.emitted('boundsChange')).toHaveLength(2)
+    expect(wrapper.find('.restaurant-map__search-area').exists()).toBe(false)
+  })
+
   it('in autoFit mode fits to markers and does not drive fetching', async () => {
     const wrapper = mount(RestaurantMap, {
       props: {

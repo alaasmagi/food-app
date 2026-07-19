@@ -7,11 +7,11 @@ import { useRestaurantsStore } from '../../stores/restaurants'
 import { useTheme, type Theme } from '../../composables/useTheme'
 import type { Bounds, Restaurant } from '../../types/restaurant'
 import { hasCoordinates, markerableRestaurants } from './mapMarkers'
-import { debounce } from '../../utils/debounce'
 
 // The map renders whatever set it is given; it does not fetch restaurants itself. Two modes:
-//  - viewport (default): reports its viewport via `boundsChange` on pan/zoom so the parent fetches
-//    that area, and never moves itself when data arrives.
+//  - viewport (default): fetches the initial viewport once, then — rather than refetching on every
+//    pan/zoom — shows a "Search this area" button the user taps to load the new viewport. This keeps
+//    request volume low and the view stable (no reshuffle while the user is still looking around).
 //  - autoFit: a pure viewer over a fixed, fully-loaded set (e.g. an environment's members) — it fits
 //    the view to those markers and does not drive fetching.
 // `focusRestaurant` (set when the user clicks "Show on map" in the list) centres/zooms on one
@@ -52,6 +52,13 @@ let tileLayer: L.TileLayer | null = null
 // re-fetch that focusing triggers would otherwise rebuild the markers and close the popup). Cleared
 // when the popup closes.
 let focusId: string | null = null
+// True while WE move the map (initial view, focus). Programmatic moves must not surface the
+// "Search this area" prompt — only a user's own pan/zoom should.
+let programmaticMove = false
+
+// Whether the "Search this area" button is showing: set when the user moves the map away from the
+// last-searched viewport, cleared once they search (or we search for them).
+const searchAreaVisible = ref(false)
 
 // Vue owns the popup body; Leaflet just displays this detached host element, so
 // the "See offers" action reuses the same store and OfferList as RestaurantCard.
@@ -107,13 +114,24 @@ function renderMarkers(): void {
   }
 }
 
-// Centre and zoom on one restaurant and open its popup (from the list's "Show on map" action).
+// Run a map move that must NOT trigger the "Search this area" prompt. Uses animate:false so the
+// move's moveend/zoomend fire synchronously and stay inside the programmatic window.
+function withProgrammaticMove(move: () => void): void {
+  programmaticMove = true
+  try {
+    move()
+  } finally {
+    programmaticMove = false
+  }
+}
+
+// Centre and zoom on one restaurant, load its area, and open its popup (from "Show on map").
 async function focusOn(restaurant: Restaurant): Promise<void> {
   if (!map || !hasCoordinates(restaurant)) return
   focusId = restaurant.id
   const latlng = L.latLng(restaurant.latitude, restaurant.longitude)
-  // setView fires moveend -> the viewport fetch loads restaurants around the focused one.
-  map.setView(latlng, FOCUS_ZOOM)
+  withProgrammaticMove(() => map!.setView(latlng, FOCUS_ZOOM, { animate: false }))
+  requestSearch() // auto-load the focused area (no button — the user asked to go here)
   await openPopupFor(restaurant, latlng)
 }
 
@@ -129,17 +147,23 @@ function fitToMarkers(): void {
   }
 }
 
-// Report the current viewport so the parent can fetch restaurants for it. Debounced so a drag or a
-// pinch-zoom (many move events) results in a single fetch once the user settles. No-op in autoFit
-// mode, where the map is a pure viewer and must not trigger fetches.
-function emitBounds(): void {
+// Ask the parent to fetch the current viewport, and dismiss the "Search this area" button. No-op in
+// autoFit mode, where the map is a pure viewer and must not trigger fetches.
+function requestSearch(): void {
   if (!map || props.autoFit) return
   const b = map.getBounds()
   const sw = b.getSouthWest()
   const ne = b.getNorthEast()
   emit('boundsChange', { minLat: sw.lat, minLon: sw.lng, maxLat: ne.lat, maxLon: ne.lng })
+  searchAreaVisible.value = false
 }
-const emitBoundsDebounced = debounce(emitBounds, 300)
+
+// A user pan/zoom (not one of ours) means the visible area no longer matches what's loaded — offer
+// to search it. We don't auto-fetch, to keep requests down and the results stable while browsing.
+function onUserMove(): void {
+  if (programmaticMove || props.autoFit) return
+  searchAreaVisible.value = true
+}
 
 onMounted(async () => {
   if (!mapEl.value) return
@@ -157,28 +181,36 @@ onMounted(async () => {
     offersExpanded.value = false
     focusId = null
   })
-  // A pan or zoom means the user is looking somewhere new — re-fetch that viewport.
-  map.on('moveend', emitBoundsDebounced)
-  map.on('zoomend', emitBoundsDebounced)
+  // A user pan/zoom offers "Search this area" rather than auto-fetching.
+  map.on('moveend', onUserMove)
+  map.on('zoomend', onUserMove)
 
-  // Start at the default view (Tallinn). In viewport mode we deliberately do NOT fit to markers:
-  // fitting on every data change would move the viewport, re-fire moveend and re-fetch endlessly.
-  map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)
+  // Everything below moves the map ourselves (default view, initial fetch, focus) and must not raise
+  // the "Search this area" prompt — keep it inside the programmatic window.
+  programmaticMove = true
+  // Start at the default view (Tallinn). In viewport mode we deliberately do NOT fit to markers.
+  map.setView(DEFAULT_CENTER, DEFAULT_ZOOM, { animate: false })
   renderMarkers()
   // The container may have just become visible via v-if; give it a laid-out size.
   await nextTick()
   // The component may have unmounted during the await (fast view toggles); bail if so.
-  if (!map) return
-  map.invalidateSize()
+  if (!map) {
+    programmaticMove = false
+    return
+  }
+  // pan:false so re-measuring the container never animates a recenter (which would fire an async
+  // moveend after the programmatic window and spuriously raise the "Search this area" button).
+  map.invalidateSize({ pan: false })
   if (props.autoFit) {
     fitToMarkers()
   } else if (props.focusRestaurant) {
     // Arrived here via "Show on map": centre on the restaurant (which also fetches its area).
     focusOn(props.focusRestaurant)
   } else {
-    // Kick off the first fetch for the default viewport.
-    emitBounds()
+    // Auto-load the first viewport so the map isn't empty; later moves use the button.
+    requestSearch()
   }
+  programmaticMove = false
 })
 
 // New data: redraw the markers. In autoFit mode also re-fit to them; in viewport mode never move
@@ -193,7 +225,7 @@ watch(
   () => props.autoFit,
   (autoFit) => {
     if (autoFit) fitToMarkers()
-    else emitBounds()
+    else requestSearch() // entering viewport mode: load the current area once
   },
 )
 
@@ -212,7 +244,6 @@ watch(theme, (value) => {
 })
 
 onUnmounted(() => {
-  emitBoundsDebounced.cancel()
   map?.remove()
   map = null
   markerLayer = null
@@ -224,6 +255,14 @@ onUnmounted(() => {
 <template>
   <div class="restaurant-map">
     <div ref="mapEl" class="restaurant-map__canvas" role="application" aria-label="Restaurant map" />
+
+    <!-- Appears after the user moves the map; fetching is deferred to this deliberate tap. -->
+    <div v-if="searchAreaVisible" class="restaurant-map__search-area">
+      <Button variant="primary" size="sm" icon="search" @click="requestSearch">
+        Search this area
+      </Button>
+    </div>
+
     <p v-if="truncated" class="restaurant-map__hint" role="status">
       Showing the closest restaurants — zoom in to see more.
     </p>
@@ -271,10 +310,19 @@ onUnmounted(() => {
   color: var(--text-secondary);
 }
 
-/* Floating hint over the top of the map when the viewport holds more than the fetch cap. */
-.restaurant-map__hint {
+/* Floating "Search this area" button, centred near the top of the map (above Leaflet panes). */
+.restaurant-map__search-area {
   position: absolute;
   top: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+}
+
+/* Cap hint floats at the bottom so it never collides with the search-area button up top. */
+.restaurant-map__hint {
+  position: absolute;
+  bottom: var(--space-3);
   left: 50%;
   transform: translateX(-50%);
   z-index: 500;
