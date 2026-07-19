@@ -56,13 +56,13 @@ function stubFetch(restaurants: Restaurant[], members: string[]) {
   )
 }
 
-// The environment tabs and the view tabs both render `.ds-tabs__tab`, so scope
-// each query to its own container.
+// Environment selection uses underline tabs (.ds-tabs__tab); the List/Map view
+// switch is a separate segmented control (.dashboard__view-btn).
 function envTabs(wrapper: VueWrapper) {
   return wrapper.find('.dashboard__tabs').findAll('.ds-tabs__tab')
 }
 function viewTabs(wrapper: VueWrapper) {
-  return wrapper.find('.dashboard__view-tabs').findAll('.ds-tabs__tab')
+  return wrapper.find('.dashboard__view-toggle').findAll('.dashboard__view-btn')
 }
 
 describe('DashboardView with a specific environment selected', () => {

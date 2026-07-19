@@ -10,7 +10,7 @@ import EnvironmentTabs from '../components/environment/EnvironmentTabs.vue'
 import EnvironmentEditorDialog from '../components/environment/EnvironmentEditorDialog.vue'
 import AddRestaurantsDialog from '../components/environment/AddRestaurantsDialog.vue'
 import Button from '../components/design-system/forms/Button.vue'
-import Tabs, { type TabItem } from '../components/design-system/navigation/Tabs.vue'
+import type { TabItem } from '../components/design-system/navigation/Tabs.vue'
 import { useEnvironmentFilteredRestaurants } from '../composables/useEnvironmentFilteredRestaurants'
 
 const store = useRestaurantsStore()
@@ -63,19 +63,38 @@ const selectedEnvironment = computed(() =>
 
     <EnvironmentTabs class="dashboard__tabs" />
 
-    <Tabs v-model="view" :tabs="viewTabs" class="dashboard__view-tabs" />
+    <div class="dashboard__toolbar">
+      <div class="dashboard__view-toggle" role="tablist">
+        <button
+          v-for="tab in viewTabs"
+          :key="tab.value"
+          type="button"
+          role="tab"
+          class="dashboard__view-btn"
+          :class="{ 'dashboard__view-btn--active': view === tab.value }"
+          :aria-selected="view === tab.value"
+          @click="view = tab.value"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
+
+      <Button
+        v-if="selectedEnvironment && view === 'list'"
+        variant="primary"
+        size="sm"
+        icon="plus"
+        @click="addOpen = true"
+      >
+        Add restaurants
+      </Button>
+    </div>
 
     <p v-if="listLoading" class="dashboard__status">Loading restaurants.</p>
     <p v-else-if="listError" class="dashboard__status dashboard__status--error">
       Restaurants could not be loaded.
     </p>
     <template v-else-if="view === 'list'">
-      <div v-if="selectedEnvironment" class="dashboard__env-bar">
-        <Button variant="primary" size="sm" icon="plus" @click="addOpen = true">
-          Add restaurants
-        </Button>
-      </div>
-
       <p v-if="listLoaded && !visibleRestaurants.length" class="dashboard__status">
         <template v-if="selectedEnvironment">
           No restaurants in {{ selectedEnvironment.name }} yet — use “Add restaurants” to build it up.
@@ -131,14 +150,48 @@ const selectedEnvironment = computed(() =>
   margin-bottom: var(--space-5);
 }
 
-.dashboard__view-tabs {
+.dashboard__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 32px;
   margin-bottom: var(--space-8);
 }
 
-.dashboard__env-bar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: var(--space-4);
+/* Segmented control: visually distinct from the environment underline tabs, so
+   the two selectors no longer read as one duplicated bar. */
+.dashboard__view-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--neutral-2);
+  border-radius: var(--radius-md);
+}
+
+.dashboard__view-btn {
+  padding: 5px 14px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard);
+}
+
+.dashboard__view-btn:hover:not(.dashboard__view-btn--active) {
+  color: var(--text-primary);
+}
+
+.dashboard__view-btn--active {
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
 }
 
 .dashboard__list {
