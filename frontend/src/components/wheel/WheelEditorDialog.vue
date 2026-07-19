@@ -43,6 +43,7 @@ watch(
     reset()
     load()
   },
+  { immediate: true },
 )
 
 // At least 2 restaurants make a meaningful wheel; a name is required.

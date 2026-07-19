@@ -1,11 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import WheelEditorDialog from './WheelEditorDialog.vue'
 import WheelSpinner from './WheelSpinner.vue'
 import WheelView from '../../views/WheelView.vue'
 import { useWheelsStore } from '../../stores/wheels'
-import { useRestaurantsStore } from '../../stores/restaurants'
 import type { Restaurant } from '../../types/restaurant'
 import type { UserWheel } from '../../types/wheel'
 
@@ -35,22 +34,29 @@ function restaurant(id: string, name: string): Restaurant {
 const RouterLinkStub = { template: '<a><slot /></a>' }
 
 describe('WheelEditorDialog', () => {
+  // The picker now fetches a page from GET /api/v1/restaurants/page instead of reading the full
+  // catalog from the store; stub that endpoint with Alpha/Beta/Gamma.
+  function pageResponse(names: string[]) {
+    const items = names.map((n, i) => restaurant(`r${i + 1}`, n))
+    return new Response(JSON.stringify({ items, total: items.length, page: 1, pageSize: 20 }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
   beforeEach(() => {
     setActivePinia(createPinia())
     copyShareLink.mockClear()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(pageResponse(['Alpha', 'Beta', 'Gamma'])))
   })
-
-  function seedCatalog() {
-    const restaurants = useRestaurantsStore()
-    restaurants.list = [restaurant('r1', 'Alpha'), restaurant('r2', 'Beta'), restaurant('r3', 'Gamma')]
-  }
+  afterEach(() => vi.unstubAllGlobals())
 
   it('blocks save until at least 2 restaurants are checked', async () => {
-    seedCatalog()
     const wheels = useWheelsStore()
     const createSpy = vi.spyOn(wheels, 'createWheel').mockResolvedValue()
 
     const wrapper = mount(WheelEditorDialog, { props: { open: true, wheel: null } })
+    await flushPromises() // let the first page load
     await wrapper.findAll('input')[0].setValue('Lunch') // name
     await wrapper.findAll('.wheel-editor__list input')[0].setValue(true) // one restaurant
 
@@ -59,12 +65,12 @@ describe('WheelEditorDialog', () => {
     expect(createSpy).not.toHaveBeenCalled()
   })
 
-  it('saves the checked restaurants by name (not id) with the public switch', async () => {
-    seedCatalog()
+  it('saves the checked restaurants by name with the public switch', async () => {
     const wheels = useWheelsStore()
     const createSpy = vi.spyOn(wheels, 'createWheel').mockResolvedValue()
 
     const wrapper = mount(WheelEditorDialog, { props: { open: true, wheel: null } })
+    await flushPromises()
     await wrapper.findAll('input')[0].setValue('Lunch') // name
     const rows = wrapper.findAll('.wheel-editor__list input')
     await rows[0].setValue(true) // Alpha
@@ -81,8 +87,35 @@ describe('WheelEditorDialog', () => {
     })
   })
 
+  it('pre-selects an edited wheel by name without needing the full catalog', async () => {
+    const wheels = useWheelsStore()
+    const updateSpy = vi.spyOn(wheels, 'updateWheel').mockResolvedValue()
+    const wheel: UserWheel = {
+      id: 'w1',
+      concurrencyToken: 't',
+      name: 'Lunch',
+      restaurantNames: ['Alpha', 'Gamma'],
+      isPublic: false,
+    }
+
+    const wrapper = mount(WheelEditorDialog, { props: { open: false, wheel } })
+    await wrapper.setProps({ open: true })
+    await flushPromises()
+
+    // The two members are counted as selected even though the picker only holds one page.
+    expect(wrapper.text()).toContain('2 selected')
+
+    const saveButton = wrapper.findAll('button').find((b) => b.text() === 'Save')!
+    await saveButton.trigger('click')
+    await flushPromises()
+    expect(updateSpy).toHaveBeenCalledWith('w1', {
+      name: 'Lunch',
+      restaurantNames: ['Alpha', 'Gamma'],
+      isPublic: false,
+    })
+  })
+
   it('shows a "Copy share link" action for a saved public wheel and copies on click', async () => {
-    seedCatalog()
     const wheel: UserWheel = {
       id: 'w1',
       concurrencyToken: 't',
@@ -94,6 +127,7 @@ describe('WheelEditorDialog', () => {
     // Mount closed, then open so the dialog hydrates isPublic from the wheel.
     const wrapper = mount(WheelEditorDialog, { props: { open: false, wheel } })
     await wrapper.setProps({ open: true })
+    await flushPromises()
 
     const shareButton = wrapper.findAll('button').find((b) => b.text() === 'Copy share link')!
     expect(shareButton).toBeTruthy()
@@ -103,10 +137,9 @@ describe('WheelEditorDialog', () => {
   })
 
   it('shows no share action for a new, unsaved wheel even with the public switch on', async () => {
-    seedCatalog()
-
     const wrapper = mount(WheelEditorDialog, { props: { open: false, wheel: null } })
     await wrapper.setProps({ open: true })
+    await flushPromises()
     // Turn the public switch on.
     await wrapper.find('.wheel-editor__public input').setValue(true)
 

@@ -27,6 +27,7 @@ watch(
     reset()
     load()
   },
+  { immediate: true },
 )
 
 function isMember(restaurantId: string): boolean {

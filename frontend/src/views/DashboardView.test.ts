@@ -145,7 +145,7 @@ describe('DashboardView with a specific environment selected', () => {
     expect(wrapper.findAll('.restaurant__name').map((n) => n.text())).toEqual(['Alpha'])
   })
 
-  it('opens the Add-restaurants picker listing the environment non-members', async () => {
+  it('opens the Add-restaurants picker showing all restaurants with an Added state for members', async () => {
     stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta')], ['r1'])
 
     const wrapper = mountWithMapStub()
@@ -159,9 +159,12 @@ describe('DashboardView with a specific environment selected', () => {
     await addButton.trigger('click')
     await flushPromises()
 
-    // The dialog lists Beta (the non-member) but not Alpha (already a member).
+    // The paged picker shows every restaurant; the member (Alpha) reads "Added", the non-member
+    // (Beta) is addable — rather than filtering members out (which breaks with paging).
     const dialogNames = wrapper.findAll('.picker__name').map((n) => n.text())
-    expect(dialogNames).toEqual(['Beta'])
+    expect(dialogNames).toEqual(['Alpha', 'Beta'])
+    const rowButtons = wrapper.findAll('.picker__row button').map((b) => b.text())
+    expect(rowButtons).toEqual(['Added', 'Add'])
   })
 })
 
