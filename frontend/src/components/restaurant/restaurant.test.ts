@@ -58,6 +58,22 @@ describe('RestaurantCard', () => {
     expect(wrapper.text()).toContain('Street parking')
   })
 
+  it('hides "Show on map" for a restaurant without coordinates', () => {
+    // Default fixture is at the 0/0 sentinel (no location).
+    const wrapper = mount(RestaurantCard, { props: { restaurant: restaurant() } })
+    expect(wrapper.text()).not.toContain('Show on map')
+  })
+
+  it('emits show-on-map with the restaurant when located', async () => {
+    const located = restaurant({ latitude: 59.43, longitude: 24.75 })
+    const wrapper = mount(RestaurantCard, { props: { restaurant: located } })
+
+    const button = wrapper.findAll('button').find((b) => b.text() === 'Show on map')!
+    await button.trigger('click')
+
+    expect(wrapper.emitted('showOnMap')?.[0]).toEqual([located])
+  })
+
   it('loads offers and expands the list when "See offers" is clicked', async () => {
     const fetchMock = vi.fn().mockResolvedValue(json([{ offerText: 'Soup', offerPrice: '3.50 EUR' }]))
     vi.stubGlobal('fetch', fetchMock)

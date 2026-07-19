@@ -17,4 +17,15 @@ public interface IRestaurantService : IBaseService<Restaurant>
         double maxLon,
         int limit,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// A single, name/city-searchable page of restaurants for the list view. Fails with
+    /// <c>INVALID_PAGING</c> when <paramref name="page"/> is less than 1; <paramref name="pageSize"/> is
+    /// clamped to a sane maximum.
+    /// </summary>
+    Task<IMethodResponse<RestaurantPage>> SearchPageAsync(
+        string? search,
+        int page,
+        int pageSize,
+        CancellationToken ct = default);
 }

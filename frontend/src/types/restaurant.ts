@@ -24,6 +24,15 @@ export interface Bounds {
   maxLon: number
 }
 
+// One page of the searchable restaurant list (GET /api/v1/restaurants/page). Matches backend
+// DTO/Web/RestaurantPageDto.cs: the items plus the total match count for pagination.
+export interface RestaurantPage {
+  items: Restaurant[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 // One offer line from GET /api/v1/restaurants/{id}/offers, which returns a bare
 // JSON array of these (matches backend DTO/Messaging/OfferLine.cs). There is no
 // BusinessDate in the response - it is cached server-side only. offerPrice is a

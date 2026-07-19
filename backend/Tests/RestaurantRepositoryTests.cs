@@ -52,18 +52,65 @@ public class RestaurantRepositoryTests
         Assert.Empty(result);
     }
 
+    [Fact]
+    public async Task SearchPageAsync_FiltersByNameOrCity_CaseInsensitive()
+    {
+        await using var context = TestAppDbContextFactory.CreateInMemory();
+        AddRestaurant(context, "Pizza Place", city: "Tallinn");
+        AddRestaurant(context, "Sushi Bar", city: "Tartu");
+        AddRestaurant(context, "Burger Joint", city: "PIZZAtown"); // city matches "pizza" too
+        await context.SaveChangesAsync();
+
+        var (items, total) = await CreateRepository(context).SearchPageAsync("pIzZa", pageNr: 1, pageSize: 20);
+
+        Assert.Equal(2, total);
+        Assert.Equal(new[] { "Burger Joint", "Pizza Place" }, items.Select(r => r.Name)); // ordered by name
+    }
+
+    [Fact]
+    public async Task SearchPageAsync_WithoutSearch_ReturnsAllOrderedByName()
+    {
+        await using var context = TestAppDbContextFactory.CreateInMemory();
+        AddRestaurant(context, "Charlie", city: "X");
+        AddRestaurant(context, "Alpha", city: "X");
+        AddRestaurant(context, "Bravo", city: "X");
+        await context.SaveChangesAsync();
+
+        var (items, total) = await CreateRepository(context).SearchPageAsync(null, pageNr: 1, pageSize: 20);
+
+        Assert.Equal(3, total);
+        Assert.Equal(new[] { "Alpha", "Bravo", "Charlie" }, items.Select(r => r.Name));
+    }
+
+    [Fact]
+    public async Task SearchPageAsync_PaginatesWithSkipTake_AndReportsFullTotal()
+    {
+        await using var context = TestAppDbContextFactory.CreateInMemory();
+        foreach (var name in new[] { "A", "B", "C", "D", "E" })
+        {
+            AddRestaurant(context, name, city: "X");
+        }
+        await context.SaveChangesAsync();
+
+        var (items, total) = await CreateRepository(context).SearchPageAsync(null, pageNr: 2, pageSize: 2);
+
+        Assert.Equal(5, total); // total reflects the whole match set, not the page
+        Assert.Equal(new[] { "C", "D" }, items.Select(r => r.Name)); // page 2 of size 2
+    }
+
     private static RestaurantRepository CreateRepository(AppDbContext context)
     {
         return new RestaurantRepository(context, new RestaurantEntityMapper());
     }
 
-    private static RestaurantEntity AddRestaurant(AppDbContext context, string name, double lat, double lon)
+    private static RestaurantEntity AddRestaurant(
+        AppDbContext context, string name, double lat = 0, double lon = 0, string city = "City")
     {
         var restaurant = new RestaurantEntity
         {
             Id = Guid.NewGuid(),
             Name = name,
-            City = "City",
+            City = city,
             Latitude = lat,
             Longitude = lon,
             OfferTimeText = "11:00-14:00",

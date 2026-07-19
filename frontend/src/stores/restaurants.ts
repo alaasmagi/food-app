@@ -1,6 +1,11 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { getRestaurantOffers, getRestaurants, getRestaurantsInBounds } from '../api/restaurants'
+import {
+  getRestaurantOffers,
+  getRestaurants,
+  getRestaurantsInBounds,
+  getRestaurantsPage,
+} from '../api/restaurants'
 import type { Bounds, DailyOffer, Restaurant } from '../types/restaurant'
 
 export interface OffersEntry {
@@ -29,12 +34,20 @@ export const useRestaurantsStore = defineStore('restaurants', () => {
   const areaError = ref<string | null>(null)
   const areaTruncated = ref(false)
 
+  // List view (All tab): one server-side page at a time, name/city searchable. Kept separate from
+  // the viewport set so the list can be a browse/search surface without fetching the whole catalog.
+  const pagedList = ref<Restaurant[]>([])
+  const pagedTotal = ref(0)
+  const pagedLoading = ref(false)
+  const pagedError = ref<string | null>(null)
+
   // Per-restaurant offers cache, keyed by restaurant id. Fetched lazily.
   const offersById = ref<Record<string, OffersEntry>>({})
 
   let listPending: Promise<void> | null = null
-  // Monotonic token so an earlier, slower viewport fetch can't overwrite a newer one's results.
+  // Monotonic tokens so an earlier, slower fetch can't overwrite a newer one's results.
   let areaRequestId = 0
+  let pageRequestId = 0
 
   async function loadRestaurants(): Promise<void> {
     if (listLoaded.value) return
@@ -76,6 +89,31 @@ export const useRestaurantsStore = defineStore('restaurants', () => {
     }
   }
 
+  /**
+   * Load one page of the searchable list into `pagedList`. Concurrent calls (typing in search,
+   * clicking next) are guarded by a request token so only the latest result is kept.
+   */
+  async function loadPage(params: {
+    page: number
+    pageSize: number
+    search?: string
+  }): Promise<void> {
+    const requestId = ++pageRequestId
+    pagedLoading.value = true
+    pagedError.value = null
+    try {
+      const result = await getRestaurantsPage(params)
+      if (requestId !== pageRequestId) return // a newer page/search superseded this one
+      pagedList.value = result.items
+      pagedTotal.value = result.total
+    } catch (e) {
+      if (requestId !== pageRequestId) return
+      pagedError.value = e instanceof Error ? e.message : 'Failed to load restaurants'
+    } finally {
+      if (requestId === pageRequestId) pagedLoading.value = false
+    }
+  }
+
   /** Fetch one restaurant's offers lazily. No-ops if already loaded or in flight. */
   async function loadOffers(id: string): Promise<void> {
     const existing = offersById.value[id]
@@ -108,9 +146,14 @@ export const useRestaurantsStore = defineStore('restaurants', () => {
     areaLoading,
     areaError,
     areaTruncated,
+    pagedList,
+    pagedTotal,
+    pagedLoading,
+    pagedError,
     offersById,
     loadRestaurants,
     loadInBounds,
+    loadPage,
     loadOffers,
     offersFor,
   }

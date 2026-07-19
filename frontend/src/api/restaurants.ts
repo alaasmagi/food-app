@@ -1,5 +1,5 @@
 import { apiFetch } from './client'
-import type { Bounds, DailyOffer, Restaurant } from '../types/restaurant'
+import type { Bounds, DailyOffer, Restaurant, RestaurantPage } from '../types/restaurant'
 
 /** GET /api/v1/restaurants -> bare array of RestaurantDto (full catalog). */
 export async function getRestaurants(): Promise<Restaurant[]> {
@@ -28,6 +28,29 @@ export async function getRestaurantsInBounds(bounds: Bounds, limit: number): Pro
     throw new Error(`Failed to load restaurants (${response.status})`)
   }
   return (await response.json()) as Restaurant[]
+}
+
+/**
+ * GET /api/v1/restaurants/page?page=&pageSize=&search= -> one page of restaurants plus the total
+ * match count. Drives the searchable list view without ever fetching the whole catalog.
+ */
+export async function getRestaurantsPage(params: {
+  page: number
+  pageSize: number
+  search?: string
+}): Promise<RestaurantPage> {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  })
+  const search = params.search?.trim()
+  if (search) query.set('search', search)
+
+  const response = await apiFetch(`/api/v1/restaurants/page?${query.toString()}`)
+  if (!response.ok) {
+    throw new Error(`Failed to load restaurants (${response.status})`)
+  }
+  return (await response.json()) as RestaurantPage
 }
 
 /** GET /api/v1/restaurants/{id}/offers -> bare array of { offerText, offerPrice }. */

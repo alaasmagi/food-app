@@ -49,4 +49,32 @@ public class RestaurantRepository
 
         return _mapper.Map(entities)?.ToList() ?? [];
     }
+
+    public async Task<(IReadOnlyList<Restaurant> Items, int Total)> SearchPageAsync(
+        string? search,
+        int pageNr,
+        int pageSize,
+        CancellationToken ct = default)
+    {
+        var query = _context.Restaurants.AsNoTracking();
+
+        var term = search?.Trim().ToLower();
+        if (!string.IsNullOrEmpty(term))
+        {
+            // ToLower().Contains (not the Npgsql-only EF.Functions.ILike) so the same query runs under
+            // the in-memory provider used by the repository tests; Npgsql translates it to lower(...) LIKE.
+            query = query.Where(restaurant =>
+                restaurant.Name.ToLower().Contains(term) ||
+                restaurant.City.ToLower().Contains(term));
+        }
+
+        var total = await query.CountAsync(ct);
+        var entities = await query
+            .OrderBy(restaurant => restaurant.Name)
+            .Skip((pageNr - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return (_mapper.Map(entities)?.ToList() ?? [], total);
+    }
 }

@@ -47,6 +47,12 @@ function stubFetch(restaurants: Restaurant[], members: string[]) {
           json(members.map((rid, i) => ({ id: `m${i}`, concurrencyToken: 't', environmentId: 'e1', restaurantId: rid }))),
         )
       }
+      // The "All" list view fetches a page envelope; checked before the bare-array /restaurants.
+      if (url.includes('/restaurants/page')) {
+        return Promise.resolve(
+          json({ items: restaurants, total: restaurants.length, page: 1, pageSize: 20 }),
+        )
+      }
       if (url.includes('/restaurants')) {
         return Promise.resolve(json(restaurants))
       }
@@ -65,6 +71,17 @@ function viewTabs(wrapper: VueWrapper) {
   return wrapper.find('.dashboard__view-toggle').findAll('.dashboard__view-btn')
 }
 
+// Leaflet cannot render in jsdom; stub the map so mounting the (now default) map view is safe and
+// the set it receives can be inspected via props.
+const mountWithMapStub = () =>
+  mount(DashboardView, { global: { stubs: { RestaurantMap: true } } })
+
+// The map is the default view; switch to the List tab (index 0) to assert on rendered cards.
+async function showList(wrapper: VueWrapper) {
+  await viewTabs(wrapper)[0].trigger('click')
+  await flushPromises()
+}
+
 describe('DashboardView with a specific environment selected', () => {
   beforeEach(() => setActivePinia(createPinia()))
   afterEach(() => vi.unstubAllGlobals())
@@ -73,14 +90,14 @@ describe('DashboardView with a specific environment selected', () => {
     // r1 is a member of "Work"; r2 is not.
     stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta')], ['r1'])
 
-    const wrapper = mount(DashboardView)
+    const wrapper = mountWithMapStub()
     await flushPromises()
 
     // Select the "Work" tab (index 1; index 0 is "All").
     const tabs = envTabs(wrapper)
     expect(tabs.map((t) => t.text())).toEqual(['All', 'Work'])
     await tabs[1].trigger('click')
-    await flushPromises()
+    await showList(wrapper)
 
     // Only the member is listed — the tab reads as a curated set, not the catalog.
     const names = wrapper.findAll('.restaurant__name').map((n) => n.text())
@@ -99,11 +116,11 @@ describe('DashboardView with a specific environment selected', () => {
     // "Work" has no members yet — the user selects it to start adding restaurants.
     stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta')], [])
 
-    const wrapper = mount(DashboardView)
+    const wrapper = mountWithMapStub()
     await flushPromises()
 
     await envTabs(wrapper)[1].trigger('click')
-    await flushPromises()
+    await showList(wrapper)
 
     // No restaurant cards; a named empty state guides the user to the picker.
     expect(wrapper.findAll('.restaurant__name')).toHaveLength(0)
@@ -114,26 +131,28 @@ describe('DashboardView with a specific environment selected', () => {
   it('hides membership actions and the picker entry under "All"', async () => {
     stubFetch([restaurant('r1', 'Alpha')], ['r1'])
 
-    const wrapper = mount(DashboardView)
+    const wrapper = mountWithMapStub()
     await flushPromises()
+    // "All" is selected by default; switch to the list to inspect the cards.
+    await showList(wrapper)
 
-    // "All" is selected by default.
     const buttons = wrapper.findAll('button').map((b) => b.text())
     expect(buttons).not.toContain('Add to environment')
     expect(buttons).not.toContain('Remove from environment')
     expect(buttons).not.toContain('Add restaurants')
-    // The full catalog is still visible under "All".
+    // The viewport set is visible under "All".
     expect(wrapper.findAll('.restaurant__name').map((n) => n.text())).toEqual(['Alpha'])
   })
 
   it('opens the Add-restaurants picker listing the environment non-members', async () => {
     stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta')], ['r1'])
 
-    const wrapper = mount(DashboardView)
+    const wrapper = mountWithMapStub()
     await flushPromises()
 
     await envTabs(wrapper)[1].trigger('click')
-    await flushPromises()
+    // The picker entry point ("Add restaurants") only renders in the list view.
+    await showList(wrapper)
 
     const addButton = wrapper.findAll('button').find((b) => b.text() === 'Add restaurants')!
     await addButton.trigger('click')
@@ -149,37 +168,44 @@ describe('DashboardView list/map toggle', () => {
   beforeEach(() => setActivePinia(createPinia()))
   afterEach(() => vi.unstubAllGlobals())
 
-  // Leaflet cannot render in jsdom; stub the map and inspect the set it receives.
-  const mountWithMapStub = () =>
-    mount(DashboardView, { global: { stubs: { RestaurantMap: true } } })
-
-  it('offers a List/Map toggle and shows the list by default', async () => {
+  it('offers a List/Map toggle and shows the map by default', async () => {
     stubFetch([restaurant('r1', 'Alpha')], ['r1'])
 
     const wrapper = mountWithMapStub()
     await flushPromises()
 
     expect(viewTabs(wrapper).map((t) => t.text())).toEqual(['List', 'Map'])
-    // List is the default view: cards render, the map does not.
-    expect(wrapper.findAll('.restaurant__name').length).toBe(1)
-    expect(wrapper.findComponent(RestaurantMap).exists()).toBe(false)
+    // Map is the default view: the map renders, no list cards are shown.
+    expect(wrapper.findComponent(RestaurantMap).exists()).toBe(true)
+    expect(wrapper.findAll('.restaurant__name').length).toBe(0)
   })
 
-  it('switches to the map view and passes the full catalog under "All"', async () => {
+  it('passes the viewport set to the map under "All" by default', async () => {
     stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta')], ['r1'])
 
     const wrapper = mountWithMapStub()
     await flushPromises()
 
-    await viewTabs(wrapper)[1].trigger('click') // Map
-    await flushPromises()
-
     const map = wrapper.findComponent(RestaurantMap)
     expect(map.exists()).toBe(true)
-    // No restaurant cards while the map view is active.
-    expect(wrapper.findAll('.restaurant__name').length).toBe(0)
-    // Under "All" the map receives every restaurant.
+    // Under "All" the map receives the current viewport's restaurants.
     expect((map.props('restaurants') as Restaurant[]).map((r) => r.id)).toEqual(['r1', 'r2'])
+  })
+
+  it('switching to the list shows cards, then back to the map hides them', async () => {
+    stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta')], ['r1'])
+
+    const wrapper = mountWithMapStub()
+    await flushPromises()
+
+    await showList(wrapper)
+    expect(wrapper.findComponent(RestaurantMap).exists()).toBe(false)
+    expect(wrapper.findAll('.restaurant__name').length).toBe(2)
+
+    await viewTabs(wrapper)[1].trigger('click') // Map
+    await flushPromises()
+    expect(wrapper.findComponent(RestaurantMap).exists()).toBe(true)
+    expect(wrapper.findAll('.restaurant__name').length).toBe(0)
   })
 
   it('narrows both the list and the map to environment members', async () => {
@@ -190,7 +216,7 @@ describe('DashboardView list/map toggle', () => {
     await flushPromises()
 
     await envTabs(wrapper)[1].trigger('click') // Work
-    await flushPromises()
+    await showList(wrapper)
 
     // List view shows only the environment's members now.
     expect(wrapper.findAll('.restaurant__name').map((n) => n.text())).toEqual(['Alpha', 'Gamma'])

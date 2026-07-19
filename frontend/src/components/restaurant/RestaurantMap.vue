@@ -6,7 +6,7 @@ import OfferList from './OfferList.vue'
 import { useRestaurantsStore } from '../../stores/restaurants'
 import { useTheme, type Theme } from '../../composables/useTheme'
 import type { Bounds, Restaurant } from '../../types/restaurant'
-import { markerableRestaurants } from './mapMarkers'
+import { hasCoordinates, markerableRestaurants } from './mapMarkers'
 import { debounce } from '../../utils/debounce'
 
 // The map renders whatever set it is given; it does not fetch restaurants itself. Two modes:
@@ -14,7 +14,14 @@ import { debounce } from '../../utils/debounce'
 //    that area, and never moves itself when data arrives.
 //  - autoFit: a pure viewer over a fixed, fully-loaded set (e.g. an environment's members) — it fits
 //    the view to those markers and does not drive fetching.
-const props = defineProps<{ restaurants: Restaurant[]; truncated?: boolean; autoFit?: boolean }>()
+// `focusRestaurant` (set when the user clicks "Show on map" in the list) centres/zooms on one
+// restaurant and opens its popup — the one intentional exception to viewport mode's "don't move" rule.
+const props = defineProps<{
+  restaurants: Restaurant[]
+  truncated?: boolean
+  autoFit?: boolean
+  focusRestaurant?: Restaurant | null
+}>()
 const emit = defineEmits<{ boundsChange: [bounds: Bounds] }>()
 
 const store = useRestaurantsStore()
@@ -34,10 +41,17 @@ const markerable = computed(() => markerableRestaurants(props.restaurants))
 const DEFAULT_CENTER: L.LatLngTuple = [59.437, 24.7536]
 const DEFAULT_ZOOM = 11
 
+// Zoom level to snap to when focusing a single restaurant from the list.
+const FOCUS_ZOOM = 16
+
 let map: L.Map | null = null
 let markerLayer: L.LayerGroup | null = null
 let popup: L.Popup | null = null
 let tileLayer: L.TileLayer | null = null
+// Id of the restaurant whose focus popup should be preserved across marker re-renders (the viewport
+// re-fetch that focusing triggers would otherwise rebuild the markers and close the popup). Cleared
+// when the popup closes.
+let focusId: string | null = null
 
 // Vue owns the popup body; Leaflet just displays this detached host element, so
 // the "See offers" action reuses the same store and OfferList as RestaurantCard.
@@ -80,7 +94,10 @@ async function toggleOffers(): Promise<void> {
 
 function renderMarkers(): void {
   if (!map || !markerLayer) return
-  map.closePopup()
+  // Preserve an open focus popup: focusing triggers a viewport re-fetch, which lands here — closing
+  // the popup would undo the "show on map" the user just asked for. Any other re-render clears stale popups.
+  const preserveFocusPopup = focusId !== null && markerable.value.some((r) => r.id === focusId)
+  if (!preserveFocusPopup) map.closePopup()
   markerLayer.clearLayers()
   for (const restaurant of markerable.value) {
     const latlng = L.latLng(restaurant.latitude, restaurant.longitude)
@@ -88,6 +105,16 @@ function renderMarkers(): void {
     marker.on('click', () => openPopupFor(restaurant, latlng))
     marker.addTo(markerLayer)
   }
+}
+
+// Centre and zoom on one restaurant and open its popup (from the list's "Show on map" action).
+async function focusOn(restaurant: Restaurant): Promise<void> {
+  if (!map || !hasCoordinates(restaurant)) return
+  focusId = restaurant.id
+  const latlng = L.latLng(restaurant.latitude, restaurant.longitude)
+  // setView fires moveend -> the viewport fetch loads restaurants around the focused one.
+  map.setView(latlng, FOCUS_ZOOM)
+  await openPopupFor(restaurant, latlng)
 }
 
 // Fit the view to the current markers (autoFit mode only). Falls back to the default view when the
@@ -128,6 +155,7 @@ onMounted(async () => {
   map.on('popupclose', () => {
     selectedRestaurant.value = null
     offersExpanded.value = false
+    focusId = null
   })
   // A pan or zoom means the user is looking somewhere new — re-fetch that viewport.
   map.on('moveend', emitBoundsDebounced)
@@ -142,6 +170,9 @@ onMounted(async () => {
   map.invalidateSize()
   if (props.autoFit) {
     fitToMarkers()
+  } else if (props.focusRestaurant) {
+    // Arrived here via "Show on map": centre on the restaurant (which also fetches its area).
+    focusOn(props.focusRestaurant)
   } else {
     // Kick off the first fetch for the default viewport.
     emitBounds()
@@ -161,6 +192,15 @@ watch(
   (autoFit) => {
     if (autoFit) fitToMarkers()
     else emitBounds()
+  },
+)
+
+// Focus a restaurant requested while the map is already mounted (e.g. clicking another list row's
+// "Show on map" without the map unmounting in between).
+watch(
+  () => props.focusRestaurant,
+  (restaurant) => {
+    if (restaurant) focusOn(restaurant)
   },
 )
 

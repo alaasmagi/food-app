@@ -84,6 +84,33 @@ public class RestaurantsController(
         return Ok(mapper.Map(result.Value)?.ToList() ?? []);
     }
 
+    /// <summary>
+    /// A single page of restaurants for the list view, optionally filtered by a case-insensitive search
+    /// on name or city. Returns items plus the total match count so the client can paginate without
+    /// fetching the whole catalog. An out-of-range page yields 400 (INVALID_PAGING).
+    /// </summary>
+    [HttpGet("page")]
+    public async Task<ActionResult<RestaurantPageDto>> GetPage(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null)
+    {
+        var result = await restaurantService.SearchPageAsync(search, page, pageSize);
+        if (!result.Successful)
+        {
+            return ToProblem(result.Error);
+        }
+
+        var value = result.Value!;
+        return Ok(new RestaurantPageDto
+        {
+            Items = mapper.Map(value.Items)?.ToList() ?? [],
+            Total = value.Total,
+            Page = value.Page,
+            PageSize = value.PageSize,
+        });
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<RestaurantDto>> GetById(Guid id)
     {

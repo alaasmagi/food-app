@@ -10,12 +10,18 @@ import FavouriteEditorDialog from '../favourite/FavouriteEditorDialog.vue'
 import { useRestaurantsStore } from '../../stores/restaurants'
 import { useEnvironmentsStore } from '../../stores/environments'
 import { useFavouritesStore } from '../../stores/favourites'
+import { hasCoordinates } from './mapMarkers'
 import type { Restaurant } from '../../types/restaurant'
 
 const props = defineProps<{ restaurant: Restaurant }>()
+// The card has no map access; the dashboard listens for this and focuses the restaurant on the map.
+const emit = defineEmits<{ showOnMap: [restaurant: Restaurant] }>()
 const store = useRestaurantsStore()
 const environments = useEnvironmentsStore()
 const favourites = useFavouritesStore()
+
+// "Show on map" only makes sense for a located restaurant (0/0 sentinel excluded).
+const locatable = computed(() => hasCoordinates(props.restaurant))
 
 // Expansion is local view state; the store owns only fetched data.
 const expanded = ref(false)
@@ -105,6 +111,17 @@ async function toggleMembership(): Promise<void> {
 
       <Button variant="ghost" size="sm" @click="editorOpen = true">
         {{ favourite ? 'Edit rating' : 'Rate' }}
+      </Button>
+
+      <Button
+        v-if="locatable"
+        variant="ghost"
+        size="sm"
+        icon="arrow-right"
+        iconPosition="right"
+        @click="emit('showOnMap', restaurant)"
+      >
+        Show on map
       </Button>
     </div>
 

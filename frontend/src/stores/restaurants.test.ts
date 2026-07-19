@@ -128,6 +128,63 @@ describe('restaurants store', () => {
     expect(store.areaLoading).toBe(false)
   })
 
+  it('loads a page and sends page/pageSize/search as query params', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      json({ items: [restaurant('a'), restaurant('b')], total: 7, page: 2, pageSize: 2 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useRestaurantsStore()
+    await store.loadPage({ page: 2, pageSize: 2, search: 'piz' })
+
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toContain('/api/v1/restaurants/page')
+    expect(url).toContain('page=2')
+    expect(url).toContain('pageSize=2')
+    expect(url).toContain('search=piz')
+    expect(store.pagedList).toHaveLength(2)
+    expect(store.pagedTotal).toBe(7)
+    expect(store.pagedLoading).toBe(false)
+  })
+
+  it('omits an empty search term from the page query', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(json({ items: [], total: 0, page: 1, pageSize: 20 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useRestaurantsStore()
+    await store.loadPage({ page: 1, pageSize: 20, search: '   ' })
+
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).not.toContain('search=')
+  })
+
+  it('keeps only the latest page result when requests overlap', async () => {
+    const first = json({ items: [restaurant('old')], total: 1, page: 1, pageSize: 20 })
+    const second = json({ items: [restaurant('new')], total: 1, page: 2, pageSize: 20 })
+    const fetchMock = vi
+      .fn()
+      .mockReturnValueOnce(new Promise((resolve) => setTimeout(() => resolve(first), 20)))
+      .mockReturnValueOnce(Promise.resolve(second))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useRestaurantsStore()
+    const stale = store.loadPage({ page: 1, pageSize: 20 })
+    const fresh = store.loadPage({ page: 2, pageSize: 20 })
+    await Promise.all([stale, fresh])
+
+    expect(store.pagedList.map((r) => r.id)).toEqual(['new'])
+  })
+
+  it('records a page error without throwing', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json('', 500)))
+
+    const store = useRestaurantsStore()
+    await store.loadPage({ page: 1, pageSize: 20 })
+
+    expect(store.pagedError).toBeTruthy()
+    expect(store.pagedLoading).toBe(false)
+  })
+
   it('fetches offers lazily per restaurant and caches them', async () => {
     const fetchMock = vi.fn().mockResolvedValue(json([{ offerText: 'Soup', offerPrice: '3.50 EUR' }]))
     vi.stubGlobal('fetch', fetchMock)
