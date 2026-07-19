@@ -30,14 +30,14 @@ RUN dotnet publish Web/Web.csproj -c Release -o /app/publish --no-restore
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-# Non-root user; /data is where the SQLite offer cache file lives
-RUN useradd --uid 1000 --create-home appuser \
-    && mkdir -p /data \
-    && chown -R appuser:appuser /data /app
+# The .NET 10 runtime image already ships a non-root 'app' user (UID 1000).
+# /data is where the SQLite offer cache file lives.
+RUN mkdir -p /data \
+    && chown -R app:app /data /app
 
 COPY --from=build /app/publish .
 
-USER appuser
+USER app
 
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
