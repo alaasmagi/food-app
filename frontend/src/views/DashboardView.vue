@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, toRef, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRestaurantsStore } from '../stores/restaurants'
 import { useEnvironmentsStore } from '../stores/environments'
@@ -19,12 +19,18 @@ import { debounce } from '../utils/debounce'
 const store = useRestaurantsStore()
 const environments = useEnvironmentsStore()
 const favourites = useFavouritesStore()
-const { listLoading, listError, areaLoading, areaError, areaTruncated, pagedTotal, pagedLoading, pagedError } =
-  storeToRefs(store)
-
-// Seed the "All" view from Tallinn (matching the map's default view) so the map's fetch is warm; the
-// list view fetches its own paged/searchable results (see loadPage below).
-const DEFAULT_TALLINN_BOUNDS: Bounds = { minLat: 59.3, minLon: 24.55, maxLat: 59.58, maxLon: 24.95 }
+const {
+  listLoading,
+  listError,
+  areaList,
+  areaLoading,
+  areaError,
+  areaTruncated,
+  pagedList,
+  pagedTotal,
+  pagedLoading,
+  pagedError,
+} = storeToRefs(store)
 
 const PAGE_SIZE = 20
 
@@ -41,9 +47,9 @@ const viewTabs: TabItem[] = [
 ]
 
 onMounted(() => {
-  // "All" view: fetch the default (Tallinn) viewport. The full catalog is loaded lazily only when
-  // an environment is selected (see the watch below).
-  store.loadInBounds(DEFAULT_TALLINN_BOUNDS)
+  // The map fetches its own viewport on mount, and the list fetches its page on demand — so there's
+  // nothing to pre-fetch here. The full catalog is loaded lazily only when an environment is
+  // selected (see the watch below).
   environments.loadEnvironments()
   environments.loadMembership()
   favourites.loadFavourites()
@@ -64,8 +70,8 @@ watch(
 
 // List and map differ under "All": the list shows the paged/searchable set, the map shows the
 // viewport set. Under an environment both show its members (see the composable).
-const listRestaurants = useEnvironmentFilteredRestaurants(toRef(store, 'pagedList'))
-const mapRestaurants = useEnvironmentFilteredRestaurants(toRef(store, 'areaList'))
+const listRestaurants = useEnvironmentFilteredRestaurants(pagedList)
+const mapRestaurants = useEnvironmentFilteredRestaurants(areaList)
 
 // Server-side search + pagination for the "All" list. `searchInput` is the raw field; a debounce
 // commits it to `search` (resetting to page 1) so we don't fetch on every keystroke.

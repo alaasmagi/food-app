@@ -83,9 +83,12 @@ app.UseSwaggerUI(options =>
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "Alaasmagi Dotnet Template API v1");
 });
 
-app.UseRateLimiter();
-
+// CORS must run before the rate limiter: a rate-limited (429) response short-circuits the pipeline,
+// so if UseCors ran later the 429 would lack Access-Control-Allow-Origin and the browser would
+// surface it as an opaque CORS error instead of a handleable 429.
 app.UseCors(CorsPolicies.Frontend);
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

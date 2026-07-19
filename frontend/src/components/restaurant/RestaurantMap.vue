@@ -167,6 +167,8 @@ onMounted(async () => {
   renderMarkers()
   // The container may have just become visible via v-if; give it a laid-out size.
   await nextTick()
+  // The component may have unmounted during the await (fast view toggles); bail if so.
+  if (!map) return
   map.invalidateSize()
   if (props.autoFit) {
     fitToMarkers()

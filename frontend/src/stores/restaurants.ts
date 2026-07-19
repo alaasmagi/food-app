@@ -48,6 +48,9 @@ export const useRestaurantsStore = defineStore('restaurants', () => {
   // Monotonic tokens so an earlier, slower fetch can't overwrite a newer one's results.
   let areaRequestId = 0
   let pageRequestId = 0
+  // Last viewport requested, so an identical bounds fetch (e.g. the map's initial emit plus the
+  // moveend from its own setView) collapses into one request instead of hammering the rate limiter.
+  let lastBoundsKey: string | null = null
 
   async function loadRestaurants(): Promise<void> {
     if (listLoaded.value) return
@@ -73,6 +76,13 @@ export const useRestaurantsStore = defineStore('restaurants', () => {
    * (rapid panning) are guarded by a request token so only the latest result is kept.
    */
   async function loadInBounds(bounds: Bounds, limit: number = DEFAULT_AREA_LIMIT): Promise<void> {
+    // Coordinates rounded (~1m) so float jitter from repeated getBounds() reads doesn't defeat the dedupe.
+    const key = [bounds.minLat, bounds.minLon, bounds.maxLat, bounds.maxLon]
+      .map((n) => n.toFixed(5))
+      .join(',') + `@${limit}`
+    if (key === lastBoundsKey) return // same viewport already loaded / in flight
+    lastBoundsKey = key
+
     const requestId = ++areaRequestId
     areaLoading.value = true
     areaError.value = null
@@ -84,6 +94,7 @@ export const useRestaurantsStore = defineStore('restaurants', () => {
     } catch (e) {
       if (requestId !== areaRequestId) return
       areaError.value = e instanceof Error ? e.message : 'Failed to load restaurants'
+      lastBoundsKey = null // let the same viewport be retried after a failure
     } finally {
       if (requestId === areaRequestId) areaLoading.value = false
     }

@@ -3,6 +3,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import DashboardView from './DashboardView.vue'
 import RestaurantMap from '../components/restaurant/RestaurantMap.vue'
+import { useRestaurantsStore } from '../stores/restaurants'
 import type { Restaurant } from '../types/restaurant'
 
 function json(body: unknown) {
@@ -180,15 +181,27 @@ describe('DashboardView list/map toggle', () => {
     expect(wrapper.findAll('.restaurant__name').length).toBe(0)
   })
 
-  it('passes the viewport set to the map under "All" by default', async () => {
+  it('passes the fetched viewport set to the map under "All"', async () => {
     stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta')], ['r1'])
 
-    const wrapper = mountWithMapStub()
+    // Share one explicit pinia between the mounted component and the store handle we drive, so the
+    // viewport we load is the same one the component's map prop reads.
+    const pinia = createPinia()
+    const wrapper = mount(DashboardView, {
+      global: { plugins: [pinia], stubs: { RestaurantMap: true } },
+    })
     await flushPromises()
 
+    expect(wrapper.findComponent(RestaurantMap).exists()).toBe(true)
+    // The dashboard no longer pre-seeds the viewport; the map drives it by reporting bounds, which
+    // the dashboard turns into a store.loadInBounds. Exercise that store path directly.
+    const store = useRestaurantsStore(pinia)
+    await store.loadInBounds({ minLat: 59.3, minLon: 24.55, maxLat: 59.58, maxLon: 24.95 })
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+
+    // Under "All" the map then receives the fetched viewport restaurants.
     const map = wrapper.findComponent(RestaurantMap)
-    expect(map.exists()).toBe(true)
-    // Under "All" the map receives the current viewport's restaurants.
     expect((map.props('restaurants') as Restaurant[]).map((r) => r.id)).toEqual(['r1', 'r2'])
   })
 
