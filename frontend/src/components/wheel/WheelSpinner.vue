@@ -76,7 +76,11 @@ function spin(): void {
   spinning.value = true
 }
 
-function onTransitionEnd(): void {
+function onTransitionEnd(event: TransitionEvent): void {
+  // The rotor's `transform` ending is the wheel stopping. The segments' `opacity` transition (fading
+  // the losers) also bubbles a transitionend here — ignore it, otherwise starting a new spin (which
+  // un-dims the previous winner) would fire this early and light up the winner mid-spin.
+  if (event.propertyName !== 'transform') return
   if (!spinning.value) return
   spinning.value = false
   winnerIndex.value = chosenIndex

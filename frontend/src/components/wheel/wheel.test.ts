@@ -157,7 +157,7 @@ describe('WheelSpinner', () => {
   it('spin() emits a name from the list once the animation settles', async () => {
     const wrapper = mount(WheelSpinner, { props: { names: ['A', 'B', 'C'] } })
     await wrapper.find('button').trigger('click') // Spin
-    await wrapper.find('.spinner__rotor').trigger('transitionend')
+    await wrapper.find('.spinner__rotor').trigger('transitionend', { propertyName: 'transform' })
 
     const emitted = wrapper.emitted('result')
     expect(emitted).toHaveLength(1)
@@ -167,7 +167,7 @@ describe('WheelSpinner', () => {
   it('cannot spin with fewer than 2 names', async () => {
     const wrapper = mount(WheelSpinner, { props: { names: ['Only'] } })
     await wrapper.find('button').trigger('click')
-    await wrapper.find('.spinner__rotor').trigger('transitionend')
+    await wrapper.find('.spinner__rotor').trigger('transitionend', { propertyName: 'transform' })
     expect(wrapper.emitted('result')).toBeUndefined()
   })
 
@@ -177,11 +177,30 @@ describe('WheelSpinner', () => {
     expect(wrapper.findAll('.spinner__seg--dim')).toHaveLength(0)
 
     await wrapper.find('button').trigger('click')
-    await wrapper.find('.spinner__rotor').trigger('transitionend')
+    await wrapper.find('.spinner__rotor').trigger('transitionend', { propertyName: 'transform' })
 
     // Every segment except the winner is dimmed, and the winner name is shown in the readout.
     expect(wrapper.findAll('.spinner__seg--dim')).toHaveLength(2)
     expect(wrapper.find('.spinner__result-name').text()).toBe(wrapper.emitted('result')![0][0])
+  })
+
+  it('ignores a segment opacity transition mid-spin (does not highlight the winner early)', async () => {
+    const wrapper = mount(WheelSpinner, { props: { names: ['A', 'B', 'C'] } })
+    await wrapper.find('button').trigger('click')
+    await wrapper.find('.spinner__rotor').trigger('transitionend', { propertyName: 'transform' })
+    expect(wrapper.emitted('result')).toHaveLength(1)
+
+    // Second spin: un-dimming the previous winner fires an opacity transitionend that bubbles to the
+    // rotor. It must NOT settle the wheel or light up the new winner while it is still turning.
+    await wrapper.find('button').trigger('click')
+    await wrapper.find('.spinner__rotor').trigger('transitionend', { propertyName: 'opacity' })
+    expect(wrapper.emitted('result')).toHaveLength(1)
+    expect(wrapper.findAll('.spinner__seg--dim')).toHaveLength(0)
+
+    // Only the transform transition (the wheel actually stopping) settles it.
+    await wrapper.find('.spinner__rotor').trigger('transitionend', { propertyName: 'transform' })
+    expect(wrapper.emitted('result')).toHaveLength(2)
+    expect(wrapper.findAll('.spinner__seg--dim')).toHaveLength(2)
   })
 })
 
