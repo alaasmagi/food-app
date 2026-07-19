@@ -88,6 +88,7 @@ async function toggleMembership(): Promise<void> {
     </dl>
 
     <div class="restaurant__actions">
+      <!-- Primary action — the point of a lunch-offers card. The only filled/anchored button. -->
       <Button
         variant="secondary"
         size="sm"
@@ -98,30 +99,35 @@ async function toggleMembership(): Promise<void> {
         {{ expanded ? 'Hide offers' : 'See offers' }}
       </Button>
 
+      <!-- Quiet secondary utilities, grouped and pushed to the right, away from the primary. -->
+      <div class="restaurant__utils">
+        <Button variant="ghost" size="sm" @click="editorOpen = true">
+          {{ favourite ? 'Edit rating' : 'Rate' }}
+        </Button>
+
+        <Button
+          v-if="locatable"
+          variant="ghost"
+          size="sm"
+          icon="arrow-right"
+          iconPosition="right"
+          @click="emit('showOnMap', restaurant)"
+        >
+          Show on map
+        </Button>
+      </div>
+
+      <!-- Destructive action, set apart and coloured so it never reads as a peer of the utilities. -->
       <Button
         v-if="showMembership"
-        :variant="isMember ? 'ghost' : 'secondary'"
+        class="restaurant__remove"
+        :variant="isMember ? 'danger' : 'secondary'"
         size="sm"
         :icon="isMember ? 'minus' : 'plus'"
         :loading="membershipPending"
         @click="toggleMembership"
       >
         {{ isMember ? 'Remove from environment' : 'Add to environment' }}
-      </Button>
-
-      <Button variant="ghost" size="sm" @click="editorOpen = true">
-        {{ favourite ? 'Edit rating' : 'Rate' }}
-      </Button>
-
-      <Button
-        v-if="locatable"
-        variant="ghost"
-        size="sm"
-        icon="arrow-right"
-        iconPosition="right"
-        @click="emit('showOnMap', restaurant)"
-      >
-        Show on map
       </Button>
     </div>
 
@@ -171,17 +177,38 @@ async function toggleMembership(): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin: 0 0 var(--space-5);
+  margin: 0 0 var(--space-4);
 }
 
 .restaurant__rating {
   margin-bottom: var(--space-4);
 }
 
+/* A distinct action footer: a divider sets it off from the card body, and the row is organised into
+   tiers — primary (left), quiet utilities (right cluster), destructive (set apart) — rather than a
+   flat strip of look-alike buttons. */
 .restaurant__actions {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.restaurant__utils {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  /* Push the utilities (and the destructive action after them) to the right, opening a clear gap
+     from the primary "See offers" button so the row reads as grouped, not one long strip. */
+  margin-left: auto;
+}
+
+/* Keep the destructive action clearly off the utility cluster. */
+.restaurant__remove {
+  margin-left: var(--space-2);
 }
 
 .restaurant__row {
