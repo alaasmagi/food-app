@@ -88,7 +88,7 @@ async function toggleMembership(): Promise<void> {
     </dl>
 
     <div class="restaurant__actions">
-      <!-- Primary action — the point of a lunch-offers card. The only filled/anchored button. -->
+      <!-- Left cluster: the primary action and, next to it, the destructive one it pairs with. -->
       <Button
         variant="secondary"
         size="sm"
@@ -99,7 +99,18 @@ async function toggleMembership(): Promise<void> {
         {{ expanded ? 'Hide offers' : 'See offers' }}
       </Button>
 
-      <!-- Quiet secondary utilities, grouped and pushed to the right, away from the primary. -->
+      <Button
+        v-if="showMembership"
+        :variant="isMember ? 'danger' : 'secondary'"
+        size="sm"
+        :icon="isMember ? 'minus' : 'plus'"
+        :loading="membershipPending"
+        @click="toggleMembership"
+      >
+        {{ isMember ? 'Remove from environment' : 'Add to environment' }}
+      </Button>
+
+      <!-- Quiet utilities, pushed to the right and set off from the cluster on the left. -->
       <div class="restaurant__utils">
         <Button variant="ghost" size="sm" @click="editorOpen = true">
           {{ favourite ? 'Edit rating' : 'Rate' }}
@@ -116,19 +127,6 @@ async function toggleMembership(): Promise<void> {
           Show on map
         </Button>
       </div>
-
-      <!-- Destructive action, set apart and coloured so it never reads as a peer of the utilities. -->
-      <Button
-        v-if="showMembership"
-        class="restaurant__remove"
-        :variant="isMember ? 'danger' : 'secondary'"
-        size="sm"
-        :icon="isMember ? 'minus' : 'plus'"
-        :loading="membershipPending"
-        @click="toggleMembership"
-      >
-        {{ isMember ? 'Remove from environment' : 'Add to environment' }}
-      </Button>
     </div>
 
     <OfferList v-if="expanded" :restaurant-id="restaurant.id" />
@@ -185,7 +183,7 @@ async function toggleMembership(): Promise<void> {
 }
 
 /* A distinct action footer: a divider sets it off from the card body, and the row is organised into
-   tiers — primary (left), quiet utilities (right cluster), destructive (set apart) — rather than a
+   two clusters — primary + destructive on the left, quiet utilities on the right — rather than a
    flat strip of look-alike buttons. */
 .restaurant__actions {
   display: flex;
@@ -200,15 +198,10 @@ async function toggleMembership(): Promise<void> {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-1);
-  /* Push the utilities (and the destructive action after them) to the right, opening a clear gap
-     from the primary "See offers" button so the row reads as grouped, not one long strip. */
+  gap: var(--space-4);
+  /* Push the utilities to the right, opening a clear gap from the See-offers / Remove cluster on
+     the left so the row reads as two groups, not one long strip. */
   margin-left: auto;
-}
-
-/* Keep the destructive action clearly off the utility cluster. */
-.restaurant__remove {
-  margin-left: var(--space-2);
 }
 
 .restaurant__row {
