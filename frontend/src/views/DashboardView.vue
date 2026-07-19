@@ -8,6 +8,7 @@ import RestaurantCard from '../components/restaurant/RestaurantCard.vue'
 import RestaurantMap from '../components/restaurant/RestaurantMap.vue'
 import EnvironmentTabs from '../components/environment/EnvironmentTabs.vue'
 import EnvironmentEditorDialog from '../components/environment/EnvironmentEditorDialog.vue'
+import AddRestaurantsDialog from '../components/environment/AddRestaurantsDialog.vue'
 import Button from '../components/design-system/forms/Button.vue'
 import Tabs, { type TabItem } from '../components/design-system/navigation/Tabs.vue'
 import { useEnvironmentFilteredRestaurants } from '../composables/useEnvironmentFilteredRestaurants'
@@ -15,9 +16,10 @@ import { useEnvironmentFilteredRestaurants } from '../composables/useEnvironment
 const store = useRestaurantsStore()
 const environments = useEnvironmentsStore()
 const favourites = useFavouritesStore()
-const { list, listLoading, listError, listLoaded } = storeToRefs(store)
+const { listLoading, listError, listLoaded } = storeToRefs(store)
 
 const editorOpen = ref(false)
+const addOpen = ref(false)
 
 // List vs map are two views of the same already-loaded catalog. Typed as a
 // plain string to match the Tabs v-model contract (see EnvironmentTabs).
@@ -34,17 +36,20 @@ onMounted(() => {
   favourites.loadFavourites()
 })
 
-// The list always shows the full catalog, regardless of the selected environment.
-// Selecting an environment tab does NOT filter the list — it puts every card
-// into "manage membership" mode for that environment, exposing the Add/Remove
-// actions (see RestaurantCard). Filtering to current members here would hide
-// every non-member card, making "Add to environment" — the only membership-add
-// UI — permanently unreachable.
-const visibleRestaurants = computed(() => list.value)
+// Both views honour the environment filter: "All" shows the full catalog, a
+// specific environment shows its members only. Under an environment, adding
+// restaurants is a deliberate action via the "Add restaurants" picker rather
+// than an inline toggle on every catalog card, so the tab reads as a curated
+// list of that environment's restaurants.
+const visibleRestaurants = useEnvironmentFilteredRestaurants()
+const mapRestaurants = visibleRestaurants
 
-// The map has no add/remove workflow, so it can safely honour the environment
-// filter: "All" shows everything, a specific environment shows its members only.
-const mapRestaurants = useEnvironmentFilteredRestaurants()
+// The currently selected environment object (null under "All"), used to label
+// the empty state and the "Add restaurants" picker.
+const selectedEnvironment = computed(() =>
+  environments.list.find((environment) => environment.id === environments.selectedEnvironmentId) ??
+  null,
+)
 </script>
 
 <template>
@@ -65,8 +70,17 @@ const mapRestaurants = useEnvironmentFilteredRestaurants()
       Restaurants could not be loaded.
     </p>
     <template v-else-if="view === 'list'">
+      <div v-if="selectedEnvironment" class="dashboard__env-bar">
+        <Button variant="primary" size="sm" icon="plus" @click="addOpen = true">
+          Add restaurants
+        </Button>
+      </div>
+
       <p v-if="listLoaded && !visibleRestaurants.length" class="dashboard__status">
-        No restaurants available.
+        <template v-if="selectedEnvironment">
+          No restaurants in {{ selectedEnvironment.name }} yet — use “Add restaurants” to build it up.
+        </template>
+        <template v-else>No restaurants available.</template>
       </p>
       <div v-else class="dashboard__list">
         <RestaurantCard
@@ -79,6 +93,13 @@ const mapRestaurants = useEnvironmentFilteredRestaurants()
     <RestaurantMap v-else :restaurants="mapRestaurants" class="dashboard__map" />
 
     <EnvironmentEditorDialog :open="editorOpen" @close="editorOpen = false" />
+    <AddRestaurantsDialog
+      v-if="selectedEnvironment"
+      :open="addOpen"
+      :environment-id="selectedEnvironment.id"
+      :environment-name="selectedEnvironment.name"
+      @close="addOpen = false"
+    />
   </section>
 </template>
 
@@ -112,6 +133,12 @@ const mapRestaurants = useEnvironmentFilteredRestaurants()
 
 .dashboard__view-tabs {
   margin-bottom: var(--space-8);
+}
+
+.dashboard__env-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-4);
 }
 
 .dashboard__list {

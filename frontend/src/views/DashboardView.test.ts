@@ -69,7 +69,7 @@ describe('DashboardView with a specific environment selected', () => {
   beforeEach(() => setActivePinia(createPinia()))
   afterEach(() => vi.unstubAllGlobals())
 
-  it('keeps the full catalog visible and exposes Add/Remove per membership', async () => {
+  it('narrows the list to the environment members, each with a Remove action', async () => {
     // r1 is a member of "Work"; r2 is not.
     stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta')], ['r1'])
 
@@ -82,18 +82,20 @@ describe('DashboardView with a specific environment selected', () => {
     await tabs[1].trigger('click')
     await flushPromises()
 
-    // Both restaurants stay visible — selecting an environment must not filter
-    // out non-members, otherwise "Add to environment" is unreachable.
+    // Only the member is listed — the tab reads as a curated set, not the catalog.
     const names = wrapper.findAll('.restaurant__name').map((n) => n.text())
-    expect(names).toEqual(['Alpha', 'Beta'])
+    expect(names).toEqual(['Alpha'])
 
-    // The member shows Remove; the non-member shows Add.
+    // Members expose Remove; the inline "Add to environment" toggle is gone
+    // (adding now happens through the picker).
     const buttons = wrapper.findAll('button').map((b) => b.text())
     expect(buttons).toContain('Remove from environment')
-    expect(buttons).toContain('Add to environment')
+    expect(buttons).not.toContain('Add to environment')
+    // The picker entry point is present.
+    expect(buttons).toContain('Add restaurants')
   })
 
-  it('shows the whole catalog with Add actions when the selected environment is empty', async () => {
+  it('shows an empty state and the Add picker entry when the environment has no members', async () => {
     // "Work" has no members yet — the user selects it to start adding restaurants.
     stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta')], [])
 
@@ -103,15 +105,13 @@ describe('DashboardView with a specific environment selected', () => {
     await envTabs(wrapper)[1].trigger('click')
     await flushPromises()
 
-    // No "No restaurants" empty state — every restaurant is addable.
-    expect(wrapper.find('.dashboard__status').exists()).toBe(false)
-    const names = wrapper.findAll('.restaurant__name').map((n) => n.text())
-    expect(names).toEqual(['Alpha', 'Beta'])
-    const addButtons = wrapper.findAll('button').filter((b) => b.text() === 'Add to environment')
-    expect(addButtons).toHaveLength(2)
+    // No restaurant cards; a named empty state guides the user to the picker.
+    expect(wrapper.findAll('.restaurant__name')).toHaveLength(0)
+    expect(wrapper.find('.dashboard__status').text()).toContain('No restaurants in Work yet')
+    expect(wrapper.findAll('button').map((b) => b.text())).toContain('Add restaurants')
   })
 
-  it('hides membership actions under "All"', async () => {
+  it('hides membership actions and the picker entry under "All"', async () => {
     stubFetch([restaurant('r1', 'Alpha')], ['r1'])
 
     const wrapper = mount(DashboardView)
@@ -121,6 +121,27 @@ describe('DashboardView with a specific environment selected', () => {
     const buttons = wrapper.findAll('button').map((b) => b.text())
     expect(buttons).not.toContain('Add to environment')
     expect(buttons).not.toContain('Remove from environment')
+    expect(buttons).not.toContain('Add restaurants')
+    // The full catalog is still visible under "All".
+    expect(wrapper.findAll('.restaurant__name').map((n) => n.text())).toEqual(['Alpha'])
+  })
+
+  it('opens the Add-restaurants picker listing the environment non-members', async () => {
+    stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta')], ['r1'])
+
+    const wrapper = mount(DashboardView)
+    await flushPromises()
+
+    await envTabs(wrapper)[1].trigger('click')
+    await flushPromises()
+
+    const addButton = wrapper.findAll('button').find((b) => b.text() === 'Add restaurants')!
+    await addButton.trigger('click')
+    await flushPromises()
+
+    // The dialog lists Beta (the non-member) but not Alpha (already a member).
+    const dialogNames = wrapper.findAll('.picker__name').map((n) => n.text())
+    expect(dialogNames).toEqual(['Beta'])
   })
 })
 
@@ -161,7 +182,7 @@ describe('DashboardView list/map toggle', () => {
     expect((map.props('restaurants') as Restaurant[]).map((r) => r.id)).toEqual(['r1', 'r2'])
   })
 
-  it('narrows the map to environment members while the list stays full', async () => {
+  it('narrows both the list and the map to environment members', async () => {
     // r1 and r3 belong to "Work"; r2 does not.
     stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta'), restaurant('r3', 'Gamma')], ['r1', 'r3'])
 
@@ -171,13 +192,13 @@ describe('DashboardView list/map toggle', () => {
     await envTabs(wrapper)[1].trigger('click') // Work
     await flushPromises()
 
-    // List view still shows the full catalog (membership management).
-    expect(wrapper.findAll('.restaurant__name').map((n) => n.text())).toEqual(['Alpha', 'Beta', 'Gamma'])
+    // List view shows only the environment's members now.
+    expect(wrapper.findAll('.restaurant__name').map((n) => n.text())).toEqual(['Alpha', 'Gamma'])
 
     await viewTabs(wrapper)[1].trigger('click') // Map
     await flushPromises()
 
-    // Map shows only the environment's members.
+    // Map shows the same members.
     const map = wrapper.findComponent(RestaurantMap)
     expect((map.props('restaurants') as Restaurant[]).map((r) => r.id)).toEqual(['r1', 'r3'])
   })
