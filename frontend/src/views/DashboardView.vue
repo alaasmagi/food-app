@@ -23,8 +23,6 @@ const {
   listLoading,
   listError,
   areaList,
-  areaLoading,
-  areaError,
   areaTruncated,
   pagedList,
   pagedTotal,
@@ -79,7 +77,6 @@ const searchInput = ref('')
 const search = ref('')
 const listPage = ref(1)
 const totalPages = computed(() => Math.max(1, Math.ceil(pagedTotal.value / PAGE_SIZE)))
-const showListControls = computed(() => isAllView.value && view.value === 'list')
 
 const commitSearch = debounce((value: string) => {
   search.value = value.trim()
@@ -113,15 +110,12 @@ function selectView(next: string): void {
   view.value = next
 }
 
-// Loading/error reflect whichever set the active view is showing.
-const loading = computed(() => {
-  if (!isAllView.value) return listLoading.value
-  return view.value === 'list' ? pagedLoading.value : areaLoading.value
-})
-const loadError = computed(() => {
-  if (!isAllView.value) return listError.value
-  return view.value === 'list' ? pagedError.value : areaError.value
-})
+// Loading/error for the LIST view only. The map is never gated by loading — it must stay mounted
+// across viewport fetches, or every pan/zoom would unmount it, reset it to the default view (zoom
+// out), and re-emit bounds in a refetch loop. Under "All" the list reads the paged fetch state; under
+// an environment it reads the full-catalog load state.
+const loading = computed(() => (isAllView.value ? pagedLoading.value : listLoading.value))
+const loadError = computed(() => (isAllView.value ? pagedError.value : listError.value))
 
 function onBoundsChange(bounds: Bounds): void {
   store.loadInBounds(bounds)
@@ -173,23 +167,33 @@ const selectedEnvironment = computed(() =>
       </Button>
     </div>
 
-    <!-- Search box for the "All" list. Kept outside the loading gate so typing isn't interrupted
-         when the results swap during a fetch. -->
-    <Input
-      v-if="showListControls"
-      v-model="searchInput"
-      icon="search"
-      size="sm"
-      placeholder="Search restaurants by name or city"
-      class="dashboard__search"
+    <!-- Map view. Rendered independently of loading so a viewport fetch never unmounts it. -->
+    <RestaurantMap
+      v-if="view === 'map'"
+      :restaurants="mapRestaurants"
+      :truncated="isAllView && areaTruncated"
+      :auto-fit="!isAllView"
+      :focus-restaurant="focusRestaurant"
+      class="dashboard__map"
+      @bounds-change="onBoundsChange"
     />
 
-    <p v-if="loading" class="dashboard__status">Loading restaurants.</p>
-    <p v-else-if="loadError" class="dashboard__status dashboard__status--error">
-      Restaurants could not be loaded.
-    </p>
-    <template v-else-if="view === 'list'">
-      <p v-if="!listRestaurants.length" class="dashboard__status">
+    <!-- List view. Its content can safely swap for a loading/empty placeholder. -->
+    <template v-else>
+      <Input
+        v-if="isAllView"
+        v-model="searchInput"
+        icon="search"
+        size="sm"
+        placeholder="Search restaurants by name or city"
+        class="dashboard__search"
+      />
+
+      <p v-if="loading" class="dashboard__status">Loading restaurants.</p>
+      <p v-else-if="loadError" class="dashboard__status dashboard__status--error">
+        Restaurants could not be loaded.
+      </p>
+      <p v-else-if="!listRestaurants.length" class="dashboard__status">
         <template v-if="selectedEnvironment">
           No restaurants in {{ selectedEnvironment.name }} yet — use “Add restaurants” to build it up.
         </template>
@@ -204,34 +208,25 @@ const selectedEnvironment = computed(() =>
           @show-on-map="focusOnMap"
         />
       </div>
-    </template>
-    <RestaurantMap
-      v-else
-      :restaurants="mapRestaurants"
-      :truncated="isAllView && areaTruncated"
-      :auto-fit="!isAllView"
-      :focus-restaurant="focusRestaurant"
-      class="dashboard__map"
-      @bounds-change="onBoundsChange"
-    />
 
-    <!-- Pagination for the "All" list. Outside the loading gate so it stays put between pages. -->
-    <div v-if="showListControls && totalPages > 1" class="dashboard__pager">
-      <Button variant="secondary" size="sm" :disabled="listPage <= 1" @click="goToPage(listPage - 1)">
-        Previous
-      </Button>
-      <span class="dashboard__pager-label">Page {{ listPage }} of {{ totalPages }}</span>
-      <Button
-        variant="secondary"
-        size="sm"
-        icon="arrow-right"
-        iconPosition="right"
-        :disabled="listPage >= totalPages"
-        @click="goToPage(listPage + 1)"
-      >
-        Next
-      </Button>
-    </div>
+      <!-- Pagination for the "All" list. -->
+      <div v-if="isAllView && totalPages > 1" class="dashboard__pager">
+        <Button variant="secondary" size="sm" :disabled="listPage <= 1" @click="goToPage(listPage - 1)">
+          Previous
+        </Button>
+        <span class="dashboard__pager-label">Page {{ listPage }} of {{ totalPages }}</span>
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="arrow-right"
+          iconPosition="right"
+          :disabled="listPage >= totalPages"
+          @click="goToPage(listPage + 1)"
+        >
+          Next
+        </Button>
+      </div>
+    </template>
 
     <EnvironmentEditorDialog :open="editorOpen" @close="editorOpen = false" />
     <AddRestaurantsDialog

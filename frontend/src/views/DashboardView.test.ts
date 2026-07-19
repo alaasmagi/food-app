@@ -181,6 +181,25 @@ describe('DashboardView list/map toggle', () => {
     expect(wrapper.findAll('.restaurant__name').length).toBe(0)
   })
 
+  it('keeps the map mounted while a viewport fetch is loading', async () => {
+    // Regression: gating the map behind the loading state unmounted it on every pan/zoom, which reset
+    // it to the default view (zoom-out) and re-emitted bounds in a refetch loop.
+    stubFetch([restaurant('r1', 'Alpha')], ['r1'])
+
+    const pinia = createPinia()
+    const wrapper = mount(DashboardView, {
+      global: { plugins: [pinia], stubs: { RestaurantMap: true } },
+    })
+    await flushPromises()
+
+    const store = useRestaurantsStore(pinia)
+    store.areaLoading = true // simulate an in-flight viewport fetch
+    await wrapper.vm.$nextTick()
+
+    // The map is still mounted (not replaced by a "Loading" placeholder).
+    expect(wrapper.findComponent(RestaurantMap).exists()).toBe(true)
+  })
+
   it('passes the fetched viewport set to the map under "All"', async () => {
     stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta')], ['r1'])
 
