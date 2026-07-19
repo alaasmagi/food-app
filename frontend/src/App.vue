@@ -34,6 +34,13 @@ body,
   min-height: 100vh;
 }
 
+/* Always reserve the vertical scrollbar's gutter so pages that grow past the
+   viewport don't claim width from the centered layout and shift it sideways.
+   No-op on overlay-scrollbar systems; prevents the jump on classic scrollbars. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   background: var(--surface-app);
   color: var(--text-primary);
