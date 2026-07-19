@@ -25,6 +25,10 @@ vi.mock('leaflet', () => {
     fitBounds: vi.fn(),
     setView: vi.fn(),
     remove: vi.fn(),
+    getBounds: vi.fn(() => ({
+      getSouthWest: () => ({ lat: 59.3, lng: 24.55 }),
+      getNorthEast: () => ({ lat: 59.58, lng: 24.95 }),
+    })),
   }))
   const L = {
     map,
@@ -115,6 +119,33 @@ describe('RestaurantMap component', () => {
 
     expect(L.marker).not.toHaveBeenCalled()
     expect(wrapper.find('.restaurant-map__empty').exists()).toBe(true)
+  })
+
+  it('emits its viewport bounds on mount so the parent can fetch that area', async () => {
+    const wrapper = mount(RestaurantMap, {
+      props: { restaurants: [restaurant('a', { latitude: 59.43, longitude: 24.75 })] },
+    })
+    await flushPromises()
+
+    const emitted = wrapper.emitted('boundsChange')
+    expect(emitted).toHaveLength(1)
+    expect(emitted![0][0]).toEqual({ minLat: 59.3, minLon: 24.55, maxLat: 59.58, maxLon: 24.95 })
+  })
+
+  it('in autoFit mode fits to markers and does not drive fetching', async () => {
+    const wrapper = mount(RestaurantMap, {
+      props: {
+        restaurants: [restaurant('a', { latitude: 59.43, longitude: 24.75 })],
+        autoFit: true,
+      },
+    })
+    await flushPromises()
+
+    const mapInstance = (
+      L.map as unknown as { mock: { results: { value: { fitBounds: ReturnType<typeof vi.fn> } }[] } }
+    ).mock.results[0].value
+    expect(mapInstance.fitBounds).toHaveBeenCalled()
+    expect(wrapper.emitted('boundsChange')).toBeUndefined()
   })
 
   it('removes the map instance on unmount', async () => {

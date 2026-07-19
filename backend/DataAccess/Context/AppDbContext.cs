@@ -57,6 +57,8 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Name);
             entity.HasIndex(e => e.City);
             entity.HasIndex(e => e.OfferProviderId);
+            // Backs the map viewport (bounding-box) query in RestaurantRepository.GetInBoundsAsync.
+            entity.HasIndex(e => new { e.Latitude, e.Longitude });
 
             entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
             entity.Property(e => e.City).HasMaxLength(128).IsRequired();

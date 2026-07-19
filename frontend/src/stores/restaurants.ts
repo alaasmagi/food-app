@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { getRestaurantOffers, getRestaurants } from '../api/restaurants'
-import type { DailyOffer, Restaurant } from '../types/restaurant'
+import { getRestaurantOffers, getRestaurants, getRestaurantsInBounds } from '../api/restaurants'
+import type { Bounds, DailyOffer, Restaurant } from '../types/restaurant'
 
 export interface OffersEntry {
   offers: DailyOffer[]
@@ -10,17 +10,31 @@ export interface OffersEntry {
   loaded: boolean
 }
 
+// Cap on restaurants fetched per map viewport; mirrors the backend's default. When a fetch returns
+// this many, the viewport is assumed to hold more and the UI hints the user to zoom in.
+export const DEFAULT_AREA_LIMIT = 250
+
 export const useRestaurantsStore = defineStore('restaurants', () => {
-  // Catalog: fetched once, cached in memory.
+  // Full catalog: fetched once, cached in memory. Used by the wheel, environments and the
+  // "add restaurants" picker — surfaces that need every restaurant regardless of the map.
   const list = ref<Restaurant[]>([])
   const listLoaded = ref(false)
   const listLoading = ref(false)
   const listError = ref<string | null>(null)
 
+  // Map/viewport results: replaced on every pan/zoom, so the dashboard map and list show only
+  // the restaurants a user is currently looking at rather than the entire catalog.
+  const areaList = ref<Restaurant[]>([])
+  const areaLoading = ref(false)
+  const areaError = ref<string | null>(null)
+  const areaTruncated = ref(false)
+
   // Per-restaurant offers cache, keyed by restaurant id. Fetched lazily.
   const offersById = ref<Record<string, OffersEntry>>({})
 
   let listPending: Promise<void> | null = null
+  // Monotonic token so an earlier, slower viewport fetch can't overwrite a newer one's results.
+  let areaRequestId = 0
 
   async function loadRestaurants(): Promise<void> {
     if (listLoaded.value) return
@@ -39,6 +53,27 @@ export const useRestaurantsStore = defineStore('restaurants', () => {
       }
     })()
     return listPending
+  }
+
+  /**
+   * Fetch the restaurants inside the given map viewport and replace `areaList`. Concurrent calls
+   * (rapid panning) are guarded by a request token so only the latest result is kept.
+   */
+  async function loadInBounds(bounds: Bounds, limit: number = DEFAULT_AREA_LIMIT): Promise<void> {
+    const requestId = ++areaRequestId
+    areaLoading.value = true
+    areaError.value = null
+    try {
+      const results = await getRestaurantsInBounds(bounds, limit)
+      if (requestId !== areaRequestId) return // a newer fetch already superseded this one
+      areaList.value = results
+      areaTruncated.value = results.length >= limit
+    } catch (e) {
+      if (requestId !== areaRequestId) return
+      areaError.value = e instanceof Error ? e.message : 'Failed to load restaurants'
+    } finally {
+      if (requestId === areaRequestId) areaLoading.value = false
+    }
   }
 
   /** Fetch one restaurant's offers lazily. No-ops if already loaded or in flight. */
@@ -69,8 +104,13 @@ export const useRestaurantsStore = defineStore('restaurants', () => {
     listLoaded,
     listLoading,
     listError,
+    areaList,
+    areaLoading,
+    areaError,
+    areaTruncated,
     offersById,
     loadRestaurants,
+    loadInBounds,
     loadOffers,
     offersFor,
   }

@@ -22,9 +22,59 @@ public class RestaurantsController(
     IOfferFetchService offerFetchService,
     IMapper mapper) : ControllerBase
 {
+    // Default cap when the client omits `limit` on a bounded query. Keeps a zoomed-out viewport from
+    // returning the whole catalog; the client shows a "zoom in to see more" hint once the cap is hit.
+    private const int DefaultBoundsLimit = 250;
+
+    /// <summary>
+    /// Lists restaurants. With no query params, returns the full catalog (used by the wheel, environments
+    /// and the "add restaurants" picker). When a full bounding box (minLat/minLon/maxLat/maxLon) is
+    /// supplied, returns only the restaurants inside it, capped at <paramref name="limit"/> — this is the
+    /// map/viewport path. Supplying only some of the four bounds is a 400.
+    /// </summary>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<RestaurantDto>>> GetAll()
+    public async Task<ActionResult<IEnumerable<RestaurantDto>>> GetAll(
+        [FromQuery] double? minLat,
+        [FromQuery] double? minLon,
+        [FromQuery] double? maxLat,
+        [FromQuery] double? maxLon,
+        [FromQuery] int? limit)
     {
+        var boundsProvided = new[] { minLat, minLon, maxLat, maxLon };
+        var providedCount = boundsProvided.Count(value => value.HasValue);
+
+        if (providedCount is not (0 or 4))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid bounds",
+                detail: "Provide all of minLat, minLon, maxLat and maxLon together, or none.");
+        }
+
+        if (providedCount == 4)
+        {
+            if (minLat > maxLat || minLon > maxLon)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: "Invalid bounds",
+                    detail: "minLat/minLon must be less than or equal to maxLat/maxLon.");
+            }
+
+            var boundedResult = await restaurantService.GetInBoundsAsync(
+                minLat!.Value,
+                minLon!.Value,
+                maxLat!.Value,
+                maxLon!.Value,
+                limit ?? DefaultBoundsLimit);
+            if (!boundedResult.Successful)
+            {
+                return ToProblem(boundedResult.Error);
+            }
+
+            return Ok(mapper.Map(boundedResult.Value)?.ToList() ?? []);
+        }
+
         var result = await restaurantService.GetAllAsync();
         if (!result.Successful)
         {

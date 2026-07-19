@@ -5,12 +5,17 @@ import Button from '../design-system/forms/Button.vue'
 import OfferList from './OfferList.vue'
 import { useRestaurantsStore } from '../../stores/restaurants'
 import { useTheme, type Theme } from '../../composables/useTheme'
-import type { Restaurant } from '../../types/restaurant'
+import type { Bounds, Restaurant } from '../../types/restaurant'
 import { markerableRestaurants } from './mapMarkers'
+import { debounce } from '../../utils/debounce'
 
-// The map is a pure viewer: it renders whatever set it is given and never
-// fetches restaurants itself.
-const props = defineProps<{ restaurants: Restaurant[] }>()
+// The map renders whatever set it is given; it does not fetch restaurants itself. Two modes:
+//  - viewport (default): reports its viewport via `boundsChange` on pan/zoom so the parent fetches
+//    that area, and never moves itself when data arrives.
+//  - autoFit: a pure viewer over a fixed, fully-loaded set (e.g. an environment's members) — it fits
+//    the view to those markers and does not drive fetching.
+const props = defineProps<{ restaurants: Restaurant[]; truncated?: boolean; autoFit?: boolean }>()
+const emit = defineEmits<{ boundsChange: [bounds: Bounds] }>()
 
 const store = useRestaurantsStore()
 const { theme } = useTheme()
@@ -85,6 +90,8 @@ function renderMarkers(): void {
   }
 }
 
+// Fit the view to the current markers (autoFit mode only). Falls back to the default view when the
+// set has no located restaurants.
 function fitToMarkers(): void {
   if (!map) return
   const points = markerable.value.map((r) => L.latLng(r.latitude, r.longitude))
@@ -94,6 +101,18 @@ function fitToMarkers(): void {
     map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)
   }
 }
+
+// Report the current viewport so the parent can fetch restaurants for it. Debounced so a drag or a
+// pinch-zoom (many move events) results in a single fetch once the user settles. No-op in autoFit
+// mode, where the map is a pure viewer and must not trigger fetches.
+function emitBounds(): void {
+  if (!map || props.autoFit) return
+  const b = map.getBounds()
+  const sw = b.getSouthWest()
+  const ne = b.getNorthEast()
+  emit('boundsChange', { minLat: sw.lat, minLon: sw.lng, maxLat: ne.lat, maxLon: ne.lng })
+}
+const emitBoundsDebounced = debounce(emitBounds, 300)
 
 onMounted(async () => {
   if (!mapEl.value) return
@@ -110,18 +129,40 @@ onMounted(async () => {
     selectedRestaurant.value = null
     offersExpanded.value = false
   })
+  // A pan or zoom means the user is looking somewhere new — re-fetch that viewport.
+  map.on('moveend', emitBoundsDebounced)
+  map.on('zoomend', emitBoundsDebounced)
 
+  // Start at the default view (Tallinn). In viewport mode we deliberately do NOT fit to markers:
+  // fitting on every data change would move the viewport, re-fire moveend and re-fetch endlessly.
+  map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)
   renderMarkers()
   // The container may have just become visible via v-if; give it a laid-out size.
   await nextTick()
   map.invalidateSize()
-  fitToMarkers()
+  if (props.autoFit) {
+    fitToMarkers()
+  } else {
+    // Kick off the first fetch for the default viewport.
+    emitBounds()
+  }
 })
 
+// New data: redraw the markers. In autoFit mode also re-fit to them; in viewport mode never move
+// the map (the user's chosen viewport is what drove the fetch).
 watch(markerable, () => {
   renderMarkers()
-  fitToMarkers()
+  if (props.autoFit) fitToMarkers()
 })
+
+// Switching between modes (e.g. selecting/clearing an environment) with the map already open.
+watch(
+  () => props.autoFit,
+  (autoFit) => {
+    if (autoFit) fitToMarkers()
+    else emitBounds()
+  },
+)
 
 // Swap the basemap in place when the app theme changes.
 watch(theme, (value) => {
@@ -129,6 +170,7 @@ watch(theme, (value) => {
 })
 
 onUnmounted(() => {
+  emitBoundsDebounced.cancel()
   map?.remove()
   map = null
   markerLayer = null
@@ -140,8 +182,11 @@ onUnmounted(() => {
 <template>
   <div class="restaurant-map">
     <div ref="mapEl" class="restaurant-map__canvas" role="application" aria-label="Restaurant map" />
+    <p v-if="truncated" class="restaurant-map__hint" role="status">
+      Showing the closest restaurants — zoom in to see more.
+    </p>
     <p v-if="!markerable.length" class="restaurant-map__empty">
-      No restaurants have a location to show on the map.
+      No restaurants have a location to show in this area.
     </p>
 
     <Teleport v-if="selectedRestaurant" :to="popupHost">
@@ -182,6 +227,25 @@ onUnmounted(() => {
   font-family: var(--font-body);
   font-size: var(--text-base);
   color: var(--text-secondary);
+}
+
+/* Floating hint over the top of the map when the viewport holds more than the fetch cap. */
+.restaurant-map__hint {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
 }
 
 /* Token-styled marker, replacing Leaflet's default PNG icon. */

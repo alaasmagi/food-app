@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRestaurantsStore } from '../stores/restaurants'
 import { useEnvironmentsStore } from '../stores/environments'
@@ -11,12 +11,17 @@ import EnvironmentEditorDialog from '../components/environment/EnvironmentEditor
 import AddRestaurantsDialog from '../components/environment/AddRestaurantsDialog.vue'
 import Button from '../components/design-system/forms/Button.vue'
 import type { TabItem } from '../components/design-system/navigation/Tabs.vue'
+import type { Bounds } from '../types/restaurant'
 import { useEnvironmentFilteredRestaurants } from '../composables/useEnvironmentFilteredRestaurants'
 
 const store = useRestaurantsStore()
 const environments = useEnvironmentsStore()
 const favourites = useFavouritesStore()
-const { listLoading, listError, listLoaded } = storeToRefs(store)
+const { listLoading, listError, areaLoading, areaError, areaTruncated } = storeToRefs(store)
+
+// Seed the "All" view from Tallinn (matching the map's default view) so the List tab has data
+// before the map mounts; the map then refines this by viewport as the user pans/zooms.
+const DEFAULT_TALLINN_BOUNDS: Bounds = { minLat: 59.3, minLon: 24.55, maxLat: 59.58, maxLon: 24.95 }
 
 const editorOpen = ref(false)
 const addOpen = ref(false)
@@ -30,19 +35,37 @@ const viewTabs: TabItem[] = [
 ]
 
 onMounted(() => {
-  store.loadRestaurants()
+  // "All" view: fetch the default (Tallinn) viewport. The full catalog is loaded lazily only when
+  // an environment is selected (see the watch below).
+  store.loadInBounds(DEFAULT_TALLINN_BOUNDS)
   environments.loadEnvironments()
   environments.loadMembership()
   favourites.loadFavourites()
 })
 
-// Both views honour the environment filter: "All" shows the full catalog, a
-// specific environment shows its members only. Under an environment, adding
-// restaurants is a deliberate action via the "Add restaurants" picker rather
-// than an inline toggle on every catalog card, so the tab reads as a curated
-// list of that environment's restaurants.
+// "All" is viewport-scoped; a specific environment shows its full member set, so ensure the whole
+// catalog is loaded when one is selected (no-op once cached). Under an environment, adding
+// restaurants is a deliberate action via the "Add restaurants" picker rather than an inline toggle
+// on every catalog card, so the tab reads as a curated list of that environment's restaurants.
+const isAllView = computed(() => environments.selectedEnvironmentId === null)
+
+watch(
+  () => environments.selectedEnvironmentId,
+  (envId) => {
+    if (envId !== null) store.loadRestaurants()
+  },
+)
+
 const visibleRestaurants = useEnvironmentFilteredRestaurants()
 const mapRestaurants = visibleRestaurants
+
+// "All" reads viewport-fetch state; an environment reads the full-catalog load state.
+const loading = computed(() => (isAllView.value ? areaLoading.value : listLoading.value))
+const loadError = computed(() => (isAllView.value ? areaError.value : listError.value))
+
+function onBoundsChange(bounds: Bounds): void {
+  store.loadInBounds(bounds)
+}
 
 // The currently selected environment object (null under "All"), used to label
 // the empty state and the "Add restaurants" picker.
@@ -90,16 +113,16 @@ const selectedEnvironment = computed(() =>
       </Button>
     </div>
 
-    <p v-if="listLoading" class="dashboard__status">Loading restaurants.</p>
-    <p v-else-if="listError" class="dashboard__status dashboard__status--error">
+    <p v-if="loading" class="dashboard__status">Loading restaurants.</p>
+    <p v-else-if="loadError" class="dashboard__status dashboard__status--error">
       Restaurants could not be loaded.
     </p>
     <template v-else-if="view === 'list'">
-      <p v-if="listLoaded && !visibleRestaurants.length" class="dashboard__status">
+      <p v-if="!visibleRestaurants.length" class="dashboard__status">
         <template v-if="selectedEnvironment">
           No restaurants in {{ selectedEnvironment.name }} yet — use “Add restaurants” to build it up.
         </template>
-        <template v-else>No restaurants available.</template>
+        <template v-else>No restaurants in this area — pan or zoom the map to explore.</template>
       </p>
       <div v-else class="dashboard__list">
         <RestaurantCard
@@ -109,7 +132,14 @@ const selectedEnvironment = computed(() =>
         />
       </div>
     </template>
-    <RestaurantMap v-else :restaurants="mapRestaurants" class="dashboard__map" />
+    <RestaurantMap
+      v-else
+      :restaurants="mapRestaurants"
+      :truncated="isAllView && areaTruncated"
+      :auto-fit="!isAllView"
+      class="dashboard__map"
+      @bounds-change="onBoundsChange"
+    />
 
     <EnvironmentEditorDialog :open="editorOpen" @close="editorOpen = false" />
     <AddRestaurantsDialog
