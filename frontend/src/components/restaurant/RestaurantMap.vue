@@ -292,6 +292,10 @@ onUnmounted(() => {
 <style scoped>
 .restaurant-map {
   position: relative;
+  /* Leaflet gives its panes/controls z-indexes up to 1000. Without an isolated stacking context
+     those leak into the page and paint over higher-level UI like modals (whose overlay is z-index
+     100). isolate traps all of Leaflet's z-indexes inside the map. */
+  isolation: isolate;
 }
 
 .restaurant-map__canvas {
