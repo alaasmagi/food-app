@@ -6,13 +6,11 @@ import Button from '../components/design-system/forms/Button.vue'
 import WheelSpinner from '../components/wheel/WheelSpinner.vue'
 import WheelEditorDialog from '../components/wheel/WheelEditorDialog.vue'
 import { useWheelsStore } from '../stores/wheels'
-import { useRestaurantsStore } from '../stores/restaurants'
 import { useToastsStore } from '../stores/toasts'
 import { useShareWheelLink } from '../composables/useShareWheelLink'
 import type { UserWheel } from '../types/wheel'
 
 const wheels = useWheelsStore()
-const restaurants = useRestaurantsStore()
 const toasts = useToastsStore()
 const { copyShareLink } = useShareWheelLink()
 const { list } = storeToRefs(wheels)
@@ -24,8 +22,8 @@ const confirmingDeleteId = ref<string | null>(null)
 
 onMounted(() => {
   wheels.loadWheels()
-  // The editor's checkbox list is built from the already-loaded catalog.
-  restaurants.loadRestaurants()
+  // The editor's restaurant picker fetches its own paged/searchable list, so there's no catalog to
+  // preload here.
 })
 
 const selected = computed(() => list.value.find((wheel) => wheel.id === selectedId.value) ?? null)

@@ -5,71 +5,59 @@ import Input from '../design-system/forms/Input.vue'
 import Checkbox from '../design-system/forms/Checkbox.vue'
 import Switch from '../design-system/forms/Switch.vue'
 import Button from '../design-system/forms/Button.vue'
+import RestaurantPager from '../restaurant/RestaurantPager.vue'
 import { useWheelsStore } from '../../stores/wheels'
-import { useRestaurantsStore } from '../../stores/restaurants'
 import { useToastsStore } from '../../stores/toasts'
 import { useShareWheelLink } from '../../composables/useShareWheelLink'
+import { useRestaurantSearch } from '../../composables/useRestaurantSearch'
 import type { UserWheel } from '../../types/wheel'
 
 const props = defineProps<{ open: boolean; wheel?: UserWheel | null }>()
 const emit = defineEmits<{ close: [] }>()
 
 const wheels = useWheelsStore()
-const restaurants = useRestaurantsStore()
 const toasts = useToastsStore()
 const { copyShareLink } = useShareWheelLink()
+// Paged, searchable restaurant picker — never loads the whole catalog into the dialog.
+const { items, page, totalPages, searchInput, loading, error, load, goToPage, reset } = useRestaurantSearch()
 
 // A share link is meaningful only once the wheel is saved (has an id) and public.
 const canShare = computed(() => Boolean(props.wheel?.id) && isPublic.value)
 
 const name = ref('')
 const isPublic = ref(false)
-const search = ref('')
-// Checked restaurant ids (stable keys); resolved to names only on save.
-const checkedIds = reactive<Set<string>>(new Set())
+// Wheels are stored by restaurant NAME, so selection is tracked by name. This survives paging and
+// search (the picker only ever holds one page) and pre-fills straight from an edited wheel without
+// needing the full catalog to map names back to ids.
+const selected = reactive<Set<string>>(new Set())
 const saving = ref(false)
 
 watch(
   () => props.open,
   (open) => {
     if (!open) return
-    const wheel = props.wheel
-    name.value = wheel?.name ?? ''
-    isPublic.value = wheel?.isPublic ?? false
-    search.value = ''
-    checkedIds.clear()
-    if (wheel) {
-      const names = new Set(wheel.restaurantNames)
-      for (const restaurant of restaurants.list) {
-        if (names.has(restaurant.name)) checkedIds.add(restaurant.id)
-      }
-    }
+    name.value = props.wheel?.name ?? ''
+    isPublic.value = props.wheel?.isPublic ?? false
+    selected.clear()
+    for (const restaurantName of props.wheel?.restaurantNames ?? []) selected.add(restaurantName)
+    reset()
+    load()
   },
 )
 
-const filtered = computed(() => {
-  const query = search.value.trim().toLowerCase()
-  if (!query) return restaurants.list
-  return restaurants.list.filter((restaurant) => restaurant.name.toLowerCase().includes(query))
-})
-
-const checkedCount = computed(() => checkedIds.size)
 // At least 2 restaurants make a meaningful wheel; a name is required.
-const valid = computed(() => name.value.trim().length > 0 && checkedIds.size >= 2)
+const valid = computed(() => name.value.trim().length > 0 && selected.size >= 2)
 
-function toggle(id: string, checked: boolean): void {
-  if (checked) checkedIds.add(id)
-  else checkedIds.delete(id)
+function toggle(restaurantName: string, checked: boolean): void {
+  if (checked) selected.add(restaurantName)
+  else selected.delete(restaurantName)
 }
 
 async function save(): Promise<void> {
   if (!valid.value || saving.value) return
   saving.value = true
   try {
-    const restaurantNames = restaurants.list
-      .filter((restaurant) => checkedIds.has(restaurant.id))
-      .map((restaurant) => restaurant.name)
-    const input = { name: name.value.trim(), restaurantNames, isPublic: isPublic.value }
+    const input = { name: name.value.trim(), restaurantNames: [...selected], isPublic: isPublic.value }
     if (props.wheel) {
       await wheels.updateWheel(props.wheel.id, input)
     } else {
@@ -92,19 +80,26 @@ async function save(): Promise<void> {
 
       <div class="wheel-editor__restaurants">
         <div class="wheel-editor__restaurants-head">
-          <span class="wheel-editor__label">Restaurants ({{ checkedCount }} selected)</span>
+          <span class="wheel-editor__label">Restaurants ({{ selected.size }} selected)</span>
         </div>
-        <Input v-model="search" placeholder="Search restaurants" icon="search" size="sm" />
-        <ul class="wheel-editor__list">
-          <li v-for="restaurant in filtered" :key="restaurant.id" class="wheel-editor__row">
+        <Input v-model="searchInput" placeholder="Search restaurants" icon="search" size="sm" />
+
+        <p v-if="loading" class="wheel-editor__hint">Loading restaurants…</p>
+        <p v-else-if="error" class="wheel-editor__hint">Restaurants could not be loaded.</p>
+        <ul v-else-if="items.length" class="wheel-editor__list">
+          <li v-for="restaurant in items" :key="restaurant.id" class="wheel-editor__row">
             <Checkbox
-              :model-value="checkedIds.has(restaurant.id)"
+              :model-value="selected.has(restaurant.name)"
               :label="restaurant.name"
-              @update:model-value="toggle(restaurant.id, $event)"
+              @update:model-value="toggle(restaurant.name, $event)"
             />
           </li>
         </ul>
-        <p v-if="checkedCount < 2" class="wheel-editor__hint">Select at least 2 restaurants.</p>
+        <p v-else class="wheel-editor__hint">No restaurants match your search.</p>
+
+        <RestaurantPager :page="page" :total-pages="totalPages" @go="goToPage" />
+
+        <p v-if="selected.size < 2" class="wheel-editor__hint">Select at least 2 restaurants.</p>
       </div>
 
       <div class="wheel-editor__public">
