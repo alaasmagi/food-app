@@ -43,4 +43,18 @@ describe('SharedWheelView', () => {
     expect(wrapper.text()).toContain("This wheel isn't available")
     expect(wrapper.findAll('path')).toHaveLength(0)
   })
+
+  it('offers a theme toggle even when the wheel is missing', async () => {
+    getPublicWheelMock.mockResolvedValue(null)
+
+    const wrapper = mount(SharedWheelView)
+    await flushPromises()
+
+    const toggle = wrapper.get('.shared-wheel__actions button')
+    const initialLabel = toggle.attributes('aria-label')
+    expect(initialLabel).toMatch(/Switch to (light|dark) mode/)
+
+    await toggle.trigger('click')
+    expect(toggle.attributes('aria-label')).not.toBe(initialLabel)
+  })
 })

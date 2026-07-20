@@ -2,10 +2,13 @@
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import WheelSpinner from '../components/wheel/WheelSpinner.vue'
+import Button from '../components/design-system/forms/Button.vue'
 import { getPublicWheel } from '../api/publicWheels'
+import { useTheme } from '../composables/useTheme'
 import type { PublicWheel } from '../types/wheel'
 
 const route = useRoute()
+const { theme, toggleTheme } = useTheme()
 
 type Status = 'loading' | 'loaded' | 'not-found' | 'error'
 
@@ -30,6 +33,17 @@ onMounted(async () => {
 
 <template>
   <main class="shared-wheel">
+    <div class="shared-wheel__actions">
+      <Button
+        variant="ghost"
+        size="sm"
+        :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+        @click="toggleTheme"
+      >
+        {{ theme === 'dark' ? 'Light' : 'Dark' }}
+      </Button>
+    </div>
+
     <p v-if="status === 'loading'" class="shared-wheel__status">Loading…</p>
 
     <template v-else-if="status === 'loaded' && wheel">
@@ -54,6 +68,11 @@ onMounted(async () => {
   max-width: 480px;
   margin: 0 auto;
   padding: var(--space-8) var(--space-6);
+}
+
+.shared-wheel__actions {
+  align-self: flex-end;
+  margin-bottom: calc(-1 * var(--space-2));
 }
 
 .shared-wheel__title {
