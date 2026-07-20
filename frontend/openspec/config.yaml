@@ -9,8 +9,8 @@ context: |
     only renders and orchestrates calls to them
   - Deployed separately from the backend (e.g. Vercel), under the same registered parent domain as
     the backend (e.g. frontend at app.<domain>, backend at api.<domain>)
-  - Authentication is entirely brokered by the backend - see Auth rules. This app never talks to
-    Keycloak directly
+  - Authentication is direct-to-Keycloak (Authorization Code + PKCE via keycloak-js); the app
+    obtains its own JWT and sends it as a bearer token to the backend Web API - see Auth rules
 
   Tech stack
   - Vue 3, Composition API only (`<script setup lang="ts">`), no Options API
@@ -19,8 +19,8 @@ context: |
   - Pinia for state management (no Vuex)
   - Vue Router for client-side routing
   - Vitest + Vue Test Utils for unit/component tests
-  - No Keycloak client library of any kind (no keycloak-js, no oidc-client-ts) - all auth goes
-    through the backend's own endpoints, see Auth rules
+  - keycloak-js is the OIDC adapter (Authorization Code + PKCE, silent check-sso) - the app
+    authenticates directly against Keycloak, not through the backend, see Auth rules
 
   Design system (authoritative source: alaasmagi-design-system/, at the frontend project root)
   - This is a framework-agnostic token system with a React reference implementation - it is NOT a
@@ -83,51 +83,51 @@ context: |
     - api/ - typed API client functions, one module per backend capability (restaurants.ts,
       offerProviders.ts, environments.ts, favourites.ts, wheels.ts, account.ts), all going through a
       single shared fetch wrapper that attaches the bearer token and handles 401 uniformly
-    - router/ - Vue Router configuration and navigation guards (redirect to the backend login flow
+    - router/ - Vue Router configuration and navigation guards (start the Keycloak login flow
       when unauthenticated)
     - types/ - TypeScript interfaces matching the backend's Web DTOs (not the backend's Domain
       entities - the frontend only ever talks to the Web DTO shape)
     - assets/tokens/ - the design system's styles.css and tokens/*.css, imported once in main.ts
 
   Auth rules
-  - This app never talks to Keycloak directly. Authentication is brokered entirely through the
-    backend: a cookie is used only transiently to obtain a real bearer token, which this app then
-    uses directly against the Web API
-  - Login: navigate the whole browser window (`window.location.href`, never fetch/XHR) to
-    `https://api.<domain>/account/login?returnUrl=<current-url>`
-  - After the browser is redirected back post-login, call `GET /api/v1/account/token` with
-    `credentials: "include"` to obtain `{ accessToken, expiresAtUtc }`. This is the ONLY call in this
-    app that uses `credentials: "include"` - every other API call uses the Bearer token instead
-  - Store the token in memory only (a Pinia store), never in localStorage/sessionStorage - it does
-    not survive a full page reload by design; on app startup, silently re-call
-    `GET /api/v1/account/token` to re-establish it from the still-valid backend cookie, no visible
-    login prompt needed unless that call itself returns 401
-  - Every other API call attaches `Authorization: Bearer <token>` in the shared fetch wrapper -
-    do not set `credentials: "include"` on these, and do not send any CSRF header on them, since
-    Bearer-authorized endpoints are not vulnerable to CSRF
-  - Logout: navigate the whole browser window to `https://api.<domain>/account/logout`, then clear
-    the in-memory token from the Pinia store
-  - A Pinia `auth` store holds the current token, the current AppUser, `isAuthenticated`, and a
-    `hasRole(role)` helper for admin-only views
-  - Token refresh: on a 401 from any API call, or proactively when `expiresAtUtc` is near, silently
-    re-call `GET /api/v1/account/token`; if that also 401s, the backend cookie session has expired -
-    redirect to the login navigation flow
-  - Router navigation guards check `auth.isAuthenticated` (triggering the silent token fetch first if
-    the store is empty) per route; admin-only routes also check `auth.hasRole("admin")`
+  - This app authenticates directly against Keycloak using keycloak-js (Authorization Code + PKCE,
+    S256). It obtains its own JWT access token and sends it as a bearer token to the Web API; the
+    backend only validates the JWT and is never contacted for login, logout, or token acquisition
+  - A single keycloak-js instance lives in `src/auth/keycloak.ts` and is initialized once from
+    `main.ts` (before the app mounts) with `onLoad: 'check-sso'` and a `silentCheckSsoRedirectUri`
+    pointing at `public/silent-check-sso.html`. Configuration (`VITE_KEYCLOAK_URL`,
+    `VITE_KEYCLOAK_REALM`, `VITE_KEYCLOAK_CLIENT_ID`) is read once in `src/config.ts`
+  - Login: `login()` starts the Keycloak redirect flow (`keycloak.login({ redirectUri })`), resolving
+    the redirect to the requesting in-app route. Do NOT navigate to any backend `/account/...` url
+  - Store the token in memory only (a Pinia `auth` store mirroring the adapter), never in
+    localStorage/sessionStorage - it does not survive a full page reload by design. On reload the
+    startup silent SSO (`check-sso`/`prompt=none` against Keycloak's own session) re-establishes it
+    with no visible login prompt when the Keycloak session is still valid
+  - Every API call attaches `Authorization: Bearer <token>` in the shared fetch wrapper - do not set
+    `credentials: "include"` on any call (no request in this app is credentialed), and do not send a
+    CSRF header, since bearer-authorized endpoints are not CSRF-vulnerable
+  - Logout: `logout()` clears the in-memory token then ends the Keycloak session
+    (`keycloak.logout({ redirectUri })`), returning to the app's `/login` view
+  - A Pinia `auth` store holds the current token, the current AppUser, `isAuthenticated`, `roles`,
+    and a `hasRole(role)` helper (roles decoded from the token's `realm_access.roles`) for admin views
+  - Token refresh: on a 401 from any API call, or proactively when the token is near expiry, silently
+    refresh via Keycloak (`keycloak.updateToken`, exposed through the store's `fetchToken()`); if the
+    refresh fails, the session is expired - redirect to the login flow
+  - Router navigation guards check `auth.isAuthenticated` (triggering the silent Keycloak refresh
+    first if the store is empty) per route; admin-only routes also check `auth.hasRole("admin")`
 
   API integration rules
   - All backend calls go through the `api/` layer - components and stores never call `fetch` directly
   - The shared fetch wrapper attaches `Authorization: Bearer <token>` from the auth store on every
-    call, except the one token-exchange call described in Auth rules, which uses
-    `credentials: "include"` instead
+    call; no call uses `credentials: "include"` (auth is direct-to-Keycloak, no backend cookie)
   - Every API module's request/response types are hand-written TypeScript interfaces matching the
     backend's Web DTOs; if the backend DTO shape changes, update the corresponding frontend type in
     the same change
   - Handle `IMethodResponse<T>`-shaped backend responses uniformly in the shared fetch wrapper:
     unwrap `value` on success, surface `error.code`/`error.message` on failure using the design
     system's Toast component for user-facing errors
-  - A 401 response from any endpoint (other than the token-exchange call itself) triggers a silent
-    token refresh attempt before surfacing an error to the user
+  - A 401 response from any endpoint triggers a silent Keycloak token refresh attempt before
+    surfacing an error to the user
   - Concurrency tokens (`ConcurrencyToken` / `If-Match`) returned by the backend must be round-tripped
     on every update call for entities that require them - store the token alongside the entity in the
     relevant Pinia store, not discarded after read

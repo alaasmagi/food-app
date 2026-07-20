@@ -15,9 +15,10 @@ declare module 'vue-router' {
 }
 
 /**
- * Navigation guard: for protected routes, silently attempt a token exchange when
- * the store is not authenticated, then allow entry if authenticated or redirect to
- * the in-app login view otherwise. Public routes always pass.
+ * Navigation guard: for protected routes, silently attempt a Keycloak token
+ * refresh (via the auth store) when the store is not authenticated, then allow
+ * entry if authenticated or redirect to the in-app login view otherwise. Public
+ * routes always pass.
  */
 export async function authGuard(to: RouteLocationNormalized) {
   if (to.meta.public) return true

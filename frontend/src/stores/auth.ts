@@ -1,8 +1,13 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { fetchToken as exchangeToken, getCurrentUser } from '../api/account'
-import { loginUrl, logoutUrl } from '../config'
-import type { TokenResponse } from '../types/account'
+import { getCurrentUser } from '../api/account'
+import {
+  getExpiresAtUtc,
+  getToken,
+  login as kcLogin,
+  logout as kcLogout,
+  refreshToken,
+} from '../auth/keycloak'
 import type { AppUser } from '../types/appUser'
 
 /**
@@ -25,13 +30,13 @@ function decodeRoles(accessToken: string): string[] {
 
 export const useAuthStore = defineStore('auth', () => {
   // In-memory only. Never written to localStorage/sessionStorage - the token does
-  // not survive a full page reload by design; startup re-establishes it silently.
+  // not survive a full page reload by design; startup silent SSO re-establishes it.
   const token = ref<string | null>(null)
   const expiresAtUtc = ref<string | null>(null)
   const currentUser = ref<AppUser | null>(null)
   const roles = ref<string[]>([])
 
-  // Collapses concurrent token exchanges (parallel guards + 401 retry) into one call.
+  // Collapses concurrent token refreshes (parallel guards + 401 retry) into one call.
   let pending: Promise<boolean> | null = null
 
   const isAuthenticated = computed(() => {
@@ -44,10 +49,17 @@ export const useAuthStore = defineStore('auth', () => {
     return roles.value.includes(role)
   }
 
-  function setSession(session: TokenResponse): void {
-    token.value = session.accessToken
-    expiresAtUtc.value = session.expiresAtUtc
-    roles.value = decodeRoles(session.accessToken)
+  // Mirror the adapter's current token into the store, or clear if none is present.
+  function syncFromKeycloak(): boolean {
+    const current = getToken()
+    if (!current) {
+      clear()
+      return false
+    }
+    token.value = current
+    expiresAtUtc.value = getExpiresAtUtc()
+    roles.value = decodeRoles(current)
+    return true
   }
 
   function clear(): void {
@@ -58,15 +70,17 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Silently exchange the backend cookie for a bearer token. De-duplicated: parallel
-   * callers share one in-flight request. Resolves to whether the app is now authenticated.
+   * Silently ensure a valid Keycloak token and mirror it into the store. De-duplicated:
+   * parallel callers share one in-flight refresh. Resolves to whether the app is now
+   * authenticated. Replaces the former backend cookie exchange.
    */
   function fetchToken(): Promise<boolean> {
     if (pending) return pending
     pending = (async () => {
       try {
-        setSession(await exchangeToken())
-        return true
+        if (await refreshToken()) return syncFromKeycloak()
+        clear()
+        return false
       } catch {
         clear()
         return false
@@ -88,26 +102,26 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Full-page navigation to the backend login flow. Pass the in-app path to land on
-   * after login (resolved against the current origin); it must be a guarded route so
-   * its navigation guard performs the silent token exchange. Defaults to the current
-   * URL - do NOT rely on that default from the public login page, which would loop
-   * back to login and never reach the app.
+   * Start the Keycloak Authorization Code + PKCE login (full-page redirect to Keycloak).
+   * Pass the in-app path to land on after login (resolved against the current origin);
+   * it must be a guarded route so its navigation guard mirrors the token into the store.
+   * Defaults to the current URL - do NOT rely on that default from the public login page,
+   * which would loop back to login and never reach the app.
    */
   function login(returnTo?: string): void {
-    const returnUrl = returnTo
+    const redirectUri = returnTo
       ? new URL(returnTo, window.location.origin).toString()
       : window.location.href
-    window.location.href = loginUrl(returnUrl)
+    void kcLogin(redirectUri)
   }
 
   /**
-   * Clear the in-memory token, then full-page navigate to the backend logout flow,
-   * returning to the app's login page once the backend/Keycloak session is ended.
+   * Clear the in-memory token, then end the Keycloak session (redirect to Keycloak's
+   * end-session endpoint), returning to the app's login page.
    */
   function logout(): void {
     clear()
-    window.location.href = logoutUrl(new URL('/login', window.location.origin).toString())
+    void kcLogout(new URL('/login', window.location.origin).toString())
   }
 
   return {
@@ -117,6 +131,7 @@ export const useAuthStore = defineStore('auth', () => {
     roles,
     isAuthenticated,
     hasRole,
+    syncFromKeycloak,
     fetchToken,
     fetchCurrentUser,
     setCurrentUser,

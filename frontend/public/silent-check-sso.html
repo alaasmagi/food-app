@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Silent SSO check</title>
+  </head>
+  <body>
+    <!--
+      keycloak-js loads this page inside a hidden iframe during check-sso.
+      It re-posts the auth result (carried in the URL fragment/query by Keycloak)
+      back to the parent window so the adapter can resolve the session without a
+      visible redirect. No secrets are handled here; it only relays the redirect.
+    -->
+    <script>
+      parent.postMessage(location.href, location.origin)
+    </script>
+  </body>
+</html>

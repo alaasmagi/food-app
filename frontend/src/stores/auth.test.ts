@@ -1,15 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAuthStore } from './auth'
+import * as keycloak from '../auth/keycloak'
 
 const FUTURE = '2999-01-01T00:00:00.000Z'
 const PAST = '2000-01-01T00:00:00.000Z'
 
-function tokenResponse(accessToken: string, expiresAtUtc = FUTURE) {
-  return new Response(JSON.stringify({ accessToken, expiresAtUtc }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  })
+// Unsigned JWT (header.payload.sig) carrying realm_access.roles.
+function jwt(roles: string[]): string {
+  const payload = btoa(JSON.stringify({ realm_access: { roles } }))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+  return `h.${payload}.s`
 }
 
 describe('auth store', () => {
@@ -20,7 +23,7 @@ describe('auth store', () => {
   })
 
   afterEach(() => {
-    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it('is unauthenticated by default', () => {
@@ -38,11 +41,10 @@ describe('auth store', () => {
     expect(auth.isAuthenticated).toBe(false)
   })
 
-  it('fetchToken stores the token in memory only, never in web storage', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(tokenResponse('mem-token')),
-    )
+  it('fetchToken mirrors the Keycloak token into memory only, never in web storage', async () => {
+    vi.spyOn(keycloak, 'refreshToken').mockResolvedValue(true)
+    vi.spyOn(keycloak, 'getToken').mockReturnValue('mem-token')
+    vi.spyOn(keycloak, 'getExpiresAtUtc').mockReturnValue(FUTURE)
 
     const auth = useAuthStore()
     const ok = await auth.fetchToken()
@@ -53,20 +55,21 @@ describe('auth store', () => {
     expect(sessionStorage.length).toBe(0)
   })
 
-  it('de-duplicates concurrent fetchToken calls into one request', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(tokenResponse('once'))
-    vi.stubGlobal('fetch', fetchMock)
+  it('de-duplicates concurrent fetchToken calls into one refresh', async () => {
+    const refresh = vi.spyOn(keycloak, 'refreshToken').mockResolvedValue(true)
+    vi.spyOn(keycloak, 'getToken').mockReturnValue('once')
+    vi.spyOn(keycloak, 'getExpiresAtUtc').mockReturnValue(FUTURE)
 
     const auth = useAuthStore()
     const [a, b] = await Promise.all([auth.fetchToken(), auth.fetchToken()])
 
     expect(a).toBe(true)
     expect(b).toBe(true)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(refresh).toHaveBeenCalledTimes(1)
   })
 
-  it('fetchToken clears state and returns false on 401', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 401 })))
+  it('fetchToken clears state and returns false when the refresh fails', async () => {
+    vi.spyOn(keycloak, 'refreshToken').mockResolvedValue(false)
 
     const auth = useAuthStore()
     auth.token = 'stale'
@@ -77,13 +80,10 @@ describe('auth store', () => {
     expect(auth.isAuthenticated).toBe(false)
   })
 
-  it('hasRole reflects roles decoded from the access token', async () => {
-    // JWT with realm_access.roles = ["admin"], base64url payload, unsigned (header.payload.sig)
-    const payload = btoa(JSON.stringify({ realm_access: { roles: ['admin'] } }))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '')
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(tokenResponse(`h.${payload}.s`)))
+  it('hasRole reflects roles decoded from the Keycloak access token', async () => {
+    vi.spyOn(keycloak, 'refreshToken').mockResolvedValue(true)
+    vi.spyOn(keycloak, 'getToken').mockReturnValue(jwt(['admin']))
+    vi.spyOn(keycloak, 'getExpiresAtUtc').mockReturnValue(FUTURE)
 
     const auth = useAuthStore()
     await auth.fetchToken()
@@ -92,42 +92,36 @@ describe('auth store', () => {
     expect(auth.hasRole('nope')).toBe(false)
   })
 
-  it('login navigates the whole window to the backend login flow with returnUrl', () => {
-    const location = { href: 'https://app.test.local/dashboard' }
+  it('login starts the Keycloak flow with the current URL as redirect', () => {
+    const location = { href: 'https://app.test.local/dashboard', origin: 'https://app.test.local' }
     Object.defineProperty(window, 'location', { value: location, writable: true })
+    const login = vi.spyOn(keycloak, 'login').mockResolvedValue()
 
     useAuthStore().login()
 
-    expect(location.href).toBe(
-      'https://api.test.local/account/login?returnUrl=' +
-        encodeURIComponent('https://app.test.local/dashboard'),
-    )
+    expect(login).toHaveBeenCalledWith('https://app.test.local/dashboard')
   })
 
-  it('login uses an explicit returnTo path resolved against the current origin', () => {
+  it('login resolves an explicit returnTo path against the current origin', () => {
     const location = { href: 'https://app.test.local/login', origin: 'https://app.test.local' }
     Object.defineProperty(window, 'location', { value: location, writable: true })
+    const login = vi.spyOn(keycloak, 'login').mockResolvedValue()
 
     useAuthStore().login('/wheel')
 
-    expect(location.href).toBe(
-      'https://api.test.local/account/login?returnUrl=' +
-        encodeURIComponent('https://app.test.local/wheel'),
-    )
+    expect(login).toHaveBeenCalledWith('https://app.test.local/wheel')
   })
 
-  it('logout clears the token then navigates to the backend logout flow', () => {
+  it('logout clears the token then ends the Keycloak session, returning to /login', () => {
     const location = { href: 'https://app.test.local/dashboard', origin: 'https://app.test.local' }
     Object.defineProperty(window, 'location', { value: location, writable: true })
+    const logout = vi.spyOn(keycloak, 'logout').mockResolvedValue()
 
     const auth = useAuthStore()
     auth.token = 'tok'
     auth.logout()
 
     expect(auth.token).toBeNull()
-    expect(location.href).toBe(
-      'https://api.test.local/account/logout?returnUrl=' +
-        encodeURIComponent('https://app.test.local/login'),
-    )
+    expect(logout).toHaveBeenCalledWith('https://app.test.local/login')
   })
 })
