@@ -1,0 +1,162 @@
+schema: spec-driven
+
+context: |
+  Project overview
+  - React Native (Expo) mobile app for FoodRoulette: daily lunch offers, restaurants on a map,
+    personal restaurant environments, favourites, and the shareable random-restaurant wheel
+  - Feature parity with the existing Vue web frontend - consumes the same ASP.NET Core backend REST
+    API (see the backend's own openspec/config.yaml for the full API domain model). This app does not
+    duplicate backend business rules, it only renders and orchestrates calls to them
+  - The backend, web frontend, and design system already exist. This app is additive - it must not
+    require any backend change except Keycloak client configuration for native OAuth (documented in
+    Auth rules)
+
+  Tech stack
+  - React Native via Expo (managed workflow), TypeScript strict mode
+  - Expo Router for file-based navigation
+  - React Query (TanStack Query) for server-state (API data fetching, caching, refetching) - this
+    replaces the hand-rolled Pinia store caching used on web; do not port Pinia patterns, use React
+    Query's cache as the source of truth for server data
+  - Zustand for the small amount of pure client state that isn't server data (e.g. selected
+    environment tab, auth token presence) - keep it minimal, most state belongs in React Query
+  - expo-auth-session (PKCE) for authentication, expo-secure-store for token storage,
+    expo-web-browser for the auth redirect - see Auth rules
+  - react-native-maps for the map view
+  - Jest + React Native Testing Library for tests
+
+  Design system (authoritative source: alaasmagi-design-system/, at the mobile project root)
+  - CRITICAL: this folder is a temporary authoring reference only, kept at the project root during
+    development. It is NOT a runtime or build-time dependency, and it will be deleted once the app is
+    complete. Nothing in the app's source may ever import from alaasmagi-design-system/ - if such a
+    reference exists, that is a bug to fix immediately
+  - The design system is a framework-agnostic token set plus a React (web) reference implementation.
+    It is NOT a React Native library. React Native has no HTML and no CSS - there are no <div>s, no
+    className, no CSS custom properties, no :hover/:active/:focus, and no cascading styles. Everything
+    must be re-expressed in React Native primitives (View, Text, Pressable, StyleSheet)
+  - Tokens: tokens/*.css (colors.css, fonts.css, spacing.css, typography.css) are CSS custom
+    properties. Port them ONCE into a typed TypeScript theme object at src/theme/tokens.ts (e.g.
+    `export const colors = { ... } as const`), converting each --token-name to a camelCase key with
+    the same literal value. Every component then reads from this theme object - never from the CSS
+    files, which cannot be imported in React Native anyway
+  - For every component this app needs (Icon, Button, Card, Badge, Tag, Tabs, Dialog, Input, Toast,
+    Select, Switch, Checkbox, Radio, plus the mobile-relevant QRCode/QRScanner if used), the source
+    of truth is the COMBINATION of:
+    - `<Component>.d.ts` - the authoritative prop contract - port prop names and variants 1:1 into
+      the RN component's props type
+    - `<Component>.prompt.md` - the authoritative usage examples and variant meanings
+    - `<component>.card.html` - the authoritative visual reference for layout, spacing, and color
+    - `<Component>.jsx` is a REFERENCE ONLY for structure and which tokens map where - it is web
+      React and its DOM/CSS mechanics do NOT transfer:
+      - Replace <div>/<span> with <View>/<Text>
+      - Replace onClick with onPress, replace hover/active/focus handlers with Pressable's pressed
+        state and, where relevant, accessibility focus
+      - Replace inline CSS/className with StyleSheet.create objects that read values from
+        src/theme/tokens.ts
+      - Match the visual result (color, spacing, radius, type scale) to the .card.html reference as
+        closely as the platform allows - identical values, native mechanics
+  - Do NOT bulk-port all components upfront. Port one component into
+    src/components/design-system/<Category>/<Component>.tsx only when a feature screen actually needs
+    it, always starting from that component's four source files above
+  - Port the Icon component early - most other components reference it. The design system ships icon
+    assets under assets/icons/light and assets/icons/dark; since this app is dark-mode-first, use the
+    dark set. Copy the needed icon assets into the app's own assets, do not reference the design
+    system folder at runtime
+  - Content/copy rules from the design system's readme apply to all UI text:
+    - Sentence case everywhere - never Title Case, never ALL CAPS (except any deliberate uppercase
+      already built into a component like Badge)
+    - No exclamation points, no hype adjectives
+    - No em-dashes in UI copy - use periods or line breaks
+    - Numerals as digits ("3 restaurants", not "three")
+    - No emoji anywhere in the UI
+  - Dark-mode-first: the app's default and only theme is dark, matching the design system's default
+    token values. Do not build a light-mode toggle unless a future change explicitly asks for it
+
+  Solution architecture
+  - app/ - Expo Router routes (file-based). Route groups: (auth) for the login screen, (tabs) for the
+    main authenticated tab navigator (dashboard, map, wheel, settings), and a standalone shared-wheel
+    route reachable via deep link without auth
+  - src/
+    - components/
+      - design-system/ - ported RN primitives, one subfolder per design system category
+        (forms/, data-display/, navigation/, feedback/)
+      - <feature>/ - feature-specific composed components (RestaurantCard, OfferList, RatingStars,
+        WheelSpinner, RestaurantMap, etc.)
+    - theme/ - tokens.ts (the ported token object) and any derived style helpers
+    - api/ - typed API client functions, one module per backend capability, all going through a
+      single shared request helper that attaches the bearer token and handles 401
+    - hooks/ - React Query hooks (useRestaurants, useRestaurantOffers, useEnvironments, useFavourites,
+      useWheels, etc.) wrapping the api/ layer
+    - stores/ - Zustand stores for non-server client state only (auth token state, selected
+      environment)
+    - auth/ - the expo-auth-session PKCE flow, token storage/refresh, and the auth context/provider
+    - types/ - TypeScript interfaces matching the backend's Web DTOs (not Domain entities)
+
+  Auth rules
+  - Authentication is native OAuth 2.0 Authorization Code + PKCE directly against Keycloak, NOT the
+    web app's cookie-based BFF flow. Mobile has no browser cookies, so the BFF pattern's XSS
+    protection is moot; the native pattern with OS-encrypted token storage is the correct choice here
+  - Use expo-auth-session to run the PKCE flow: open the Keycloak authorize URL in the system browser
+    (expo-web-browser), receive the redirect back to the app's custom scheme (foodroulette://), and
+    exchange the authorization code for tokens
+  - Backend/Keycloak prerequisite (NOT a code change in this repo, document it in the first auth
+    change's design.md): the food-app realm needs a public client usable by the mobile app (either
+    reuse food-api if it can be made public with PKCE, or add a dedicated food-mobile client) with
+    the redirect URI foodroulette://* allowed and PKCE (code challenge S256) required
+  - Store the access token AND refresh token in expo-secure-store (iOS Keychain / Android Keystore),
+    never in AsyncStorage or plain memory-only that's lost on backgrounding
+  - Attach Authorization: Bearer <access token> to every API call via the shared request helper
+  - On a 401, use the refresh token to silently obtain a new access token (Keycloak token endpoint);
+    if refresh fails, clear secure-store and route to the login screen
+  - The api audience must match what the backend's JWT bearer validation expects (aud = food-api) -
+    the token must be requested for that audience/client, mirroring the fix already applied on the
+    web side
+  - No client secret is stored in the app - PKCE is precisely the mechanism that removes the need for
+    one in a public client
+
+  API integration rules
+  - All backend calls go through the api/ layer wrapped by React Query hooks - components never call
+    fetch directly
+  - The shared request helper attaches the bearer token, and on 401 triggers one silent refresh +
+    retry before surfacing an error
+  - Every API module's request/response types are hand-written TypeScript interfaces matching the
+    backend's Web DTOs; if a backend DTO changes, update the corresponding type in the same change
+  - Handle the backend's IMethodResponse<T> shape uniformly in the request helper: unwrap value on
+    success, surface error.code/error.message on failure (shown via the ported Toast component)
+  - Concurrency tokens (ConcurrencyToken / If-Match) returned by the backend must be round-tripped on
+    updates for entities that require them - React Query's cache holds the current entity including
+    its token; send it back on mutation
+  - The shared-wheel public endpoint (GET /api/v1/public/wheels/{id}) is called WITHOUT a bearer
+    token and must work when logged out - keep it on a separate unauthenticated request path
+
+  Code style
+  - Function components with hooks only, TypeScript strict, explicit prop types
+  - No inline literal colors/spacing/font values - every style value comes from src/theme/tokens.ts,
+    matching the design system's token names
+  - StyleSheet.create for component styles, not inline style objects, except for genuinely dynamic
+    values
+  - Keep screens thin: a screen composes feature + design-system components and wires React Query
+    hooks; business/formatting logic lives in hooks or small helpers, not in the screen body
+  - Reuse logic via hooks whenever it's shared across 2+ screens
+
+  Platform rules
+  - Support both iOS and Android from a single codebase; avoid platform-specific code unless a feature
+    genuinely requires it, and isolate it with Platform.select when unavoidable
+  - Respect safe-area insets (notches, home indicators) on every screen using react-native-safe-area-context
+  - The map uses react-native-maps; markers come only from restaurants that have both Latitude and
+    Longitude, matching the web map's behavior - restaurants without coordinates are silently omitted
+  - Deep linking: the app registers the foodroulette:// scheme for both the OAuth redirect and the
+    shared-wheel link (foodroulette://w/<id> or an associated universal/app link to app.<domain>/w/<id>)
+
+  Testing rules
+  - Jest + React Native Testing Library for component and hook tests
+  - Ported design-system components get at least one smoke test per variant/size verifying they render
+  - Do not test the token values themselves - those are the design system's concern
+  - Mock the api/ layer in hook/screen tests; do not hit the real backend in unit tests
+
+  Output expectations
+  - Prefer incremental, minimal changes - one feature area per OpenSpec change, mirroring the web
+    frontend's sequence (auth bootstrap -> dashboard/offers -> map -> environments -> favourites ->
+    wheel -> settings)
+  - Port design-system components lazily, only when a feature change needs them, always from the
+    component's own .d.ts + .prompt.md + .card.html, never by copying the .jsx web mechanics
+  - All specs and prompts for this project are written in English

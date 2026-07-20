@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "FoodRoulette",
+    "slug": "foodroulette-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "foodroulette",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.alaasmagi.foodroulette"
+    },
+    "android": {
+      "package": "dev.alaasmagi.foodroulette",
+      "edgeToEdgeEnabled": true,
+      "config": {
+        "googleMaps": {
+          "apiKey": "REPLACE_WITH_ANDROID_GOOGLE_MAPS_API_KEY"
+        }
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "keycloakIssuer": "https://identity.alaasmagi.dev/realms/food-app",
+      "keycloakClientId": "food-app-mobile",
+      "redirectScheme": "foodroulette",
+      "apiBaseUrl": "https://food-api.alaasmagi.dev"
+    }
+  }
+}
