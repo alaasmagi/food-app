@@ -50,6 +50,26 @@ public class RestaurantRepository
         return _mapper.Map(entities)?.ToList() ?? [];
     }
 
+    public async Task<IReadOnlyList<Restaurant>> GetAllInBoundsAsync(
+        double minLat,
+        double minLon,
+        double maxLat,
+        double maxLon,
+        CancellationToken ct = default)
+    {
+        // Indexed bounding-box pre-filter for proximity auto-fill. Only comparisons here (no trig), so
+        // the same query runs under the in-memory provider the repository tests use; the exact
+        // great-circle radius test is applied by the caller. No Take: every in-box match is returned.
+        var entities = await _context.Restaurants
+            .AsNoTracking()
+            .Where(restaurant =>
+                restaurant.Latitude >= minLat && restaurant.Latitude <= maxLat &&
+                restaurant.Longitude >= minLon && restaurant.Longitude <= maxLon)
+            .ToListAsync(ct);
+
+        return _mapper.Map(entities)?.ToList() ?? [];
+    }
+
     public async Task<(IReadOnlyList<Restaurant> Items, int Total)> SearchPageAsync(
         string? search,
         int pageNr,

@@ -13,12 +13,13 @@ import {
 } from '@/hooks/useEnvironmentFilteredRestaurants';
 import {
   useAddRestaurantToEnvironment,
+  useAutoFillEnvironment,
   useDeleteEnvironment,
 } from '@/hooks/useEnvironmentMutations';
 import { environmentRestaurantsQueryKey } from '@/hooks/useEnvironmentRestaurants';
 import { environmentsQueryKey } from '@/hooks/useEnvironments';
 import { useEnvironmentStore } from '@/stores/environmentStore';
-import type { EnvironmentRestaurant } from '@/types/environment';
+import type { DiningEnvironment, EnvironmentRestaurant } from '@/types/environment';
 import type { Restaurant } from '@/types/restaurant';
 
 jest.mock('@/api/environments');
@@ -87,9 +88,14 @@ describe('filterRestaurantsByEnvironment', () => {
 });
 
 describe('reconcileSelection', () => {
-  const envs = [
-    { id: 'e1', concurrencyToken: 't', name: 'Lunch', description: null },
-    { id: 'e2', concurrencyToken: 't', name: 'Dinner', description: null },
+  const noOrigin = {
+    autoFillLatitude: null,
+    autoFillLongitude: null,
+    autoFillRadiusMeters: null,
+  };
+  const envs: DiningEnvironment[] = [
+    { id: 'e1', concurrencyToken: 't', name: 'Lunch', description: null, ...noOrigin },
+    { id: 'e2', concurrencyToken: 't', name: 'Dinner', description: null, ...noOrigin },
   ];
 
   it('keeps a still-existing selection', () => {
@@ -123,6 +129,20 @@ describe('environment mutation invalidations', () => {
       await result.current.mutateAsync({ environmentId: 'e1', restaurantId: 'r1' });
     });
 
+    expect(spy).toHaveBeenCalledWith({ queryKey: environmentRestaurantsQueryKey });
+  });
+
+  it('auto-fill calls the api and invalidates memberships', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const spy = jest.spyOn(client, 'invalidateQueries');
+    mockApi.autoFillEnvironment.mockResolvedValue({ added: 2, alreadyPresent: 0, totalMembers: 2 });
+
+    const { result } = renderHook(() => useAutoFillEnvironment(), { wrapper: wrapper(client) });
+    await act(async () => {
+      await result.current.mutateAsync('e1');
+    });
+
+    expect(mockApi.autoFillEnvironment).toHaveBeenCalledWith('e1');
     expect(spy).toHaveBeenCalledWith({ queryKey: environmentRestaurantsQueryKey });
   });
 

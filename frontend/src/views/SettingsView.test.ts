@@ -24,7 +24,15 @@ function appUser(over: Partial<AppUser> = {}): AppUser {
 }
 
 function env(id: string, name: string): DiningEnvironment {
-  return { id, concurrencyToken: 't', name, description: null }
+  return {
+    id,
+    concurrencyToken: 't',
+    name,
+    description: null,
+    autoFillLatitude: null,
+    autoFillLongitude: null,
+    autoFillRadiusMeters: null,
+  }
 }
 
 async function mountWith(user: AppUser, envs: DiningEnvironment[]) {

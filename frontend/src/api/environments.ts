@@ -9,6 +9,19 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' }
 export interface EnvironmentInput {
   name: string
   description: string | null
+  // Optional saved auto-fill origin. Both-or-neither coordinates; radius only with coordinates;
+  // null radius means "unset" (the backend applies its 500 m default at run time). Omitted callers
+  // default these to null.
+  autoFillLatitude?: number | null
+  autoFillLongitude?: number | null
+  autoFillRadiusMeters?: number | null
+}
+
+/** Summary returned by POST {id}/auto-fill. Additive import, so totalMembers can exceed added. */
+export interface DiningEnvironmentAutoFillResult {
+  added: number
+  alreadyPresent: number
+  totalMembers: number
 }
 
 export async function getEnvironments(): Promise<DiningEnvironment[]> {
@@ -55,6 +68,16 @@ export async function deleteEnvironment(id: string, concurrencyToken: string): P
   if (!response.ok) {
     throw new Error(`Failed to delete environment (${response.status})`)
   }
+}
+
+export async function autoFillEnvironment(id: string): Promise<DiningEnvironmentAutoFillResult> {
+  const response = await apiFetch(`${ENVIRONMENTS}/${id}/auto-fill`, {
+    method: 'POST',
+  })
+  if (!response.ok) {
+    throw new Error(`Failed to auto-fill environment (${response.status})`)
+  }
+  return (await response.json()) as DiningEnvironmentAutoFillResult
 }
 
 export async function getEnvironmentRestaurants(): Promise<EnvironmentRestaurant[]> {

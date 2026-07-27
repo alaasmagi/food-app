@@ -93,6 +93,15 @@ namespace DataAccess.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<double?>("AutoFillLatitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("AutoFillLongitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<int?>("AutoFillRadiusMeters")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ConcurrencyToken")
                         .IsRequired()
                         .HasMaxLength(128)

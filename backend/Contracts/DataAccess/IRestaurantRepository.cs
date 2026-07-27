@@ -18,6 +18,19 @@ public interface IRestaurantRepository : IBaseRepository<Restaurant>
         CancellationToken ct = default);
 
     /// <summary>
+    /// Every restaurant whose coordinates fall inside the given bounding box, with no cap and no
+    /// ordering. Used as an indexed pre-filter for proximity auto-fill before the caller applies the
+    /// exact haversine radius test in memory; unlike <see cref="GetInBoundsAsync"/> it must not drop
+    /// any match, so it takes no limit. Bounds are assumed already normalized (min &lt;= max).
+    /// </summary>
+    Task<IReadOnlyList<Restaurant>> GetAllInBoundsAsync(
+        double minLat,
+        double minLon,
+        double maxLat,
+        double maxLon,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// A single page of restaurants, optionally filtered by a case-insensitive match on name or city,
     /// ordered by name. Returns the page items together with the total count of matches (so the caller
     /// can render pagination). The base <c>GetAllByPageAsync</c>/<c>GetCountAsync</c> can't be used here

@@ -12,6 +12,14 @@ export interface DiningEnvironment {
   concurrencyToken: string;
   name: string;
   description: string | null;
+  /**
+   * The backend's saved auto-fill origin (a point plus optional radius), all
+   * nullable and serialized camelCase like `concurrencyToken`. `null` when no
+   * origin is stored. Auto-fill uses 500 m when `autoFillRadiusMeters` is null.
+   */
+  autoFillLatitude: number | null;
+  autoFillLongitude: number | null;
+  autoFillRadiusMeters: number | null;
 }
 
 export interface EnvironmentRestaurant {

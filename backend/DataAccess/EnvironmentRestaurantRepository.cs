@@ -33,6 +33,53 @@ public class EnvironmentRestaurantRepository
                 ct);
     }
 
+    public async Task<IReadOnlyList<Guid>> GetRestaurantIdsForEnvironmentAsync(Guid environmentId, CancellationToken ct = default)
+    {
+        return await _context.EnvironmentRestaurants
+            .AsNoTracking()
+            .Where(environmentRestaurant => environmentRestaurant.EnvironmentId == environmentId)
+            .Select(environmentRestaurant => environmentRestaurant.RestaurantId)
+            .ToListAsync(ct);
+    }
+
+    public async Task<int> AddMembershipsAsync(
+        Guid environmentId,
+        Guid userId,
+        IReadOnlyCollection<Guid> restaurantIds,
+        CancellationToken ct = default)
+    {
+        if (restaurantIds.Count == 0)
+        {
+            return 0;
+        }
+
+        // Direct-context insert with manual metadata stamping, mirroring AppUserRepository's direct
+        // writes: auto-fill imports a whole set at once, so a single SaveChanges beats one base
+        // CreateAsync round-trip per row. The unique (UserId, EnvironmentId, RestaurantId) index is the
+        // final duplicate guard even though the caller passes only ids it already found to be missing.
+        var now = DateTime.UtcNow;
+        var actor = userId.ToString();
+
+        foreach (var restaurantId in restaurantIds)
+        {
+            _context.EnvironmentRestaurants.Add(new EnvironmentRestaurantEntity
+            {
+                Id = Guid.NewGuid(),
+                EnvironmentId = environmentId,
+                RestaurantId = restaurantId,
+                UserId = userId,
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedBy = actor,
+                UpdatedBy = actor,
+                ConcurrencyToken = Guid.NewGuid().ToString("N")
+            });
+        }
+
+        await _context.SaveChangesAsync(ct);
+        return restaurantIds.Count;
+    }
+
     public async Task<IReadOnlyList<DailyRecommendationRestaurantCandidate>> GetDailyRecommendationRestaurantCandidatesAsync(
         Guid userId,
         Guid? environmentId = null,

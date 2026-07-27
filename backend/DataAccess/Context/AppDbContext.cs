@@ -81,6 +81,12 @@ public class AppDbContext : DbContext
 
             entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
             entity.Property(e => e.Description).HasMaxLength(1024);
+
+            // Optional auto-fill origin: nullable, no default (a null radius stays null and the 500m
+            // default is applied only at auto-fill time, never persisted).
+            entity.Property(e => e.AutoFillLatitude).IsRequired(false);
+            entity.Property(e => e.AutoFillLongitude).IsRequired(false);
+            entity.Property(e => e.AutoFillRadiusMeters).IsRequired(false);
         });
 
         modelBuilder.Entity<EnvironmentRestaurantEntity>(entity =>

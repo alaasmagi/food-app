@@ -13,6 +13,9 @@ public class DiningEnvironmentDtoMapper : IMapper<DiningEnvironmentDto, DiningEn
             ConcurrencyToken = entity.ConcurrencyToken,
             Name = entity.Name,
             Description = entity.Description,
+            AutoFillLatitude = entity.AutoFillLatitude,
+            AutoFillLongitude = entity.AutoFillLongitude,
+            AutoFillRadiusMeters = entity.AutoFillRadiusMeters,
         };
     }
 
@@ -29,6 +32,9 @@ public class DiningEnvironmentDtoMapper : IMapper<DiningEnvironmentDto, DiningEn
             ConcurrencyToken = entity.ConcurrencyToken ?? string.Empty,
             Name = entity.Name,
             Description = entity.Description,
+            AutoFillLatitude = entity.AutoFillLatitude,
+            AutoFillLongitude = entity.AutoFillLongitude,
+            AutoFillRadiusMeters = entity.AutoFillRadiusMeters,
         };
     }
 

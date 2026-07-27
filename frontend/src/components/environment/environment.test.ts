@@ -9,7 +9,15 @@ import type { DiningEnvironment } from '../../types/environment'
 import type { Restaurant } from '../../types/restaurant'
 
 function env(id: string, name: string): DiningEnvironment {
-  return { id, concurrencyToken: `tok-${id}`, name, description: null }
+  return {
+    id,
+    concurrencyToken: `tok-${id}`,
+    name,
+    description: null,
+    autoFillLatitude: null,
+    autoFillLongitude: null,
+    autoFillRadiusMeters: null,
+  }
 }
 
 function restaurant(over: Partial<Restaurant> = {}): Restaurant {

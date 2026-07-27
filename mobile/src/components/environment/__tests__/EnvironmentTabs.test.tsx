@@ -19,7 +19,15 @@ jest.mock('@/components/environment/EnvironmentEditorDialog', () => ({
 const mockUseEnvironments = useEnvironments as jest.MockedFunction<typeof useEnvironments>;
 
 function env(id: string, name: string): DiningEnvironment {
-  return { id, concurrencyToken: 't', name, description: null };
+  return {
+    id,
+    concurrencyToken: 't',
+    name,
+    description: null,
+    autoFillLatitude: null,
+    autoFillLongitude: null,
+    autoFillRadiusMeters: null,
+  };
 }
 
 function setEnvironments(list: DiningEnvironment[]) {

@@ -14,6 +14,9 @@ public class DiningEnvironmentEntityMapper : IMapper<DiningEnvironment, DiningEn
             UserId = entity.UserId,
             Name = entity.Name,
             Description = entity.Description,
+            AutoFillLatitude = entity.AutoFillLatitude,
+            AutoFillLongitude = entity.AutoFillLongitude,
+            AutoFillRadiusMeters = entity.AutoFillRadiusMeters,
         };
     }
 
@@ -31,6 +34,9 @@ public class DiningEnvironmentEntityMapper : IMapper<DiningEnvironment, DiningEn
             UserId = entity.UserId,
             Name = entity.Name,
             Description = entity.Description,
+            AutoFillLatitude = entity.AutoFillLatitude,
+            AutoFillLongitude = entity.AutoFillLongitude,
+            AutoFillRadiusMeters = entity.AutoFillRadiusMeters,
         };
     }
 

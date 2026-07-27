@@ -56,7 +56,7 @@ jobs:
           RABBITMQ_URI: ${{ secrets.RABBITMQ_URI }}
           RABBITMQ_QUEUE: ${{ secrets.RABBITMQ_QUEUE }}
           RABBITMQ_EXCHANGE: ${{ secrets.RABBITMQ_EXCHANGE }}
-          RABBITMQ_CONSUMER_ROUTING_KEYS: ${{ secrets.RABBITMQ_CONSUMER_ROUTING_KEYS || 'user.*' }}
+          RABBITMQ_CONSUMER_ROUTING_KEYS: ${{ secrets.RABBITMQ_CONSUMER_ROUTING_KEYS || 'user' }}
           GLITCHTIP_DSN: ${{ secrets.GLITCHTIP_DSN }}
           GLITCHTIP_RELEASE: ${{ secrets.GLITCHTIP_RELEASE || 'food-app-backend' }}
           KEYCLOAK_AUTHORITY: ${{ secrets.KEYCLOAK_AUTHORITY }}

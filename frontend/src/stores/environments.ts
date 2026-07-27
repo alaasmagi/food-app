@@ -2,12 +2,14 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
   addRestaurantToEnvironment,
+  autoFillEnvironment,
   createEnvironment as apiCreate,
   deleteEnvironment as apiDelete,
   getEnvironmentRestaurants,
   getEnvironments,
   removeRestaurantFromEnvironment,
   updateEnvironment as apiUpdate,
+  type DiningEnvironmentAutoFillResult,
   type EnvironmentInput,
 } from '../api/environments'
 import type { DiningEnvironment } from '../types/environment'
@@ -65,16 +67,38 @@ export const useEnvironmentsStore = defineStore('environments', () => {
     return pending.value.has(restaurantId)
   }
 
-  async function createEnvironment(input: EnvironmentInput): Promise<void> {
+  async function createEnvironment(input: EnvironmentInput): Promise<DiningEnvironment> {
     const created = await apiCreate(input)
     list.value = [...list.value, created]
+    return created
   }
 
   async function renameEnvironment(id: string, input: EnvironmentInput): Promise<void> {
     const target = list.value.find((e) => e.id === id)
     if (!target) return
-    const updated = await apiUpdate(id, input, target.concurrencyToken)
+    // Default the auto-fill origin to the stored values so a plain rename (which sends only
+    // name/description) never drops a saved location. Any auto-fill fields the caller supplies
+    // (including an explicit null to clear the origin) override these defaults.
+    const payload: EnvironmentInput = {
+      autoFillLatitude: target.autoFillLatitude,
+      autoFillLongitude: target.autoFillLongitude,
+      autoFillRadiusMeters: target.autoFillRadiusMeters,
+      ...input,
+    }
+    const updated = await apiUpdate(id, payload, target.concurrencyToken)
     list.value = list.value.map((e) => (e.id === id ? updated : e))
+  }
+
+  /**
+   * Trigger the backend proximity import for an environment that has a stored origin, then refresh
+   * membership so the newly added join rows (needed to render/toggle membership) are reflected.
+   * Returns the summary so the caller can report how many were added.
+   */
+  async function autoFill(id: string): Promise<DiningEnvironmentAutoFillResult> {
+    const result = await autoFillEnvironment(id)
+    membershipLoaded = false
+    await loadMembership()
+    return result
   }
 
   async function deleteEnvironment(id: string): Promise<void> {
@@ -129,6 +153,7 @@ export const useEnvironmentsStore = defineStore('environments', () => {
     createEnvironment,
     renameEnvironment,
     deleteEnvironment,
+    autoFill,
     addRestaurant,
     removeRestaurant,
   }

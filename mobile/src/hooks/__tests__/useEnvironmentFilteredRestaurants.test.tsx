@@ -44,6 +44,9 @@ const environment: DiningEnvironment = {
   concurrencyToken: 't',
   name: 'Lunch',
   description: null,
+  autoFillLatitude: null,
+  autoFillLongitude: null,
+  autoFillRadiusMeters: null,
 };
 const membership: EnvironmentRestaurant = {
   id: 'm1',

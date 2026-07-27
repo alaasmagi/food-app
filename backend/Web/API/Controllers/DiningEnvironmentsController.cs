@@ -128,6 +128,29 @@ public class DiningEnvironmentsController(
         return NoContent();
     }
 
+    [HttpPost("{id:guid}/auto-fill")]
+    public async Task<ActionResult<DiningEnvironmentAutoFillResultDto>> AutoFill(Guid id)
+    {
+        if (!TryGetActorId(out var actorId, out var unauthorized))
+        {
+            return unauthorized;
+        }
+
+        var result = await diningEnvironmentService.AutoFillAsync(id, actorId);
+        if (!result.Successful)
+        {
+            return ToProblem(result.Error);
+        }
+
+        var summary = result.Value!;
+        return Ok(new DiningEnvironmentAutoFillResultDto
+        {
+            Added = summary.Added,
+            AlreadyPresent = summary.AlreadyPresent,
+            TotalMembers = summary.TotalMembers
+        });
+    }
+
     private bool TryGetActorId(out Guid actorId, out ActionResult unauthorizedResult)
     {
         var resolved = currentActorAccessor.TryGetActorId();
@@ -160,6 +183,8 @@ public class DiningEnvironmentsController(
             ErrorDefaults.Codes.ConcurrencyTokenRequired => StatusCodes.Status428PreconditionRequired,
             ErrorDefaults.Codes.InvalidPaging => StatusCodes.Status400BadRequest,
             ErrorDefaults.Codes.MapFailed => StatusCodes.Status400BadRequest,
+            DiningEnvironmentErrorCodes.AutoFillValidation => StatusCodes.Status400BadRequest,
+            DiningEnvironmentErrorCodes.AutoFillLocationRequired => StatusCodes.Status400BadRequest,
             _ => StatusCodes.Status500InternalServerError
         };
 

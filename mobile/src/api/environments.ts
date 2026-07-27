@@ -21,6 +21,26 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 export interface EnvironmentInput {
   name: string;
   description: string | null;
+  /**
+   * Optional saved auto-fill origin. When a location is picked these carry the
+   * coordinates (and optional radius) to the backend; all null when no location
+   * is set. Sent through on create/update alongside name/description.
+   */
+  autoFillLatitude?: number | null;
+  autoFillLongitude?: number | null;
+  autoFillRadiusMeters?: number | null;
+}
+
+/**
+ * Summary returned by the proximity auto-fill endpoint: how many nearby
+ * restaurants were newly added as memberships, how many were already members,
+ * and the environment's resulting total membership count. Auto-fill is additive,
+ * so `totalMembers` can exceed the number of in-radius matches.
+ */
+export interface DiningEnvironmentAutoFillResult {
+  added: number;
+  alreadyPresent: number;
+  totalMembers: number;
 }
 
 async function unwrap<T>(res: Response): Promise<T> {
@@ -73,6 +93,18 @@ export async function deleteEnvironment(id: string, concurrencyToken: string): P
     headers: { 'If-Match': concurrencyToken },
   });
   await expectOk(res);
+}
+
+/**
+ * POST /api/v1/dining-environments/{id}/auto-fill — additive proximity import.
+ * Reads the environment's stored auto-fill origin and adds every restaurant
+ * within the radius (500 m when none is stored) as a membership, returning a
+ * summary. Throws the parsed ProblemDetails on a non-ok response (e.g. a 400
+ * when no location is stored, or a 403 for another user's environment).
+ */
+export async function autoFillEnvironment(id: string): Promise<DiningEnvironmentAutoFillResult> {
+  const res = await apiFetch(`${ENVIRONMENTS}/${id}/auto-fill`, { method: 'POST' });
+  return unwrap<DiningEnvironmentAutoFillResult>(res);
 }
 
 /** GET /api/v1/environment-restaurants — the user's membership join rows. */

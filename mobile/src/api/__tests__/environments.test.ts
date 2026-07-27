@@ -1,5 +1,6 @@
 import {
   addRestaurantToEnvironment,
+  autoFillEnvironment,
   createEnvironment,
   deleteEnvironment,
   getEnvironmentRestaurants,
@@ -95,6 +96,22 @@ describe('environments api', () => {
     expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/environment-restaurants/m1', expect.any(Object));
     expect(initOf(0).method).toBe('DELETE');
     expect(headerOf(0, 'If-Match')).toBe('tok-3');
+  });
+
+  it('auto-fills via POST to the auto-fill path and returns the summary', async () => {
+    mockApiFetch.mockResolvedValue(okJson({ added: 3, alreadyPresent: 1, totalMembers: 4 }));
+    const result = await autoFillEnvironment('e1');
+    expect(mockApiFetch).toHaveBeenCalledWith(
+      '/api/v1/dining-environments/e1/auto-fill',
+      expect.any(Object),
+    );
+    expect(initOf(0).method).toBe('POST');
+    expect(result).toEqual({ added: 3, alreadyPresent: 1, totalMembers: 4 });
+  });
+
+  it('throws ProblemDetailsError when auto-fill responds non-ok', async () => {
+    mockApiFetch.mockResolvedValue(errorResponse(400));
+    await expect(autoFillEnvironment('e1')).rejects.toBeInstanceOf(ProblemDetailsError);
   });
 
   it('throws ProblemDetailsError on a non-ok response (e.g. 403)', async () => {

@@ -11,7 +11,16 @@ function json(body: unknown, status = 200) {
 }
 
 function env(id: string, over: Partial<DiningEnvironment> = {}): DiningEnvironment {
-  return { id, concurrencyToken: `tok-${id}`, name: `Env ${id}`, description: null, ...over }
+  return {
+    id,
+    concurrencyToken: `tok-${id}`,
+    name: `Env ${id}`,
+    description: null,
+    autoFillLatitude: null,
+    autoFillLongitude: null,
+    autoFillRadiusMeters: null,
+    ...over,
+  }
 }
 
 function membership(id: string, environmentId: string, restaurantId: string): EnvironmentRestaurant {
@@ -104,5 +113,89 @@ describe('environments store', () => {
     expect(new Headers(init.headers).get('If-Match')).toBe('tok-e1')
     expect(store.list).toHaveLength(0)
     expect(store.selectedEnvironmentId).toBeNull()
+  })
+
+  it('renameEnvironment carries the stored auto-fill origin when only name changes', async () => {
+    const stored = { autoFillLatitude: 59.4, autoFillLongitude: 24.7, autoFillRadiusMeters: 800 }
+    const fetchMock = vi.fn().mockResolvedValue(json(env('e1', { name: 'Renamed', ...stored })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useEnvironmentsStore()
+    store.list = [env('e1', stored)]
+    await store.renameEnvironment('e1', { name: 'Renamed', description: null })
+
+    const [, init] = fetchMock.mock.calls[0]
+    const body = JSON.parse(init.body)
+    expect(body.autoFillLatitude).toBe(59.4)
+    expect(body.autoFillLongitude).toBe(24.7)
+    expect(body.autoFillRadiusMeters).toBe(800)
+  })
+
+  it('renameEnvironment sends an explicit null origin when the caller clears it', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(json(env('e1', { name: 'Cleared' })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useEnvironmentsStore()
+    store.list = [env('e1', { autoFillLatitude: 59.4, autoFillLongitude: 24.7, autoFillRadiusMeters: 800 })]
+    await store.renameEnvironment('e1', {
+      name: 'Cleared',
+      description: null,
+      autoFillLatitude: null,
+      autoFillLongitude: null,
+      autoFillRadiusMeters: null,
+    })
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body.autoFillLatitude).toBeNull()
+    expect(body.autoFillLongitude).toBeNull()
+    expect(body.autoFillRadiusMeters).toBeNull()
+  })
+
+  it('createEnvironment carries the auto-fill origin and returns the created environment', async () => {
+    const created = env('e2', {
+      name: 'New',
+      autoFillLatitude: 1,
+      autoFillLongitude: 2,
+      autoFillRadiusMeters: 300,
+    })
+    const fetchMock = vi.fn().mockResolvedValue(json(created, 201))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useEnvironmentsStore()
+    const result = await store.createEnvironment({
+      name: 'New',
+      description: null,
+      autoFillLatitude: 1,
+      autoFillLongitude: 2,
+      autoFillRadiusMeters: 300,
+    })
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body.autoFillLatitude).toBe(1)
+    expect(body.autoFillLongitude).toBe(2)
+    expect(body.autoFillRadiusMeters).toBe(300)
+    expect(result.id).toBe('e2')
+    expect(store.list.map((e) => e.id)).toContain('e2')
+  })
+
+  it('autoFill posts to the endpoint, returns the summary, and reloads membership', async () => {
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      void init
+      if (url.includes('/auto-fill')) {
+        return Promise.resolve(json({ added: 3, alreadyPresent: 1, totalMembers: 4 }))
+      }
+      return Promise.resolve(json([membership('m1', 'e1', 'r1')]))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useEnvironmentsStore()
+    const result = await store.autoFill('e1')
+
+    expect(result).toEqual({ added: 3, alreadyPresent: 1, totalMembers: 4 })
+    const [url0, init0] = fetchMock.mock.calls[0]
+    expect(url0).toContain('/api/v1/dining-environments/e1/auto-fill')
+    expect(init0?.method).toBe('POST')
+    // Membership was refreshed so the new join row is indexed.
+    expect(store.membershipByEnv['e1']['r1']).toEqual({ joinId: 'm1', concurrencyToken: 'tok-m1' })
   })
 })

@@ -5,9 +5,12 @@ import Input from '../design-system/forms/Input.vue'
 import Checkbox from '../design-system/forms/Checkbox.vue'
 import Switch from '../design-system/forms/Switch.vue'
 import Button from '../design-system/forms/Button.vue'
+import Select, { type SelectOption } from '../design-system/forms/Select.vue'
 import RestaurantPager from '../restaurant/RestaurantPager.vue'
 import { useWheelsStore } from '../../stores/wheels'
 import { useToastsStore } from '../../stores/toasts'
+import { useEnvironmentsStore } from '../../stores/environments'
+import { useRestaurantsStore } from '../../stores/restaurants'
 import { useShareWheelLink } from '../../composables/useShareWheelLink'
 import { useRestaurantSearch } from '../../composables/useRestaurantSearch'
 import type { UserWheel } from '../../types/wheel'
@@ -17,6 +20,10 @@ const emit = defineEmits<{ close: [] }>()
 
 const wheels = useWheelsStore()
 const toasts = useToastsStore()
+// Import-from-environment reads environment membership (restaurant ids) and the restaurant catalog
+// (id -> name) — both already cached client-side. No backend call is involved.
+const environments = useEnvironmentsStore()
+const restaurants = useRestaurantsStore()
 const { copyShareLink } = useShareWheelLink()
 // Paged, searchable restaurant picker — never loads the whole catalog into the dialog.
 const { items, page, totalPages, searchInput, loading, error, load, goToPage, reset } = useRestaurantSearch()
@@ -31,6 +38,9 @@ const isPublic = ref(false)
 // needing the full catalog to map names back to ids.
 const selected = reactive<Set<string>>(new Set())
 const saving = ref(false)
+// Transient: the environment chosen in the import control. It only triggers one import and is reset
+// afterward — the wheel records names, never which environment they came from.
+const importEnvId = ref('')
 
 watch(
   () => props.open,
@@ -40,10 +50,20 @@ watch(
     isPublic.value = props.wheel?.isPublic ?? false
     selected.clear()
     for (const restaurantName of props.wheel?.restaurantNames ?? []) selected.add(restaurantName)
+    importEnvId.value = ''
     reset()
     load()
+    // Ensure the datasets the import resolves against are loaded (each is cached/no-op if already).
+    environments.loadEnvironments()
+    environments.loadMembership()
+    restaurants.loadRestaurants()
   },
   { immediate: true },
+)
+
+// Environments offered by the import control; empty when the user has none.
+const environmentOptions = computed<SelectOption[]>(() =>
+  environments.list.map((environment) => ({ value: environment.id, label: environment.name })),
 )
 
 // At least 2 restaurants make a meaningful wheel; a name is required.
@@ -53,6 +73,37 @@ function toggle(restaurantName: string, checked: boolean): void {
   if (checked) selected.add(restaurantName)
   else selected.delete(restaurantName)
 }
+
+// Merge an environment's current restaurants into the selection, by name. Additive and
+// de-duplicating: existing selections are kept and no name is added twice. Membership ids that no
+// longer resolve to a catalog restaurant (deleted since) are skipped. Reports the number newly added.
+function importFromEnvironment(envId: string): void {
+  importEnvId.value = '' // reset the control so the same environment can be imported again
+  const membership = environments.membershipByEnv[envId]
+  const nameById = new Map(restaurants.list.map((restaurant) => [restaurant.id, restaurant.name]))
+  let added = 0
+  for (const restaurantId of Object.keys(membership ?? {})) {
+    const restaurantName = nameById.get(restaurantId)
+    if (!restaurantName) continue // membership references a restaurant no longer in the catalog
+    if (selected.has(restaurantName)) continue // already selected — never duplicate
+    selected.add(restaurantName)
+    added += 1
+  }
+  toasts.push({
+    tone: 'success',
+    title:
+      added === 0
+        ? 'No new restaurants added'
+        : added === 1
+          ? 'Added 1 restaurant'
+          : `Added ${added} restaurants`,
+  })
+}
+
+// Choosing an environment in the control triggers one import; the empty reset value is ignored.
+watch(importEnvId, (envId) => {
+  if (envId) importFromEnvironment(envId)
+})
 
 async function save(): Promise<void> {
   if (!valid.value || saving.value) return
@@ -83,6 +134,18 @@ async function save(): Promise<void> {
         <div class="wheel-editor__restaurants-head">
           <span class="wheel-editor__label">Restaurants ({{ selected.size }} selected)</span>
         </div>
+
+        <Select
+          v-if="environmentOptions.length"
+          v-model="importEnvId"
+          label="Import from environment"
+          placeholder="Choose an environment"
+          :options="environmentOptions"
+        />
+        <p v-else class="wheel-editor__hint">
+          Create an environment to import its restaurants here.
+        </p>
+
         <Input v-model="searchInput" placeholder="Search restaurants" icon="search" size="sm" />
 
         <p v-if="loading" class="wheel-editor__hint">Loading restaurants…</p>

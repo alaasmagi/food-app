@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
   addRestaurantToEnvironment,
+  autoFillEnvironment,
   createEnvironment,
   deleteEnvironment,
   removeRestaurantFromEnvironment,
@@ -45,6 +46,20 @@ export function useDeleteEnvironment() {
       qc.invalidateQueries({ queryKey: environmentsQueryKey });
       qc.invalidateQueries({ queryKey: environmentRestaurantsQueryKey });
     },
+  });
+}
+
+/**
+ * Triggers the backend's proximity auto-fill for one environment, then
+ * invalidates the membership query so the tabs and per-card membership
+ * re-render with the newly added restaurants. Resolves to the summary
+ * (`{ added, alreadyPresent, totalMembers }`) so the caller can toast the count.
+ */
+export function useAutoFillEnvironment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => autoFillEnvironment(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: environmentRestaurantsQueryKey }),
   });
 }
 

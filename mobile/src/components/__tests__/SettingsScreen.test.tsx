@@ -43,7 +43,15 @@ function user(overrides: Partial<AppUser> = {}): AppUser {
 }
 
 function env(id: string, name: string): DiningEnvironment {
-  return { id, concurrencyToken: 't', name, description: null };
+  return {
+    id,
+    concurrencyToken: 't',
+    name,
+    description: null,
+    autoFillLatitude: null,
+    autoFillLongitude: null,
+    autoFillRadiusMeters: null,
+  };
 }
 
 function setup(u: AppUser, environments: DiningEnvironment[] = []) {

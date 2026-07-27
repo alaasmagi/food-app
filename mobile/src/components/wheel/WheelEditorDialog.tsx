@@ -2,10 +2,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Dialog } from '@/components/design-system/feedback/Dialog';
+import { useToast } from '@/components/design-system/feedback/ToastProvider';
 import { Button } from '@/components/design-system/forms/Button';
 import { Checkbox } from '@/components/design-system/forms/Checkbox';
 import { Input } from '@/components/design-system/forms/Input';
+import { Select, type SelectOption } from '@/components/design-system/forms/Select';
 import { Switch } from '@/components/design-system/forms/Switch';
+import { useEnvironments } from '@/hooks/useEnvironments';
+import {
+  membershipMapForEnvironment,
+  useEnvironmentRestaurants,
+} from '@/hooks/useEnvironmentRestaurants';
 import { useRestaurants } from '@/hooks/useRestaurants';
 import { useCreateWheel, useUpdateWheel } from '@/hooks/useWheelMutations';
 import { useShareWheelLink } from '@/hooks/useShareWheelLink';
@@ -33,14 +40,22 @@ export function WheelEditorDialog({
 }: WheelEditorDialogProps): React.ReactElement {
   const isEdit = wheel != null;
   const { data: restaurants } = useRestaurants();
+  // Import-from-environment reads the user's environments and their membership join rows — both
+  // already cached client-side via React Query. No backend call is involved in the import.
+  const { data: environments } = useEnvironments();
+  const { data: memberships } = useEnvironmentRestaurants();
   const create = useCreateWheel();
   const update = useUpdateWheel();
   const { copyShareLink } = useShareWheelLink();
+  const toast = useToast();
 
   const [name, setName] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Transient: the environment picked in the import control. It only triggers one import and is reset
+  // afterward — the wheel records names, never which environment they came from.
+  const [importEnvId, setImportEnvId] = useState('');
 
   // Seed the form from the edited wheel each time the dialog opens.
   useEffect(() => {
@@ -49,6 +64,7 @@ export function WheelEditorDialog({
       setIsPublic(wheel?.isPublic ?? false);
       setSelected(new Set(wheel?.restaurantNames ?? []));
       setSearch('');
+      setImportEnvId('');
     }
   }, [open, wheel]);
 
@@ -65,6 +81,42 @@ export function WheelEditorDialog({
       if (next.has(restaurantName)) next.delete(restaurantName);
       else next.add(restaurantName);
       return next;
+    });
+  }
+
+  // Environments offered by the import control; empty when the user has none.
+  const environmentOptions: SelectOption[] = useMemo(
+    () => (environments ?? []).map((environment) => ({ value: environment.id, label: environment.name })),
+    [environments],
+  );
+
+  // Merge an environment's current restaurants into the selection, by name. Additive and
+  // de-duplicating: existing selections are kept and no name is added twice. Membership ids that no
+  // longer resolve to a catalog restaurant (deleted since) are skipped. Reports the number newly added.
+  function importFromEnvironment(envId: string) {
+    // Reset the control so the same environment can be imported again.
+    setImportEnvId('');
+    if (!envId) return;
+    const membership = membershipMapForEnvironment(memberships ?? [], envId);
+    const nameById = new Map(catalog.map((r) => [r.id, r.name]));
+    const next = new Set(selected);
+    let added = 0;
+    for (const restaurantId of Object.keys(membership)) {
+      const restaurantName = nameById.get(restaurantId);
+      if (restaurantName == null) continue; // membership references a restaurant no longer in the catalog
+      if (next.has(restaurantName)) continue; // already selected — never duplicate
+      next.add(restaurantName);
+      added += 1;
+    }
+    setSelected(next);
+    toast.push({
+      tone: 'success',
+      title:
+        added === 0
+          ? 'No new restaurants added'
+          : added === 1
+            ? 'Added 1 restaurant'
+            : `Added ${added} restaurants`,
     });
   }
 
@@ -109,6 +161,18 @@ export function WheelEditorDialog({
 
       <View>
         <Text style={styles.label}>Restaurants</Text>
+        {environmentOptions.length > 0 ? (
+          <Select
+            label="Import from environment"
+            placeholder="Choose an environment"
+            options={environmentOptions}
+            value={importEnvId}
+            onChange={importFromEnvironment}
+            style={styles.importSelect}
+          />
+        ) : (
+          <Text style={styles.emptyList}>Create an environment to import its restaurants here.</Text>
+        )}
         <Input placeholder="Search restaurants" icon="search" value={search} onChangeText={setSearch} />
         <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
           {filtered.map((r) => (
@@ -148,6 +212,9 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     fontWeight: typography.weight.medium,
     color: colors.textSecondary,
+    marginBottom: spacing[2],
+  },
+  importSelect: {
     marginBottom: spacing[2],
   },
   list: {
