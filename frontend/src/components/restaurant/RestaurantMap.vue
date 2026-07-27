@@ -70,12 +70,31 @@ popupHost.className = 'restaurant-map__popup'
 const selectedRestaurant = ref<Restaurant | null>(null)
 const offersExpanded = ref(false)
 
-const markerIcon = L.divIcon({
-  className: 'restaurant-map__marker',
-  html: '<span class="restaurant-map__marker-dot"></span>',
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-})
+// Restaurant names come from data and go into marker HTML, so escape them to avoid injection.
+const HTML_ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char])
+}
+
+// A marker is the green dot plus a small name label above it. The icon is built per restaurant (not
+// shared) because each carries its own name; the dot stays anchored on the coordinate and the label
+// floats above it via CSS, so iconSize/iconAnchor only account for the dot.
+function markerIconFor(name: string): L.DivIcon {
+  return L.divIcon({
+    className: 'restaurant-map__marker',
+    html:
+      '<span class="restaurant-map__marker-dot"></span>' +
+      `<span class="restaurant-map__marker-label">${escapeHtml(name)}</span>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  })
+}
 
 // Visually distinct pin for the user's own location (a haloed dot), so it doesn't read as a restaurant.
 const userIcon = L.divIcon({
@@ -119,7 +138,7 @@ function renderMarkers(): void {
   markerLayer.clearLayers()
   for (const restaurant of markerable.value) {
     const latlng = L.latLng(restaurant.latitude, restaurant.longitude)
-    const marker = L.marker(latlng, { icon: markerIcon, title: restaurant.name })
+    const marker = L.marker(latlng, { icon: markerIconFor(restaurant.name), title: restaurant.name })
     marker.on('click', () => openPopupFor(restaurant, latlng))
     marker.addTo(markerLayer)
   }
@@ -388,11 +407,38 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-/* Token-styled marker, replacing Leaflet's default PNG icon. */
+/* Token-styled marker, replacing Leaflet's default PNG icon. The label floats above the dot, so the
+   marker box stays centred on the dot and the label is allowed to overflow it. */
 :deep(.restaurant-map__marker) {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
+}
+
+/* Small name label sitting above the dot. Centred on the dot, one line, with a subtle pill
+   background so it stays legible over the map tiles. pointer-events:none so it never intercepts the
+   dot's click. */
+:deep(.restaurant-map__marker-label) {
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 140px;
+  padding: 1px var(--space-2);
+  overflow: hidden;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
 }
 
 :deep(.restaurant-map__marker-dot) {
