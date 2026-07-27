@@ -142,6 +142,33 @@ function renderMarkers(): void {
     marker.on('click', () => openPopupFor(restaurant, latlng))
     marker.addTo(markerLayer)
   }
+  declutterLabels()
+}
+
+// Hide name labels that would overlap. Greedy: walk the markers in order, keep a label only if its
+// box clears every label already kept, otherwise hide it (the dot always stays). Depends on the
+// icons being in the DOM, so it runs after markers are added and again on zoom (which changes how far
+// apart the markers sit on screen). Uses visibility, not display, so hidden labels keep their layout
+// box and the pass stays cheap.
+function declutterLabels(): void {
+  if (!markerLayer) return
+  const labels: HTMLElement[] = []
+  markerLayer.eachLayer((layer) => {
+    const icon = (layer as L.Marker & { _icon?: HTMLElement })._icon
+    const label = icon?.querySelector<HTMLElement>('.restaurant-map__marker-label')
+    if (!label) return
+    label.style.visibility = '' // reset from any previous pass before measuring
+    labels.push(label)
+  })
+  const placed: DOMRect[] = []
+  for (const label of labels) {
+    const rect = label.getBoundingClientRect()
+    const overlaps = placed.some(
+      (p) => rect.left < p.right && rect.right > p.left && rect.top < p.bottom && rect.bottom > p.top,
+    )
+    if (overlaps) label.style.visibility = 'hidden'
+    else placed.push(rect)
+  }
 }
 
 // Run a map move that must NOT trigger the "Search this area" prompt. Uses animate:false so the
@@ -247,6 +274,8 @@ onMounted(async () => {
   // A user pan/zoom offers "Search this area" rather than auto-fetching.
   map.on('moveend', onUserMove)
   map.on('zoomend', onUserMove)
+  // Zooming changes how far apart markers sit on screen, so re-run label decluttering after it.
+  map.on('zoomend', declutterLabels)
 
   // Everything below moves the map ourselves (default view, initial fetch, focus) and must not raise
   // the "Search this area" prompt — keep it inside the programmatic window.
