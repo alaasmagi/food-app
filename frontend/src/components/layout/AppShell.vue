@@ -11,7 +11,9 @@ const { theme, toggleTheme } = useTheme()
   <div class="shell">
     <header class="shell__header">
       <div class="shell__lead">
-        <span class="shell__brand">Food app</span>
+        <RouterLink to="/" class="shell__brand" aria-label="FoodRoulette — home">
+          <img src="/logo.png" alt="FoodRoulette" class="shell__logo" />
+        </RouterLink>
         <nav class="shell__nav">
           <RouterLink to="/" class="shell__nav-link">Dashboard</RouterLink>
           <RouterLink to="/wheel" class="shell__nav-link">Wheel</RouterLink>
@@ -51,6 +53,7 @@ const { theme, toggleTheme } = useTheme()
 }
 
 .shell__header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -60,6 +63,17 @@ const { theme, toggleTheme } = useTheme()
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* Teal→gold accent line echoing the wordmark's gradient, tying the bar to the brand. */
+.shell__header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-7), var(--accent-gold));
+}
+
 .shell__lead {
   display: flex;
   align-items: center;
@@ -67,11 +81,24 @@ const { theme, toggleTheme } = useTheme()
 }
 
 .shell__brand {
-  font-family: var(--font-display);
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-tight);
-  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+}
+
+.shell__logo {
+  display: block;
+  height: 26px;
+  width: auto;
+  /* The wordmark is very wide; keep it from crowding the nav on narrow viewports. */
+  max-width: min(52vw, 340px);
+  object-fit: contain;
+  object-position: left center;
+}
+
+@media (max-width: 640px) {
+  .shell__logo {
+    height: 20px;
+  }
 }
 
 .shell__actions {

@@ -3,6 +3,9 @@
    Dark-mode-first. Near-black cool-neutral base (nudged blue at
    low chroma) + a mint-green accent. Accent variants share hue
    ~169; only lightness/chroma vary for hover/press/muted states.
+   The FoodRoulette wordmark is a two-tone teal→gold gradient: the
+   mint accent (hue ~169) is the teal end; a gold scale (hue ~88)
+   is the second brand hue, used as a complementary accent.
    Price/warning/error carry their own brand hues.
    ============================================================ */
 
@@ -26,6 +29,14 @@
   --accent-5: oklch(68% 0.140 169);      /* accent, press */
   --accent-3: oklch(34% 0.075 169);      /* accent, subtle fill */
   --accent-2: oklch(26% 0.050 169);      /* accent, faint fill */
+
+  /* ---- Gold: second brand hue (the wordmark's gold end), single hue family ~88 ---- */
+  --gold-9: oklch(78% 0.135 88);         /* gold, bright (on dark) */
+  --gold-7: oklch(70% 0.142 88);         /* gold, default (#c19806) */
+  --gold-6: oklch(64% 0.138 88);         /* gold, hover */
+  --gold-3: oklch(34% 0.075 88);         /* gold, subtle fill */
+  --gold-2: oklch(26% 0.050 88);         /* gold, faint fill */
+  --accent-gold: var(--gold-7);          /* semantic: complementary brand accent */
 
   /* ---- Semantic status hues ---- */
   --success-7: oklch(72% 0.15 150);
@@ -104,6 +115,14 @@
   --accent-5: oklch(39% 0.14 169);
   --accent-3: oklch(88% 0.06 169);
   --accent-2: oklch(94% 0.035 169);
+
+  /* ---- Gold: same hue 88, re-tuned darker for contrast on light ---- */
+  --gold-9: oklch(56% 0.13 88);
+  --gold-7: oklch(60% 0.14 88);
+  --gold-6: oklch(54% 0.135 88);
+  --gold-3: oklch(90% 0.06 88);
+  --gold-2: oklch(95% 0.035 88);
+  --accent-gold: var(--gold-7);
 
   /* ---- Semantic status hues, same recipe re-tuned for light ---- */
   --success-7: oklch(50% 0.13 150);
