@@ -39,7 +39,7 @@ const markerable = computed(() => markerableRestaurants(props.restaurants))
 
 // Fallback view when nothing has coordinates (Tallinn, where the catalog lives).
 const DEFAULT_CENTER: L.LatLngTuple = [59.437, 24.7536]
-const DEFAULT_ZOOM = 20
+const DEFAULT_ZOOM = 17
 
 // Zoom level to snap to when focusing a single restaurant from the list.
 const FOCUS_ZOOM = 16
