@@ -10,7 +10,6 @@ namespace External.RabbitMQ;
 
 public class RabbitMqEventHandler(
     IServiceScopeFactory scopeFactory,
-    AppMessagingOptions options,
     ILogger<RabbitMqEventHandler> logger) : IBaseEventHandler<JsonElement>
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -34,10 +33,16 @@ public class RabbitMqEventHandler(
             @event.Source);
     }
 
-    private bool IsIdentityUserEvent(IBaseEventEnvelope<JsonElement> @event)
+    private static bool IsIdentityUserEvent(IBaseEventEnvelope<JsonElement> @event)
     {
+        // The food-app queue only receives identity-routed "user" events; RabbitMQ owns the
+        // bindings. Match on the event type plus the "identity." source prefix instead of an exact
+        // "identity.<realm>" string so consumption does not silently break when the running
+        // service's Keycloak realm/authority differs from the event's source. The app itself only
+        // publishes "email" events, so there is no risk of consuming its own messages here.
         return string.Equals(@event.Type, DefaultMessageTypes.User, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(@event.Source, options.IdentitySource, StringComparison.OrdinalIgnoreCase);
+               @event.Source is not null &&
+               @event.Source.StartsWith("identity.", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task HandleIdentityUserEventAsync(IBaseEventEnvelope<JsonElement> @event, CancellationToken ct)

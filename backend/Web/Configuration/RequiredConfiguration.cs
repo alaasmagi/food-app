@@ -84,6 +84,9 @@ public static class RequiredConfiguration
                 Environment.GetEnvironmentVariable("RABBITMQ_EXCHANGE"),
                 "RabbitMQ exchange",
                 "RABBITMQ_EXCHANGE"),
+            // RabbitMQ topology (exchange, queue, bindings) is provisioned externally; this service
+            // only publishes to the existing exchange and must not declare or manage it.
+            DeclareExchange = false,
             UseTls = uri.Scheme.Equals("amqps", StringComparison.OrdinalIgnoreCase)
         };
     }
@@ -96,8 +99,7 @@ public static class RequiredConfiguration
                 Environment.GetEnvironmentVariable("RABBITMQ_QUEUE"),
                 "RabbitMQ consumer queue",
                 "RABBITMQ_QUEUE"),
-            Source = Optional("APP_EVENT_SOURCE") ?? keycloakOptions.ClientId ?? KeycloakRealmName(keycloakOptions.Authority),
-            IdentitySource = $"identity.{KeycloakRealmName(keycloakOptions.Authority)}"
+            Source = Optional("APP_EVENT_SOURCE") ?? keycloakOptions.ClientId ?? KeycloakRealmName(keycloakOptions.Authority)
         };
     }
 
