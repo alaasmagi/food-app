@@ -39,7 +39,7 @@ const markerable = computed(() => markerableRestaurants(props.restaurants))
 
 // Fallback view when nothing has coordinates (Tallinn, where the catalog lives).
 const DEFAULT_CENTER: L.LatLngTuple = [59.437, 24.7536]
-const DEFAULT_ZOOM = 11
+const DEFAULT_ZOOM = 15
 
 // Zoom level to snap to when focusing a single restaurant from the list.
 const FOCUS_ZOOM = 16
@@ -147,6 +147,32 @@ function fitToMarkers(): void {
   }
 }
 
+// Try to centre the initial view on the user's location, then load that area. Falls back to the
+// default (Tallinn) view when geolocation is unsupported, denied, times out, or otherwise fails.
+// Viewport mode only — autoFit and focus modes set their own initial view. Because the callbacks
+// fire after the mount's programmatic window has closed, the move is re-wrapped so it never raises
+// the "Search this area" prompt, and the viewport fetch is deferred until the position resolves (or
+// fails) to avoid a Tallinn fetch immediately followed by a second fetch of the user's area.
+function centreOnUserLocation(): void {
+  if (!('geolocation' in navigator)) {
+    requestSearch()
+    return
+  }
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      if (!map) return
+      const latlng = L.latLng(position.coords.latitude, position.coords.longitude)
+      withProgrammaticMove(() => map!.setView(latlng, DEFAULT_ZOOM, { animate: false }))
+      requestSearch()
+    },
+    () => {
+      if (!map) return
+      requestSearch() // keep the default Tallinn view already set on mount
+    },
+    { timeout: 8000 },
+  )
+}
+
 // Ask the parent to fetch the current viewport, and dismiss the "Search this area" button. No-op in
 // autoFit mode, where the map is a pure viewer and must not trigger fetches.
 function requestSearch(): void {
@@ -207,8 +233,9 @@ onMounted(async () => {
     // Arrived here via "Show on map": centre on the restaurant (which also fetches its area).
     focusOn(props.focusRestaurant)
   } else {
-    // Auto-load the first viewport so the map isn't empty; later moves use the button.
-    requestSearch()
+    // Centre on the user's location if they allow it (falling back to Tallinn), then load that
+    // viewport; later moves use the "Search this area" button.
+    centreOnUserLocation()
   }
   programmaticMove = false
 })

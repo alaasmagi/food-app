@@ -241,7 +241,7 @@ const selectedEnvironment = computed(() =>
 
 <style scoped>
 .dashboard {
-  max-width: 720px;
+  max-width: 1080px;
   margin: 0 auto;
   padding: var(--space-10) var(--space-6) var(--space-16);
 }
