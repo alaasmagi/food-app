@@ -518,7 +518,7 @@ onUnmounted(() => {
    Lift only the tile pane (the "undermap"); markers, labels and popups live in other panes and are
    untouched. Light theme needs no correction. */
 :root[data-theme='dark'] .restaurant-map .leaflet-tile-pane {
-  filter: brightness(1.55) contrast(1.1) saturate(1.08);
+  filter: brightness(1.8) contrast(1.25) saturate(1.1);
 }
 
 .restaurant-map__popup-wrap .leaflet-popup-content-wrapper {
