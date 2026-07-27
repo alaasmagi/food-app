@@ -39,7 +39,7 @@ const markerable = computed(() => markerableRestaurants(props.restaurants))
 
 // Fallback view when nothing has coordinates (Tallinn, where the catalog lives).
 const DEFAULT_CENTER: L.LatLngTuple = [59.437, 24.7536]
-const DEFAULT_ZOOM = 15
+const DEFAULT_ZOOM = 20
 
 // Zoom level to snap to when focusing a single restaurant from the list.
 const FOCUS_ZOOM = 16
@@ -48,6 +48,9 @@ let map: L.Map | null = null
 let markerLayer: L.LayerGroup | null = null
 let popup: L.Popup | null = null
 let tileLayer: L.TileLayer | null = null
+// Marker for the user's own location, set once geolocation resolves on mount. Kept separate from the
+// restaurant markerLayer so viewport re-fetches (which clear that layer) never remove it.
+let userMarker: L.Marker | null = null
 // Id of the restaurant whose focus popup should be preserved across marker re-renders (the viewport
 // re-fetch that focusing triggers would otherwise rebuild the markers and close the popup). Cleared
 // when the popup closes.
@@ -72,6 +75,14 @@ const markerIcon = L.divIcon({
   html: '<span class="restaurant-map__marker-dot"></span>',
   iconSize: [18, 18],
   iconAnchor: [9, 9],
+})
+
+// Visually distinct pin for the user's own location (a haloed dot), so it doesn't read as a restaurant.
+const userIcon = L.divIcon({
+  className: 'restaurant-map__user',
+  html: '<span class="restaurant-map__user-dot"></span>',
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
 })
 
 async function openPopupFor(restaurant: Restaurant, latlng: L.LatLng): Promise<void> {
@@ -162,6 +173,13 @@ function centreOnUserLocation(): void {
     (position) => {
       if (!map) return
       const latlng = L.latLng(position.coords.latitude, position.coords.longitude)
+      userMarker?.remove()
+      userMarker = L.marker(latlng, {
+        icon: userIcon,
+        title: 'Your location',
+        interactive: false,
+        keyboard: false,
+      }).addTo(map)
       withProgrammaticMove(() => map!.setView(latlng, DEFAULT_ZOOM, { animate: false }))
       requestSearch()
     },
@@ -276,6 +294,7 @@ onUnmounted(() => {
   markerLayer = null
   popup = null
   tileLayer = null
+  userMarker = null
 })
 </script>
 
@@ -384,6 +403,28 @@ onUnmounted(() => {
   background: var(--accent-7);
   border: 2px solid var(--surface-app);
   box-shadow: var(--shadow-sm);
+}
+
+/* User's own location: a blue dot with a soft halo. The design system has no blue (restaurant
+   markers are teal accent), so this uses an explicit blue — the universal "you are here" convention —
+   harmonized to the neutrals' hue (~250) so it still sits with the palette. */
+:deep(.restaurant-map__user) {
+  --user-location: oklch(60% 0.18 255);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:deep(.restaurant-map__user-dot) {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  background: var(--user-location);
+  border: 2px solid var(--surface-app);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--user-location) 30%, transparent),
+    var(--shadow-sm);
 }
 </style>
 
