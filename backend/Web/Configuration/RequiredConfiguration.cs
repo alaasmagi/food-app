@@ -97,8 +97,7 @@ public static class RequiredConfiguration
                 "RabbitMQ consumer queue",
                 "RABBITMQ_QUEUE"),
             Source = Optional("APP_EVENT_SOURCE") ?? keycloakOptions.ClientId ?? KeycloakRealmName(keycloakOptions.Authority),
-            IdentitySource = $"identity.{KeycloakRealmName(keycloakOptions.Authority)}",
-            ConsumerRoutingKeys = OptionalList("RABBITMQ_CONSUMER_ROUTING_KEYS", ["user.*"])
+            IdentitySource = $"identity.{KeycloakRealmName(keycloakOptions.Authority)}"
         };
     }
 
@@ -200,22 +199,6 @@ public static class RequiredConfiguration
     {
         var value = Environment.GetEnvironmentVariable(key);
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
-
-    private static string[] OptionalList(string key, string[] fallback)
-    {
-        var value = Environment.GetEnvironmentVariable(key);
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return fallback;
-        }
-
-        var values = value
-            .Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .ToArray();
-
-        return values.Length == 0 ? fallback : values;
     }
 
     private static int OptionalPositiveInt(string key, int fallback)

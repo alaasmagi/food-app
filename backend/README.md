@@ -187,7 +187,7 @@ Redis cache support is built on `alaasmagi.Base.Contracts.Cache`, `alaasmagi.Bas
 RabbitMQ support is built on `alaasmagi.Base.Message` and `alaasmagi.Base.Message.RabbitMQ`.
 
 - `RabbitMqEventPublisher` publishes fixed-schema Base event envelopes.
-- `RabbitMqEventConsumer` subscribes to configured routing keys.
+- `RabbitMqEventConsumer` consumes directly from the configured queue (no exchange binding).
 - `RabbitMqEventHandler` handles incoming events.
 - Keycloak user lifecycle events are consumed as `UserEventContent` from `alaasmagi.Base.Keycloak.Events`
   and synchronized into the local `AppUsers` table.
@@ -275,7 +275,6 @@ ASPNETCORE_URLS
 HOST_PORT
 CACHE_KEY_PREFIX
 CACHE_DEFAULT_ABSOLUTE_EXPIRATION_SECONDS
-RABBITMQ_CONSUMER_ROUTING_KEYS
 APP_EVENT_SOURCE
 GLITCHTIP_DSN
 GLITCHTIP_RELEASE
@@ -328,7 +327,8 @@ remain non-secret and generic.
 
 ### RabbitMQ topology is configuration-driven
 
-The service reads RabbitMQ host/credentials/exchange/queue/routing keys from env vars. Event payloads
+The service reads RabbitMQ host/credentials/exchange/queue from env vars. The consumer reads directly
+from the queue (no exchange binding); the exchange is used only for outbound publishing. Event payloads
 use the Base fixed envelope, so only `content` varies per event type.
 
 ### Redis cache adapter lives under External
