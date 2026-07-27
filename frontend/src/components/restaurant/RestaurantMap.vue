@@ -514,6 +514,13 @@ onUnmounted(() => {
   font-family: var(--font-body);
 }
 
+/* The dark CARTO basemap is very low-contrast on its own — streets and place names barely read.
+   Lift only the tile pane (the "undermap"); markers, labels and popups live in other panes and are
+   untouched. Light theme needs no correction. */
+:root[data-theme='dark'] .restaurant-map .leaflet-tile-pane {
+  filter: brightness(1.35) contrast(1.08) saturate(1.05);
+}
+
 .restaurant-map__popup-wrap .leaflet-popup-content-wrapper {
   background: var(--surface-raised);
   color: var(--text-primary);

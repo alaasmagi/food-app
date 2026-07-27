@@ -10,17 +10,20 @@
    ============================================================ */
 
 :root {
-  /* ---- Base neutrals (raw scale, dark end = low L) ---- */
-  --neutral-0: oklch(13.9% 0.008 250);   /* app background  (#07090c) */
-  --neutral-1: oklch(17.5% 0.012 250);   /* raised surface */
-  --neutral-2: oklch(20.1% 0.015 249);   /* card surface / panel (#11171d) */
-  --neutral-3: oklch(24% 0.015 250);     /* hover surface */
-  --neutral-4: oklch(28% 0.014 250);     /* border, subtle */
-  --neutral-5: oklch(36% 0.015 250);     /* border, strong */
-  --neutral-6: oklch(50% 0.016 248);     /* disabled text */
-  --neutral-7: oklch(67.3% 0.022 244);   /* secondary text  (#8b98a3) */
-  --neutral-8: oklch(82% 0.012 240);     /* primary text (soft) */
-  --neutral-9: oklch(96.8% 0.004 236);   /* primary text (bright) (#f2f5f7) */
+  /* ---- Base neutrals (raw scale, dark end = low L) ----
+         Lifted off near-black: the app background sits at ~18% L (was 13.9%),
+         with wider steps between surfaces and brighter borders so panels, cards
+         and dividers separate clearly instead of melting into the background. */
+  --neutral-0: oklch(18% 0.008 250);     /* app background */
+  --neutral-1: oklch(22% 0.012 250);     /* raised surface */
+  --neutral-2: oklch(25.5% 0.015 249);   /* card surface / panel */
+  --neutral-3: oklch(30% 0.016 250);     /* hover surface */
+  --neutral-4: oklch(37% 0.017 250);     /* border, subtle */
+  --neutral-5: oklch(47% 0.017 250);     /* border, strong */
+  --neutral-6: oklch(58% 0.017 248);     /* disabled text */
+  --neutral-7: oklch(74% 0.022 244);     /* secondary text */
+  --neutral-8: oklch(86% 0.012 240);     /* primary text (soft) */
+  --neutral-9: oklch(97% 0.004 236);     /* primary text (bright) */
 
   /* ---- Accent: mint-green, single hue family ---- */
   --accent-9: oklch(87% 0.150 169);      /* accent, bright (on dark) */
@@ -55,7 +58,7 @@
   --surface-raised: var(--neutral-1);
   --surface-card: var(--neutral-2);
   --surface-hover: var(--neutral-3);
-  --surface-overlay: oklch(13.9% 0.008 250 / 0.72);
+  --surface-overlay: oklch(18% 0.008 250 / 0.78);
 
   /* ---- Semantic aliases: borders ---- */
   --border-subtle: var(--neutral-4);
