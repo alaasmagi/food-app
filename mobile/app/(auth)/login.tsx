@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/design-system/forms/Button';
@@ -27,7 +27,12 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>FoodRoulette</Text>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+            accessibilityLabel="FoodRoulette"
+          />
           <Text style={styles.subtitle}>Sign in to see today's lunch offers.</Text>
         </View>
         <Button
@@ -58,13 +63,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[6],
   },
   header: {
-    gap: spacing[2],
+    gap: spacing[4],
   },
-  title: {
-    fontFamily: fonts.bodyBold,
-    fontWeight: typography.weight.bold,
-    fontSize: typography.size['3xl'],
-    color: colors.textPrimary,
+  logo: {
+    width: '100%',
+    aspectRatio: 2271 / 213,
+    alignSelf: 'flex-start',
   },
   subtitle: {
     fontFamily: fonts.body,

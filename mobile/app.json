@@ -7,6 +7,11 @@
     "scheme": "foodroulette",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#121518"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "dev.alaasmagi.foodroulette"

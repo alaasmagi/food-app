@@ -7,53 +7,53 @@ import type { MapStyleElement, Region } from 'react-native-maps';
  * muted labels) so the map reads as part of the dark app.
  */
 export const darkMapStyle: MapStyleElement[] = [
-  { elementType: 'geometry', stylers: [{ color: '#0C1014' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#0C1014' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#8D9399' }] },
+  { elementType: 'geometry', stylers: [{ color: '#121518' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#121518' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#A8B6C2' }] },
   {
     featureType: 'administrative',
     elementType: 'geometry',
-    stylers: [{ color: '#424850' }],
+    stylers: [{ color: '#677079' }],
   },
   {
     featureType: 'poi',
     elementType: 'labels.text.fill',
-    stylers: [{ color: '#636A71' }],
+    stylers: [{ color: '#848D97' }],
   },
   {
     featureType: 'poi.park',
     elementType: 'geometry',
-    stylers: [{ color: '#12161B' }],
+    stylers: [{ color: '#1B2025' }],
   },
   {
     featureType: 'road',
     elementType: 'geometry',
-    stylers: [{ color: '#272C32' }],
+    stylers: [{ color: '#2F363E' }],
   },
   {
     featureType: 'road',
     elementType: 'labels.text.fill',
-    stylers: [{ color: '#8D9399' }],
+    stylers: [{ color: '#A8B6C2' }],
   },
   {
     featureType: 'road.highway',
     elementType: 'geometry',
-    stylers: [{ color: '#2E343A' }],
+    stylers: [{ color: '#49515A' }],
   },
   {
     featureType: 'transit',
     elementType: 'labels.text.fill',
-    stylers: [{ color: '#636A71' }],
+    stylers: [{ color: '#848D97' }],
   },
   {
     featureType: 'water',
     elementType: 'geometry',
-    stylers: [{ color: '#02060A' }],
+    stylers: [{ color: '#0B0E11' }],
   },
   {
     featureType: 'water',
     elementType: 'labels.text.fill',
-    stylers: [{ color: '#424850' }],
+    stylers: [{ color: '#677079' }],
   },
 ];
 

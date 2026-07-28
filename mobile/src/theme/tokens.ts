@@ -8,38 +8,54 @@
  * in the app imports the design system's CSS; components read from here.
  */
 
-/** Raw neutral ramp (app background -> bright text). */
+/** Raw neutral ramp (app background -> bright text). Lifted off near-black:
+ * the background sits at ~19.5% L (was 13.9%) with wider steps between
+ * surfaces and brighter borders so panels/cards/dividers separate clearly. */
 const neutral = {
-  neutral0: '#0C1014', // app background
-  neutral1: '#12161B', // raised surface
-  neutral2: '#1B2025', // card surface
-  neutral3: '#272C32', // hover surface
-  neutral4: '#2E343A', // border, subtle
-  neutral5: '#424850', // border, strong
-  neutral6: '#636A71', // disabled text
-  neutral7: '#8D9399', // secondary text
-  neutral8: '#B9BEC4', // primary text (soft)
-  neutral9: '#EBEFF2', // primary text (bright)
+  neutral0: '#121518', // app background
+  neutral1: '#1B2025', // raised surface
+  neutral2: '#232A31', // card surface
+  neutral3: '#2F363E', // hover surface
+  neutral4: '#49515A', // border, subtle
+  neutral5: '#677079', // border, strong
+  neutral6: '#848D97', // disabled text
+  neutral7: '#A8B6C2', // secondary text
+  neutral8: '#D1D9DF', // primary text (soft)
+  neutral9: '#F6F9FB', // primary text (bright)
 } as const;
 
-/** Raw accent scale (single cyan-blue hue). */
+/** Raw accent scale (mint-green, single hue family ~169). */
 const accent = {
-  accent9: '#1AC8FF', // bright
-  accent7: '#00A8E6', // default
-  accent6: '#008FCD', // hover
-  accent5: '#0076B1', // press
-  accent3: '#003451', // subtle fill
-  accent2: '#002436', // faint fill
+  accent9: '#53F4C3', // bright
+  accent7: '#34E6B5', // default
+  accent6: '#11CFA1', // hover
+  accent5: '#00B389', // press
+  accent3: '#004431', // subtle fill
+  accent2: '#022C20', // faint fill
+} as const;
+
+/** Raw gold scale (second brand hue ~88, the wordmark's gold end). */
+const gold = {
+  gold9: '#DBB242', // bright
+  gold7: '#C39806', // default
+  gold6: '#AF8600', // hover
+  gold3: '#483500', // subtle fill
+  gold2: '#2E2202', // faint fill
 } as const;
 
 /** Raw status scales (`-7` foreground, `-3` background). */
 const status = {
-  success7: '#48B162',
-  success3: '#083214',
-  warning7: '#E09C1A',
-  warning3: '#412800',
-  danger7: '#EC5B57',
-  danger3: '#4F1313',
+  success7: '#53BE70',
+  success3: '#083818',
+  warning7: '#FFB454',
+  warning3: '#442600',
+  danger7: '#FF5C7A',
+  danger3: '#550F1F',
+} as const;
+
+/** Data hues. */
+const data = {
+  price7: '#FFD166', // offer price
 } as const;
 
 /**
@@ -50,14 +66,16 @@ const status = {
 export const colors = {
   ...neutral,
   ...accent,
+  ...gold,
   ...status,
+  ...data,
 
   // surfaces
   surfaceApp: neutral.neutral0,
   surfaceRaised: neutral.neutral1,
   surfaceCard: neutral.neutral2,
   surfaceHover: neutral.neutral3,
-  surfaceOverlay: 'rgba(12, 16, 20, 0.72)',
+  surfaceOverlay: 'rgba(18, 21, 24, 0.8)',
 
   // borders
   borderSubtle: neutral.neutral4,
@@ -68,15 +86,19 @@ export const colors = {
   textPrimary: neutral.neutral9,
   textSecondary: neutral.neutral7,
   textDisabled: neutral.neutral6,
-  textOnAccent: '#020B10',
+  textOnAccent: '#03160F',
   textLink: accent.accent9,
-  textLinkHover: '#63DEFF',
+  textLinkHover: '#88FBD4',
 
   // actions
   actionPrimary: accent.accent7,
   actionPrimaryHover: accent.accent6,
   actionPrimaryPress: accent.accent5,
-  actionPrimaryText: '#020B10',
+  actionPrimaryText: '#03160F',
+
+  // brand: complementary gold accent (wordmark's gold end) + price data hue
+  accentGold: gold.gold7,
+  price: data.price7,
 
   // status semantic
   statusSuccess: status.success7,
