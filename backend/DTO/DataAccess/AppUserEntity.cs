@@ -23,5 +23,8 @@ public class AppUserEntity : BaseEntityWithMetaConcurrency
 
     public bool SendNotifications { get; set; }
 
+    // Keycloak account enabled state; a disabled user never receives the daily send.
+    public bool IsEnabled { get; set; } = true;
+
     public Guid? NotificationEnvironmentId { get; set; }
 }

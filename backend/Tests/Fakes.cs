@@ -3,7 +3,6 @@ using Base.Contracts.Message;
 using Base.DTO;
 using Contracts.Application;
 using Contracts.DataAccess;
-using Contracts.External;
 
 namespace Tests;
 
@@ -39,13 +38,32 @@ internal sealed class FakeOfferFetchService : IOfferFetchService
             : MethodResponse<string>.Failure(new Error("not.configured", "no result configured")));
 }
 
+// Records confirmed publishes with their AMQP expiration. FailIds forces an unconfirmed result for
+// matching envelope ids so tests can exercise the "unconfirmed means failed" path.
 internal sealed class FakeEventPublisher : IBaseEventPublisher
 {
-    public List<object> Published { get; } = new();
+    public List<PublishedEnvelope> Published { get; } = new();
+    public HashSet<string> FailIds { get; } = new();
 
-    public Task PublishAsync<TContent>(string topic, IBaseEventEnvelope<TContent> message, CancellationToken cancellationToken = default)
+    public Task<PublishResult> PublishAsync<TContent>(
+        IBaseEventEnvelope<TContent> message,
+        string? expiration = null,
+        CancellationToken cancellationToken = default)
     {
-        Published.Add(message!);
-        return Task.CompletedTask;
+        if (FailIds.Contains(message.Id))
+        {
+            return Task.FromResult(PublishResult.Failed("forced failure"));
+        }
+
+        Published.Add(new PublishedEnvelope(message, expiration));
+        return Task.FromResult(PublishResult.Ok());
     }
+}
+
+internal sealed record PublishedEnvelope(object Envelope, string? Expiration);
+
+// Minimal TimeProvider returning a fixed instant, for deterministic scheduling/expiry tests.
+internal sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+{
+    public override DateTimeOffset GetUtcNow() => now;
 }

@@ -18,6 +18,8 @@ public class AppDbContext : DbContext
     public DbSet<EnvironmentRestaurantEntity> EnvironmentRestaurants => Set<EnvironmentRestaurantEntity>();
     public DbSet<FavouriteEntity> Favourites => Set<FavouriteEntity>();
     public DbSet<UserWheelEntity> UserWheels => Set<UserWheelEntity>();
+    public DbSet<ProcessedMessageEntity> ProcessedMessages => Set<ProcessedMessageEntity>();
+    public DbSet<PublishedRecommendationEntity> PublishedRecommendations => Set<PublishedRecommendationEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,6 +32,10 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Email);
             entity.HasIndex(e => e.Username);
             entity.HasIndex(e => e.NotificationEnvironmentId);
+
+            // Existing users predate identity enabled/disabled tracking and are enabled; the column
+            // default backfills them to true rather than silently disabling every recipient.
+            entity.Property(e => e.IsEnabled).HasDefaultValue(true);
 
             // Optional notification scope. No navigation on AppUserEntity (kept lean); deleting the
             // referenced DiningEnvironment sets this FK to null rather than blocking the delete.
@@ -119,6 +125,24 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.RestaurantId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProcessedMessageEntity>(entity =>
+        {
+            entity.ToTable("ProcessedMessages");
+            // Envelope id is the idempotency key: the primary key already enforces uniqueness, so a
+            // redelivery's insert fails and the consumer acks the duplicate.
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+        });
+
+        modelBuilder.Entity<PublishedRecommendationEntity>(entity =>
+        {
+            entity.ToTable("PublishedRecommendations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            // One send per recipient per local date makes a same-day re-run a no-op.
+            entity.HasIndex(e => new { e.UserId, e.LocalDate }).IsUnique();
         });
 
         modelBuilder.Entity<UserWheelEntity>(entity =>

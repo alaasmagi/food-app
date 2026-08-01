@@ -75,10 +75,8 @@ projection of the authenticated Keycloak user.
 |   |-- Cache
 |   |   `-- RedisCache.cs
 |   `-- RabbitMQ
-|       |-- AppMessagingOptions.cs
-|       |-- RabbitMqEventConsumer.cs
-|       |-- RabbitMqEventHandler.cs
-|       `-- RabbitMqEventPublisher.cs
+|       |-- IdentityUserEventConsumer.cs
+|       `-- IdentityUserEventValidator.cs
 |-- Web
 |   |-- API
 |   |   `-- Controllers
@@ -184,13 +182,20 @@ Redis cache support is built on `alaasmagi.Base.Contracts.Cache`, `alaasmagi.Bas
 - `BaseCacheKeyBuilder` handles key validation and prefixing.
 - `BaseCacheOptions` configures the cache key prefix and default entry expiration.
 
-RabbitMQ support is built on `alaasmagi.Base.Message` and `alaasmagi.Base.Message.RabbitMQ`.
+Messaging is wired to the shared platform contract on `alaasmagi.Base.* 1.3.0` (topic exchanges, one
+envelope, one routing-key builder).
 
-- `RabbitMqEventPublisher` publishes fixed-schema Base event envelopes.
-- `RabbitMqEventConsumer` consumes directly from the configured queue (no exchange binding).
-- `RabbitMqEventHandler` handles incoming events.
-- Keycloak user lifecycle events are consumed as `UserEventContent` from `alaasmagi.Base.Keycloak.Events`
-  and synchronized into the local `AppUsers` table.
+- Publishing: the package `IBaseEventPublisher` (persistent, `mandatory`, publisher-confirm with a
+  bounded wait) publishes the daily `lunch-recommendation` command to the `email-hub.commands`
+  exchange. The envelope (`BaseEventEnvelope<T>`) and routing key (`BaseRoutingKey.For`, which builds
+  `{source}.{tenant}.{action}`) come from the package — neither is hand-built. No exchange/queue is
+  declared. See `Application/DailyRecommendationNotificationService.cs`.
+- Consuming: `IdentityUserEventConsumer` reads identity-hub user events from this app's existing
+  `{APP_SLUG}.users` queue (manual acks, bounded prefetch, no declare/bind), validates each envelope
+  (`IdentityUserEventValidator`), and projects `user-created/updated/enabled/disabled/deleted` into
+  the local `AppUsers` table idempotently (`IdentityUserProjection`, keyed by the envelope id).
+- `user-disabled`/`user-deleted` remove the recipient from the daily send; disabled users keep an
+  `IsEnabled=false` row.
 
 ### `Web`
 
@@ -247,7 +252,8 @@ Key Base conventions used here:
 - Services coordinate repository calls and Unit of Work commits.
 - Optimistic concurrency is enabled by entities implementing the Base concurrency contract.
 - Cache access goes through string-keyed `IBaseCache` abstractions.
-- Messaging uses the fixed envelope shape `{ type, source, action, timestamp, content }`.
+- Messaging uses the platform envelope shape `{ id, source, tenant, action, timestamp, contentVersion, content }`
+  (no `type` field — the exchange carries the message kind).
 
 ## Configuration
 
@@ -259,8 +265,8 @@ Required runtime values:
 DATABASE_CONNECTION_STRING
 REDIS_CONNECTION_STRING
 RABBITMQ_URI
-RABBITMQ_QUEUE
-RABBITMQ_EXCHANGE
+RABBITMQ_EXCHANGE          # email-commands exchange to publish to (e.g. email-hub.commands)
+APP_SLUG                   # envelope source/tenant; must equal the RABBITMQ_URI username and realm
 KEYCLOAK_AUTHORITY
 KEYCLOAK_CLIENT_ID
 KEYCLOAK_CLIENT_SECRET
@@ -275,7 +281,14 @@ ASPNETCORE_URLS
 HOST_PORT
 CACHE_KEY_PREFIX
 CACHE_DEFAULT_ABSOLUTE_EXPIRATION_SECONDS
-APP_EVENT_SOURCE
+RABBITMQ_USERS_QUEUE                     # identity-hub consumer queue; default "{APP_SLUG}.users"
+RABBITMQ_PUBLISH_CONFIRM_TIMEOUT_SECONDS # bounded publisher-confirm wait; default 10
+DAILY_RECOMMENDATION_RUN_TIME            # default 08:00
+DAILY_RECOMMENDATION_TIME_ZONE           # default Europe/Tallinn
+DAILY_RECOMMENDATION_CURRENCY            # default EUR
+DAILY_RECOMMENDATION_APP_BASE_URL
+DAILY_RECOMMENDATION_RESTAURANT_PATH_TEMPLATE
+DAILY_RECOMMENDATION_WHEEL_PATH
 GLITCHTIP_DSN
 GLITCHTIP_RELEASE
 RATE_LIMIT_PERMIT_LIMIT
@@ -327,9 +340,11 @@ remain non-secret and generic.
 
 ### RabbitMQ topology is configuration-driven
 
-The service reads RabbitMQ host/credentials/exchange/queue from env vars. The consumer reads directly
-from the queue (no exchange binding); the exchange is used only for outbound publishing. Event payloads
-use the Base fixed envelope, so only `content` varies per event type.
+The service reads RabbitMQ host/credentials and the publishing exchange from env vars, and derives its
+messaging identity from a single `APP_SLUG`. Exchanges, queues, bindings and permissions are
+provisioned on the broker; the application declares none of them. The consumer reads directly from the
+`{APP_SLUG}.users` queue; the exchange is used only for outbound publishing. Event payloads use the
+platform envelope, so only `content` varies per action.
 
 ### Redis cache adapter lives under External
 
@@ -408,7 +423,9 @@ Prefer Base implementations first:
 - Use `BaseRepository` for EF repositories.
 - Use `BaseService` for CRUD application services.
 - Use `IAppCache` / `IBaseCache` for cache reads and writes.
-- Use `BaseEventEnvelope<TContent>` for published events.
-- Use `RabbitMqConsumerBase<TContent>` for consumers.
+- Use `BaseEventEnvelope<TContent>` and `BaseRoutingKey.For` for published events (never hand-build the
+  envelope id or routing key — except the deterministic batch id, see `DeterministicGuid`).
+- Consume with a queue-only background consumer (manual acks, no declare/bind) as in
+  `IdentityUserEventConsumer`, since the broker owns the topology.
 
 Only write custom behavior where the feature differs from generic CRUD or generic messaging.

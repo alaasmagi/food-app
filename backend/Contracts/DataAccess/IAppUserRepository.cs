@@ -11,12 +11,15 @@ public interface IAppUserRepository : IBaseRepository<AppUser>
 
     Task ClearNotificationEnvironmentAsync(Guid environmentId, CancellationToken ct = default);
 
+    // isEnabled: true/false sets the account enabled state (user-created/enabled/disabled);
+    // null leaves it unchanged (user-updated carries profile only, not enabled state).
     Task<AppUser> UpsertFromIdentityEventAsync(
         Guid id,
         string? email,
         string? username,
         string? fullName,
         string? locale,
+        bool? isEnabled,
         CancellationToken ct = default);
 
     Task<bool> DeleteFromIdentityEventAsync(Guid id, CancellationToken ct = default);

@@ -2,7 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace DTO.Messaging;
 
-public sealed record DailyLunchRecommendationContent
+// content payload of a `lunch-recommendation` command on email-hub.commands. Flat (no nesting
+// wrapper) per the envelope contract. All values are machine-readable: currency is an ISO 4217 code
+// ("EUR", never a symbol) and linkToUserWheel is this service's own URL. locale is per recipient.
+public sealed record LunchRecommendationContent
 {
     [JsonPropertyName("email")]
     public string Email { get; init; } = default!;

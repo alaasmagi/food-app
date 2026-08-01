@@ -3,7 +3,6 @@ using Base.Cache;
 using Contracts.Application;
 using Base.Keycloak.Authentication;
 using Base.Message.RabbitMQ;
-using External.RabbitMQ;
 
 namespace Web.Configuration;
 
@@ -82,24 +81,38 @@ public static class RequiredConfiguration
             VirtualHost = RabbitMqVirtualHost(uri),
             Exchange = Required(
                 Environment.GetEnvironmentVariable("RABBITMQ_EXCHANGE"),
-                "RabbitMQ exchange",
+                "RabbitMQ publishing exchange",
                 "RABBITMQ_EXCHANGE"),
-            // RabbitMQ topology (exchange, queue, bindings) is provisioned externally; this service
-            // only publishes to the existing exchange and must not declare or manage it.
-            DeclareExchange = false,
+            // Publisher confirms with a bounded wait: an unconfirmed publish is treated as failed.
+            PublishConfirmTimeout = TimeSpan.FromSeconds(
+                OptionalPositiveInt("RABBITMQ_PUBLISH_CONFIRM_TIMEOUT_SECONDS", 10)),
+            // RabbitMQ topology (exchange, queue, bindings) is provisioned externally. The 1.3.0
+            // package never declares an exchange or queue, so a mismatched declare cannot occur.
             UseTls = uri.Scheme.Equals("amqps", StringComparison.OrdinalIgnoreCase)
         };
     }
 
-    public static AppMessagingOptions AppMessagingOptions(KeycloakOptions keycloakOptions)
+    public static MessagingOptions MessagingOptions(RabbitMqOptions rabbitMqOptions)
     {
-        return new AppMessagingOptions
+        var slug = Required(
+            Environment.GetEnvironmentVariable("APP_SLUG"),
+            "Application messaging slug",
+            "APP_SLUG");
+
+        // The slug is the single registry value: envelope source/tenant, the first routing-key
+        // segment, and the broker username whose write permission is a '^{slug}\.' prefix. If it does
+        // not match the broker username the broker refuses every publish, so fail fast at startup.
+        if (!string.Equals(slug, rabbitMqOptions.Username, StringComparison.Ordinal))
         {
-            Queue = Required(
-                Environment.GetEnvironmentVariable("RABBITMQ_QUEUE"),
-                "RabbitMQ consumer queue",
-                "RABBITMQ_QUEUE"),
-            Source = Optional("APP_EVENT_SOURCE") ?? keycloakOptions.ClientId ?? KeycloakRealmName(keycloakOptions.Authority)
+            throw new InvalidOperationException(
+                $"APP_SLUG ('{slug}') must equal the RabbitMQ username ('{rabbitMqOptions.Username}'). " +
+                "The slug is the envelope source/tenant and the broker enforces a matching write permission.");
+        }
+
+        return new MessagingOptions
+        {
+            Slug = slug,
+            UsersQueue = Optional("RABBITMQ_USERS_QUEUE") ?? $"{slug}.users"
         };
     }
 
@@ -193,7 +206,10 @@ public static class RequiredConfiguration
             AppBaseUrl = Optional("DAILY_RECOMMENDATION_APP_BASE_URL") ?? defaults.AppBaseUrl,
             RestaurantPathTemplate = Optional("DAILY_RECOMMENDATION_RESTAURANT_PATH_TEMPLATE") ?? defaults.RestaurantPathTemplate,
             WheelPath = Optional("DAILY_RECOMMENDATION_WHEEL_PATH") ?? defaults.WheelPath,
-            Currency = Optional("DAILY_RECOMMENDATION_CURRENCY") ?? defaults.Currency
+            Currency = Optional("DAILY_RECOMMENDATION_CURRENCY") ?? defaults.Currency,
+            // Same timezone env as the scheduler, so the business date/wall-clock used to build the
+            // message stays in step with when the batch actually runs.
+            TimeZone = Optional("DAILY_RECOMMENDATION_TIME_ZONE") ?? defaults.TimeZone
         };
     }
 
@@ -268,24 +284,6 @@ public static class RequiredConfiguration
         return string.IsNullOrWhiteSpace(path)
             ? "/"
             : Uri.UnescapeDataString(path);
-    }
-
-    private static string KeycloakRealmName(string authority)
-    {
-        var uri = new Uri(authority);
-        var pathParts = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        var realmsIndex = Array.FindIndex(pathParts, part => part.Equals("realms", StringComparison.OrdinalIgnoreCase));
-        if (realmsIndex >= 0 && realmsIndex + 1 < pathParts.Length)
-        {
-            return pathParts[realmsIndex + 1];
-        }
-
-        if (pathParts.Length > 0)
-        {
-            return pathParts[^1];
-        }
-
-        throw new InvalidOperationException("KEYCLOAK_AUTHORITY must include the realm path, for example https://host/realms/app-service.");
     }
 
     private static string Required(string? value, string description, string key)

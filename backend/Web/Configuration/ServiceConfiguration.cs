@@ -36,7 +36,7 @@ public static class ServiceConfiguration
     {
         var keycloakOptions = RequiredConfiguration.KeycloakOptions();
         var rabbitMqOptions = RequiredConfiguration.RabbitMqOptions();
-        var appMessagingOptions = RequiredConfiguration.AppMessagingOptions(keycloakOptions);
+        var messagingOptions = RequiredConfiguration.MessagingOptions(rabbitMqOptions);
         var redisConnectionString = RequiredConfiguration.RedisConnectionString();
         var baseCacheOptions = RequiredConfiguration.BaseCacheOptions();
         var offerCacheConnectionString = RequiredConfiguration.OfferCacheConnectionString(builder.Configuration);
@@ -54,7 +54,7 @@ public static class ServiceConfiguration
             .AddApplicationAuthentication(keycloakOptions)
             .AddApplicationCors(frontendOriginProvider)
             .AddApplicationCache(redisConnectionString, baseCacheOptions)
-            .AddApplicationMessaging(rabbitMqOptions, appMessagingOptions)
+            .AddApplicationMessaging(rabbitMqOptions, messagingOptions)
             .AddDailyRecommendationNotifications(recommendationScheduleOptions, recommendationNotificationOptions)
             .AddApplicationMvc();
 
@@ -118,6 +118,8 @@ public static class ServiceConfiguration
         services.AddScoped<IEnvironmentRestaurantRepository, EnvironmentRestaurantRepository>();
         services.AddScoped<IFavouriteRepository, FavouriteRepository>();
         services.AddScoped<IUserWheelRepository, UserWheelRepository>();
+        services.AddScoped<IPublishedRecommendationStore, PublishedRecommendationStore>();
+        services.AddScoped<IIdentityUserProjection, IdentityUserProjection>();
         services.AddScoped<IBaseUow, DataAccessUow>();
 
         return services;
@@ -126,6 +128,7 @@ public static class ServiceConfiguration
     private static IServiceCollection AddApplicationServices(this IServiceCollection services, OfferCacheOptions offerCacheOptions)
     {
         services.AddSingleton(offerCacheOptions);
+        services.AddSingleton(TimeProvider.System);
         services.AddScoped<IAppUserService, AppUserService>();
         services.AddScoped<IOfferFetchService, OfferFetchService>();
         services.AddScoped<IOfferProviderService, OfferProviderService>();
@@ -204,18 +207,20 @@ public static class ServiceConfiguration
     private static IServiceCollection AddApplicationMessaging(
         this IServiceCollection services,
         RabbitMqOptions rabbitMqOptions,
-        AppMessagingOptions appMessagingOptions)
+        MessagingOptions messagingOptions)
     {
         services.Configure<HostOptions>(options =>
         {
             options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
         });
 
-        services.AddSingleton(appMessagingOptions);
+        services.AddSingleton(messagingOptions);
+        // Registers IBaseEventPublisher (persistent, mandatory, publisher-confirm) and the shared
+        // RabbitMqConnectionManager. The publisher writes only to the email-hub.commands exchange.
         services.AddRabbitMqPublisher(rabbitMqOptions);
-        services.AddSingleton<IAppEventPublisher, External.RabbitMQ.RabbitMqEventPublisher>();
-        services.AddSingleton<IBaseEventHandler<JsonElement>, RabbitMqEventHandler>();
-        services.AddRabbitMqConsumer<RabbitMqEventConsumer>();
+        // This service keeps a local user table, so it consumes identity-hub user events from its own
+        // {slug}.users queue. A queue-only custom consumer (no declare/bind) with manual ack control.
+        services.AddHostedService<IdentityUserEventConsumer>();
 
         return services;
     }

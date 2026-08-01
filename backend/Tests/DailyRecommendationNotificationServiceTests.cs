@@ -1,5 +1,8 @@
+using System.Globalization;
 using System.Text.Json;
 using Application;
+using Application.Messaging;
+using Base.Message;
 using Contracts.Application;
 using Contracts.DataAccess;
 using Contracts.External;
@@ -17,89 +20,89 @@ public class DailyRecommendationNotificationServiceTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    [Fact]
-    public async Task RunAsync_FreshCache_BuildsRowWithRawPriceAndPlainDeepLinks()
-    {
-        await using var context = TestAppDbContextFactory.CreateInMemory();
-        var userId = AddOptedInUser(context);
-        var restaurant = AddRestaurantForUser(context, userId, "Bistro One", fetchable: true);
-        await context.SaveChangesAsync();
-
-        var cache = new FakeOfferCacheRepository();
-        cache.Set(restaurant.Id, FreshEntry(restaurant.Id,
-            OffersJson(("Soup", "4,50 €"), ("Water", null))));
-
-        var publisher = new FakeEventPublisher();
-        var service = CreateService(context, cache, new FakeOfferFetchService(), publisher);
-
-        await service.RunAsync();
-
-        var content = Assert.IsType<DailyLunchRecommendationEvent>(Assert.Single(publisher.Published)).Content;
-        var row = Assert.Single(content.RecommendationRows);
-        Assert.Equal("Bistro One", row.RestaurantName);
-        Assert.Equal($"https://app.example.com/restaurants/{restaurant.Id}", row.Link);
-        Assert.Equal("https://app.example.com/wheel", content.LinkToUserWheel);
-        Assert.Equal("EUR", content.Currency);
-
-        Assert.Collection(row.Offers,
-            first =>
-            {
-                Assert.Equal("Soup", first.OfferText);
-                Assert.Equal("4,50 €", first.OfferPrice);
-            },
-            second =>
-            {
-                Assert.Equal("Water", second.OfferText);
-                Assert.Null(second.OfferPrice);
-            });
-    }
+    // 2026-07-15 05:00Z == 08:00 in Europe/Tallinn (summer, UTC+3). Local send date is 2026-07-15.
+    private static readonly DateTimeOffset FakeNow = new(2026, 7, 15, 5, 0, 0, TimeSpan.Zero);
+    private static readonly DateOnly LocalDate = new(2026, 7, 15);
 
     [Fact]
-    public async Task RunAsync_NonFetchableWithoutFreshCache_ExcludesRestaurantButStillPublishes()
+    public async Task RunAsync_ParsesPriceToInvariantDecimal_AndSplitsOfferWindow()
     {
         await using var context = TestAppDbContextFactory.CreateInMemory();
-        var userId = AddOptedInUser(context);
-        AddRestaurantForUser(context, userId, "No Provider", fetchable: false);
-        await context.SaveChangesAsync();
-
-        var publisher = new FakeEventPublisher();
-        var service = CreateService(context, new FakeOfferCacheRepository(), new FakeOfferFetchService(), publisher);
-
-        await service.RunAsync();
-
-        var content = Assert.IsType<DailyLunchRecommendationEvent>(Assert.Single(publisher.Published)).Content;
-        Assert.Empty(content.RecommendationRows);
-    }
-
-    [Fact]
-    public async Task RunAsync_FetchFailure_ExcludesOnlyThatRestaurant()
-    {
-        await using var context = TestAppDbContextFactory.CreateInMemory();
-        var userId = AddOptedInUser(context);
-        var ok = AddRestaurantForUser(context, userId, "Fetch OK", fetchable: true);
-        var failing = AddRestaurantForUser(context, userId, "Fetch Fails", fetchable: true);
+        var userId = AddUser(context, sendNotifications: true, isEnabled: true);
+        var restaurant = AddRestaurantForUser(context, userId, "Bistro One", "11:00-14:00", fetchable: true);
         await context.SaveChangesAsync();
 
         var fetch = new FakeOfferFetchService();
-        fetch.SetSuccess(ok.Id, OffersJson(("Pasta", "6 €")));
-        fetch.SetFailure(failing.Id);
+        fetch.SetSuccess(restaurant.Id, OffersJson(("Soup", "4,50 €"), ("Water", null), ("Pasta", "6 €")));
 
         var publisher = new FakeEventPublisher();
         var service = CreateService(context, new FakeOfferCacheRepository(), fetch, publisher);
 
         await service.RunAsync();
 
-        var content = Assert.IsType<DailyLunchRecommendationEvent>(Assert.Single(publisher.Published)).Content;
-        var row = Assert.Single(content.RecommendationRows);
-        Assert.Equal("Fetch OK", row.RestaurantName);
+        var envelope = SinglePublished(publisher);
+        Assert.Equal("food-app", envelope.Source);
+        Assert.Equal("food-app", envelope.Tenant);
+        Assert.Equal("lunch-recommendation", envelope.Action);
+        Assert.Equal("1.0", envelope.ContentVersion);
+
+        var row = Assert.Single(envelope.Content.RecommendationRows);
+        Assert.Equal("Bistro One", row.RestaurantName);
+        Assert.Equal("11:00", row.OfferTimeFrom);
+        Assert.Equal("14:00", row.OfferTimeUntil);
+        Assert.Equal($"https://app.example.com/restaurants/{restaurant.Id}", row.Link);
+        Assert.Equal("EUR", envelope.Content.Currency);
+
+        // Water has no parseable price and is dropped; Soup/Pasta become invariant decimal strings.
+        Assert.Collection(row.Offers,
+            soup =>
+            {
+                Assert.Equal("Soup", soup.OfferText);
+                Assert.Equal("4.50", soup.OfferPrice);
+            },
+            pasta =>
+            {
+                Assert.Equal("Pasta", pasta.OfferText);
+                Assert.Equal("6", pasta.OfferPrice);
+            });
     }
 
     [Fact]
-    public async Task RunAsync_EmptyOffers_ExcludesRestaurant()
+    public async Task RunAsync_DerivesDeterministicIdAndExpiration_FromEarliestWindow()
     {
         await using var context = TestAppDbContextFactory.CreateInMemory();
-        var userId = AddOptedInUser(context);
-        var restaurant = AddRestaurantForUser(context, userId, "Empty", fetchable: true);
+        var userId = AddUser(context, sendNotifications: true, isEnabled: true);
+        var early = AddRestaurantForUser(context, userId, "Closes 13", "11:00-13:00", fetchable: true);
+        var late = AddRestaurantForUser(context, userId, "Closes 15", "11:00-15:00", fetchable: true);
+        await context.SaveChangesAsync();
+
+        var fetch = new FakeOfferFetchService();
+        fetch.SetSuccess(early.Id, OffersJson(("A", "5 €")));
+        fetch.SetSuccess(late.Id, OffersJson(("B", "5 €")));
+
+        var publisher = new FakeEventPublisher();
+        var service = CreateService(context, new FakeOfferCacheRepository(), fetch, publisher);
+
+        await service.RunAsync();
+
+        var published = Assert.Single(publisher.Published);
+        var envelope = (BaseEventEnvelope<LunchRecommendationContent>)published.Envelope;
+
+        var expectedId = DeterministicGuid
+            .CreateV5(DeterministicGuid.LunchRecommendationNamespace, $"{userId}:2026-07-15")
+            .ToString();
+        Assert.Equal(expectedId, envelope.Id);
+
+        // Earliest window ends 13:00 Tallinn == 10:00Z; from 05:00Z that is 5h = 18_000_000 ms.
+        Assert.Equal("18000000", published.Expiration);
+    }
+
+    [Fact]
+    public async Task RunAsync_RecipientWithNoOffers_PublishesNothing()
+    {
+        await using var context = TestAppDbContextFactory.CreateInMemory();
+        var userId = AddUser(context, sendNotifications: true, isEnabled: true);
+        var restaurant = AddRestaurantForUser(context, userId, "Empty", "11:00-14:00", fetchable: true);
         await context.SaveChangesAsync();
 
         var fetch = new FakeOfferFetchService();
@@ -110,32 +113,136 @@ public class DailyRecommendationNotificationServiceTests
 
         await service.RunAsync();
 
-        var content = Assert.IsType<DailyLunchRecommendationEvent>(Assert.Single(publisher.Published)).Content;
-        Assert.Empty(content.RecommendationRows);
+        Assert.Empty(publisher.Published);
     }
 
     [Fact]
-    public async Task RunAsync_PublishesOneEventPerOptedInUser()
+    public async Task RunAsync_RestaurantWithNoParseablePrice_IsOmitted()
     {
         await using var context = TestAppDbContextFactory.CreateInMemory();
-        AddOptedInUser(context);
-        AddOptedInUser(context);
-        AddOptedOutUser(context);
+        var userId = AddUser(context, sendNotifications: true, isEnabled: true);
+        var restaurant = AddRestaurantForUser(context, userId, "Unpriced", "11:00-14:00", fetchable: true);
         await context.SaveChangesAsync();
 
+        var fetch = new FakeOfferFetchService();
+        fetch.SetSuccess(restaurant.Id, OffersJson(("Soup", null), ("Water", "free")));
+
         var publisher = new FakeEventPublisher();
-        var service = CreateService(context, new FakeOfferCacheRepository(), new FakeOfferFetchService(), publisher);
+        var service = CreateService(context, new FakeOfferCacheRepository(), fetch, publisher);
 
         await service.RunAsync();
 
-        Assert.Equal(2, publisher.Published.Count);
+        // Both offers unpriced -> restaurant omitted -> no rows -> nothing published.
+        Assert.Empty(publisher.Published);
+    }
+
+    [Fact]
+    public async Task RunAsync_OfferWindowAlreadyEnded_IsOmitted()
+    {
+        await using var context = TestAppDbContextFactory.CreateInMemory();
+        var userId = AddUser(context, sendNotifications: true, isEnabled: true);
+        // 07:00 Tallinn == 04:00Z, before the 05:00Z fake now -> window already ended.
+        var restaurant = AddRestaurantForUser(context, userId, "Breakfast", "06:00-07:00", fetchable: true);
+        await context.SaveChangesAsync();
+
+        var fetch = new FakeOfferFetchService();
+        fetch.SetSuccess(restaurant.Id, OffersJson(("Porridge", "3 €")));
+
+        var publisher = new FakeEventPublisher();
+        var service = CreateService(context, new FakeOfferCacheRepository(), fetch, publisher);
+
+        await service.RunAsync();
+
+        Assert.Empty(publisher.Published);
+    }
+
+    [Fact]
+    public async Task RunAsync_ExcludesOptedOutAndDisabledUsers()
+    {
+        await using var context = TestAppDbContextFactory.CreateInMemory();
+        var enabledOptedIn = AddUser(context, sendNotifications: true, isEnabled: true);
+        var optedOut = AddUser(context, sendNotifications: false, isEnabled: true);
+        var disabled = AddUser(context, sendNotifications: true, isEnabled: false);
+
+        foreach (var userId in new[] { enabledOptedIn, optedOut, disabled })
+        {
+            var restaurant = AddRestaurantForUser(context, userId, $"R-{userId:N}", "11:00-14:00", fetchable: false);
+            SetFreshCache(context, restaurant.Id);
+        }
+
+        await context.SaveChangesAsync();
+
+        var cache = BuildCache(context);
+        var publisher = new FakeEventPublisher();
+        var service = CreateService(context, cache, new FakeOfferFetchService(), publisher);
+
+        await service.RunAsync();
+
+        var envelope = SinglePublished(publisher);
+        var expectedEmail = (await context.AppUsers.FindAsync(enabledOptedIn))!.Email;
+        Assert.Equal(expectedEmail, envelope.Content.Email);
+    }
+
+    [Fact]
+    public async Task RunAsync_SecondRunSameDay_SendsNothing()
+    {
+        await using var context = TestAppDbContextFactory.CreateInMemory();
+        var userId = AddUser(context, sendNotifications: true, isEnabled: true);
+        var restaurant = AddRestaurantForUser(context, userId, "Bistro", "11:00-14:00", fetchable: true);
+        await context.SaveChangesAsync();
+
+        var fetch = new FakeOfferFetchService();
+        fetch.SetSuccess(restaurant.Id, OffersJson(("Soup", "4 €")));
+
+        var publisher = new FakeEventPublisher();
+        var store = new PublishedRecommendationStore(context);
+        var service = CreateService(context, new FakeOfferCacheRepository(), fetch, publisher, store);
+
+        await service.RunAsync();
+        await service.RunAsync();
+
+        Assert.Single(publisher.Published);
+    }
+
+    [Fact]
+    public async Task RunAsync_UnconfirmedPublish_IsNotRecorded_AndRetriesNextRun()
+    {
+        await using var context = TestAppDbContextFactory.CreateInMemory();
+        var userId = AddUser(context, sendNotifications: true, isEnabled: true);
+        var restaurant = AddRestaurantForUser(context, userId, "Bistro", "11:00-14:00", fetchable: true);
+        await context.SaveChangesAsync();
+
+        var fetch = new FakeOfferFetchService();
+        fetch.SetSuccess(restaurant.Id, OffersJson(("Soup", "4 €")));
+
+        var deterministicId = DeterministicGuid
+            .CreateV5(DeterministicGuid.LunchRecommendationNamespace, $"{userId}:2026-07-15")
+            .ToString();
+
+        var publisher = new FakeEventPublisher();
+        publisher.FailIds.Add(deterministicId);
+        var store = new PublishedRecommendationStore(context);
+        var service = CreateService(context, new FakeOfferCacheRepository(), fetch, publisher, store);
+
+        await service.RunAsync();
+        Assert.Empty(publisher.Published);
+        Assert.False(await store.IsPublishedAsync(userId, LocalDate, default));
+
+        // Broker recovers: the same deterministic id is republished on the next run.
+        publisher.FailIds.Clear();
+        await service.RunAsync();
+
+        var envelope = SinglePublished(publisher);
+        Assert.Equal(deterministicId, envelope.Id);
+        Assert.True(await store.IsPublishedAsync(userId, LocalDate, default));
     }
 
     private static DailyRecommendationNotificationService CreateService(
         AppDbContext context,
         IOfferCacheRepository cache,
         IOfferFetchService fetch,
-        FakeEventPublisher publisher)
+        FakeEventPublisher publisher,
+        IPublishedRecommendationStore? store = null)
     {
         return new DailyRecommendationNotificationService(
             new AppUserRepository(context, new AppUserEntityMapper()),
@@ -144,23 +251,44 @@ public class DailyRecommendationNotificationServiceTests
             fetch,
             new OfferCacheOptions { Ttl = TimeSpan.FromHours(1) },
             publisher,
+            store ?? new PublishedRecommendationStore(context),
+            new MessagingOptions { Slug = "food-app", UsersQueue = "food-app.users" },
             new DailyRecommendationNotificationOptions
             {
                 AppBaseUrl = "https://app.example.com",
                 RestaurantPathTemplate = "/restaurants/{restaurantId}",
                 WheelPath = "/wheel",
-                Currency = "EUR"
+                Currency = "EUR",
+                TimeZone = "Europe/Tallinn"
             },
+            new FixedTimeProvider(FakeNow),
             NullLogger<DailyRecommendationNotificationService>.Instance);
     }
 
-    private static OfferCacheEntry FreshEntry(Guid restaurantId, string offersJson) => new()
+    private static BaseEventEnvelope<LunchRecommendationContent> SinglePublished(FakeEventPublisher publisher)
+        => (BaseEventEnvelope<LunchRecommendationContent>)Assert.Single(publisher.Published).Envelope;
+
+    private readonly Dictionary<Guid, OfferCacheEntry> _freshCache = new();
+
+    private void SetFreshCache(AppDbContext context, Guid restaurantId)
+        => _freshCache[restaurantId] = new OfferCacheEntry
+        {
+            RestaurantId = restaurantId,
+            BusinessDate = LocalDate,
+            OffersJson = OffersJson(("Special", "5 €")),
+            FetchedAtUtc = FakeNow.UtcDateTime
+        };
+
+    private IOfferCacheRepository BuildCache(AppDbContext context)
     {
-        RestaurantId = restaurantId,
-        BusinessDate = DateOnly.FromDateTime(DateTime.UtcNow.Date),
-        OffersJson = offersJson,
-        FetchedAtUtc = DateTime.UtcNow
-    };
+        var cache = new FakeOfferCacheRepository();
+        foreach (var (restaurantId, entry) in _freshCache)
+        {
+            cache.Set(restaurantId, entry);
+        }
+
+        return cache;
+    }
 
     private static string OffersJson(params (string Text, string? Price)[] offers)
     {
@@ -170,11 +298,7 @@ public class DailyRecommendationNotificationServiceTests
         return JsonSerializer.Serialize(items, JsonOptions);
     }
 
-    private static Guid AddOptedInUser(AppDbContext context) => AddUser(context, enabled: true);
-
-    private static void AddOptedOutUser(AppDbContext context) => AddUser(context, enabled: false);
-
-    private static Guid AddUser(AppDbContext context, bool enabled)
+    private static Guid AddUser(AppDbContext context, bool sendNotifications, bool isEnabled)
     {
         var id = Guid.NewGuid();
         var user = new AppUserEntity
@@ -184,14 +308,20 @@ public class DailyRecommendationNotificationServiceTests
             Username = id.ToString("N"),
             FullName = "Test User",
             Locale = "et",
-            SendNotifications = enabled
+            SendNotifications = sendNotifications,
+            IsEnabled = isEnabled
         };
         Stamp(user);
         context.AppUsers.Add(user);
         return id;
     }
 
-    private static RestaurantEntity AddRestaurantForUser(AppDbContext context, Guid userId, string name, bool fetchable)
+    private static RestaurantEntity AddRestaurantForUser(
+        AppDbContext context,
+        Guid userId,
+        string name,
+        string offerTimeText,
+        bool fetchable)
     {
         OfferProviderEntity? provider = null;
         if (fetchable)
@@ -214,7 +344,7 @@ public class DailyRecommendationNotificationServiceTests
             Id = Guid.NewGuid(),
             Name = name,
             City = "City",
-            OfferTimeText = "11:00-14:00",
+            OfferTimeText = offerTimeText,
             ParkingInfo = "parking",
             OpeningInfo = "opening",
             HasOffers = true,

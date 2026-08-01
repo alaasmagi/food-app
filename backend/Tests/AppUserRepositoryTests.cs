@@ -30,7 +30,7 @@ public class AppUserRepositoryTests
         var repository = new AppUserRepository(context, new AppUserEntityMapper());
 
         var user = await repository.UpsertFromIdentityEventAsync(
-            Guid.NewGuid(), "new@example.com", "new", "New User", "et");
+            Guid.NewGuid(), "new@example.com", "new", "New User", "et", isEnabled: true);
 
         Assert.False(user.SendNotifications);
     }
@@ -46,7 +46,7 @@ public class AppUserRepositoryTests
         var repository = new AppUserRepository(context, new AppUserEntityMapper());
 
         var updated = await repository.UpsertFromIdentityEventAsync(
-            id, "renamed@example.com", "renamed", "Renamed User", "en");
+            id, "renamed@example.com", "renamed", "Renamed User", "en", isEnabled: null);
 
         Assert.Equal("renamed@example.com", updated.Email);
         Assert.True(updated.SendNotifications);

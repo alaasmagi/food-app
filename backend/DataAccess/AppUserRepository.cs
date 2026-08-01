@@ -33,7 +33,7 @@ public class AppUserRepository : BaseRepository<AppUser, AppUserEntity, IMapper<
     {
         var entities = await _context.AppUsers
             .AsNoTracking()
-            .Where(user => user.SendNotifications)
+            .Where(user => user.SendNotifications && user.IsEnabled)
             .ToListAsync(ct);
 
         return entities
@@ -69,6 +69,7 @@ public class AppUserRepository : BaseRepository<AppUser, AppUserEntity, IMapper<
         string? username,
         string? fullName,
         string? locale,
+        bool? isEnabled,
         CancellationToken ct = default)
     {
         var entity = await _context.AppUsers
@@ -84,7 +85,9 @@ public class AppUserRepository : BaseRepository<AppUser, AppUserEntity, IMapper<
                 FullName = Normalize(fullName),
                 Locale = NormalizeLocale(locale),
                 // New identity-created users are not subscribed to notifications.
-                SendNotifications = false
+                SendNotifications = false,
+                // Enabled unless the event says otherwise; a first-seen user-disabled must land disabled.
+                IsEnabled = isEnabled ?? true
             };
             StampNew(entity);
             _context.AppUsers.Add(entity);
@@ -97,6 +100,12 @@ public class AppUserRepository : BaseRepository<AppUser, AppUserEntity, IMapper<
             entity.Username = Normalize(username);
             entity.FullName = Normalize(fullName);
             entity.Locale = NormalizeLocale(locale);
+            // Only user-enabled/user-disabled carry an enabled state; user-updated passes null so the
+            // current enabled state is preserved.
+            if (isEnabled.HasValue)
+            {
+                entity.IsEnabled = isEnabled.Value;
+            }
             StampExisting(entity);
         }
 

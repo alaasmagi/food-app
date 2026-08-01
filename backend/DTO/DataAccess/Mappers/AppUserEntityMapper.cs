@@ -16,6 +16,7 @@ public class AppUserEntityMapper : IMapper<AppUser, AppUserEntity>
             FullName = entity.FullName,
             Locale = entity.Locale,
             SendNotifications = entity.SendNotifications,
+            IsEnabled = entity.IsEnabled,
             NotificationEnvironmentId = entity.NotificationEnvironmentId,
         };
     }
@@ -36,6 +37,7 @@ public class AppUserEntityMapper : IMapper<AppUser, AppUserEntity>
             FullName = entity.FullName,
             Locale = entity.Locale,
             SendNotifications = entity.SendNotifications,
+            IsEnabled = entity.IsEnabled,
             NotificationEnvironmentId = entity.NotificationEnvironmentId,
         };
     }
