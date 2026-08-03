@@ -80,7 +80,8 @@ jobs:
           REDIS_CONNECTION_STRING="redis:6379"
           OFFER_CACHE_CONNECTION_STRING="Data Source=/data/offer-cache.db"
           CACHE_KEY_PREFIX="food-app-backend"
-          APP_EVENT_SOURCE="food"
+          APP_EVENT_SOURCE="food-app"
+          APP_SLUG="FoodRoulette"
 
           {
             printf 'ASPNETCORE_ENVIRONMENT=%s\n' 'Production'
