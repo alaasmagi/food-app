@@ -190,8 +190,8 @@ envelope, one routing-key builder).
   exchange. The envelope (`BaseEventEnvelope<T>`) and routing key (`BaseRoutingKey.For`, which builds
   `{source}.{tenant}.{action}`) come from the package — neither is hand-built. No exchange/queue is
   declared. See `Application/DailyRecommendationNotificationService.cs`.
-- Consuming: `IdentityUserEventConsumer` reads identity-hub user events from this app's existing
-  `{APP_SLUG}.users` queue (manual acks, bounded prefetch, no declare/bind), validates each envelope
+- Consuming: `IdentityUserEventConsumer` reads identity-hub user events from this app's configured
+  `RABBITMQ_QUEUE` (manual acks, bounded prefetch, no declare/bind), validates each envelope
   (`IdentityUserEventValidator`), and projects `user-created/updated/enabled/disabled/deleted` into
   the local `AppUsers` table idempotently (`IdentityUserProjection`, keyed by the envelope id).
 - `user-disabled`/`user-deleted` remove the recipient from the daily send; disabled users keep an
@@ -266,7 +266,8 @@ DATABASE_CONNECTION_STRING
 REDIS_CONNECTION_STRING
 RABBITMQ_URI
 RABBITMQ_EXCHANGE          # email-commands exchange to publish to (e.g. email-hub.commands)
-APP_SLUG                   # envelope source/tenant; must equal the RABBITMQ_URI username and realm
+RABBITMQ_QUEUE             # identity-hub user-events queue this service consumes (e.g. food-app)
+APP_EVENT_SOURCE           # envelope source/tenant; must equal the RABBITMQ_URI username and realm
 KEYCLOAK_AUTHORITY
 KEYCLOAK_CLIENT_ID
 KEYCLOAK_CLIENT_SECRET
@@ -281,7 +282,6 @@ ASPNETCORE_URLS
 HOST_PORT
 CACHE_KEY_PREFIX
 CACHE_DEFAULT_ABSOLUTE_EXPIRATION_SECONDS
-RABBITMQ_USERS_QUEUE                     # identity-hub consumer queue; default "{APP_SLUG}.users"
 RABBITMQ_PUBLISH_CONFIRM_TIMEOUT_SECONDS # bounded publisher-confirm wait; default 10
 DAILY_RECOMMENDATION_RUN_TIME            # default 08:00
 DAILY_RECOMMENDATION_TIME_ZONE           # default Europe/Tallinn
@@ -341,9 +341,9 @@ remain non-secret and generic.
 ### RabbitMQ topology is configuration-driven
 
 The service reads RabbitMQ host/credentials and the publishing exchange from env vars, and derives its
-messaging identity from a single `APP_SLUG`. Exchanges, queues, bindings and permissions are
+messaging identity from a single `APP_EVENT_SOURCE`. Exchanges, queues, bindings and permissions are
 provisioned on the broker; the application declares none of them. The consumer reads directly from the
-`{APP_SLUG}.users` queue; the exchange is used only for outbound publishing. Event payloads use the
+`RABBITMQ_QUEUE` queue; the exchange is used only for outbound publishing. Event payloads use the
 platform envelope, so only `content` varies per action.
 
 ### Redis cache adapter lives under External

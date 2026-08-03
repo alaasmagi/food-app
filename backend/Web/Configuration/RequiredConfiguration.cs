@@ -95,24 +95,17 @@ public static class RequiredConfiguration
     public static MessagingOptions MessagingOptions(RabbitMqOptions rabbitMqOptions)
     {
         var slug = Required(
-            Environment.GetEnvironmentVariable("APP_SLUG"),
-            "Application messaging slug",
-            "APP_SLUG");
-
-        // The slug is the single registry value: envelope source/tenant, the first routing-key
-        // segment, and the broker username whose write permission is a '^{slug}\.' prefix. If it does
-        // not match the broker username the broker refuses every publish, so fail fast at startup.
-        if (!string.Equals(slug, rabbitMqOptions.Username, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                $"APP_SLUG ('{slug}') must equal the RabbitMQ username ('{rabbitMqOptions.Username}'). " +
-                "The slug is the envelope source/tenant and the broker enforces a matching write permission.");
-        }
+            Environment.GetEnvironmentVariable("APP_EVENT_SOURCE"),
+            "Application event source",
+            "APP_EVENT_SOURCE");
 
         return new MessagingOptions
         {
             Slug = slug,
-            UsersQueue = Optional("RABBITMQ_USERS_QUEUE") ?? $"{slug}.users"
+            UsersQueue = Required(
+                Environment.GetEnvironmentVariable("RABBITMQ_QUEUE"),
+                "RabbitMQ consumer queue",
+                "RABBITMQ_QUEUE")
         };
     }
 

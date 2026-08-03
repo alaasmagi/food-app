@@ -13,7 +13,7 @@ using RabbitMQ.Client.Events;
 
 namespace External.RabbitMQ;
 
-// Consumes identity-hub user events from this app's existing {slug}.users queue and projects them
+// Consumes identity-hub user events from this app's configured RABBITMQ_QUEUE and projects them
 // into the local user table. Manual acks, bounded prefetch, no declare/bind (the queue, its binding
 // and DLX are provisioned on the broker). Validation failures reject without requeue; transient
 // failures requeue so the queue's delivery limit dead-letters after a few attempts.

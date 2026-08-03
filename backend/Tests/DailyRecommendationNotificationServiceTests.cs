@@ -252,7 +252,7 @@ public class DailyRecommendationNotificationServiceTests
             new OfferCacheOptions { Ttl = TimeSpan.FromHours(1) },
             publisher,
             store ?? new PublishedRecommendationStore(context),
-            new MessagingOptions { Slug = "food-app", UsersQueue = "food-app.users" },
+            new MessagingOptions { Slug = "food-app", UsersQueue = "food-app" },
             new DailyRecommendationNotificationOptions
             {
                 AppBaseUrl = "https://app.example.com",

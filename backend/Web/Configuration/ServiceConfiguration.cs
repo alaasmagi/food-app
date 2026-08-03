@@ -218,8 +218,8 @@ public static class ServiceConfiguration
         // Registers IBaseEventPublisher (persistent, mandatory, publisher-confirm) and the shared
         // RabbitMqConnectionManager. The publisher writes only to the email-hub.commands exchange.
         services.AddRabbitMqPublisher(rabbitMqOptions);
-        // This service keeps a local user table, so it consumes identity-hub user events from its own
-        // {slug}.users queue. A queue-only custom consumer (no declare/bind) with manual ack control.
+        // This service keeps a local user table, so it consumes identity-hub user events from its
+        // configured RABBITMQ_QUEUE. A queue-only custom consumer (no declare/bind) with manual ack control.
         services.AddHostedService<IdentityUserEventConsumer>();
 
         return services;

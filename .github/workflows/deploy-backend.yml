@@ -81,7 +81,6 @@ jobs:
           OFFER_CACHE_CONNECTION_STRING="Data Source=/data/offer-cache.db"
           CACHE_KEY_PREFIX="food-app-backend"
           APP_EVENT_SOURCE="food-app"
-          APP_SLUG="food"
 
           {
             printf 'ASPNETCORE_ENVIRONMENT=%s\n' 'Production'
