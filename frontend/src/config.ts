@@ -20,3 +20,7 @@ export const API_BASE_URL = required('VITE_API_BASE_URL').replace(/\/+$/, '')
 export const KEYCLOAK_URL = required('VITE_KEYCLOAK_URL').replace(/\/+$/, '')
 export const KEYCLOAK_REALM = required('VITE_KEYCLOAK_REALM')
 export const KEYCLOAK_CLIENT_ID = required('VITE_KEYCLOAK_CLIENT_ID')
+
+// CARTO basemaps API key (free at dashboard.basemaps.carto.com). Optional: without it the map
+// still loads, but CARTO serves "API key required" placeholder tiles.
+export const CARTO_API_KEY = (import.meta.env.VITE_CARTO_API_KEY as string | undefined) ?? ''

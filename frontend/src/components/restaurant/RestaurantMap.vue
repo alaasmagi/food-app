@@ -4,9 +4,10 @@ import L from 'leaflet'
 import Button from '../design-system/forms/Button.vue'
 import OfferList from './OfferList.vue'
 import { useRestaurantsStore } from '../../stores/restaurants'
-import { useTheme, type Theme } from '../../composables/useTheme'
+import { useTheme } from '../../composables/useTheme'
 import type { Bounds, Restaurant } from '../../types/restaurant'
 import { hasCoordinates, markerableRestaurants } from './mapMarkers'
+import { TILE_URL } from './basemap'
 
 // The map renders whatever set it is given; it does not fetch restaurants itself. Two modes:
 //  - viewport (default): fetches the initial viewport once, then — rather than refetching on every
@@ -26,12 +27,6 @@ const emit = defineEmits<{ boundsChange: [bounds: Bounds] }>()
 
 const store = useRestaurantsStore()
 const { theme } = useTheme()
-
-// CARTO basemaps matched to the app theme, so the map reads with the rest of the UI.
-const TILE_URL: Record<Theme, string> = {
-  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-}
 
 const mapEl = ref<HTMLElement | null>(null)
 // Restaurants that carry a usable location; the rest are silently excluded.

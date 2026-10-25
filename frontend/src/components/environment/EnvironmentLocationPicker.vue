@@ -15,17 +15,12 @@ import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import L from 'leaflet'
 import Input from '../design-system/forms/Input.vue'
 import Button from '../design-system/forms/Button.vue'
-import { useTheme, type Theme } from '../../composables/useTheme'
+import { useTheme } from '../../composables/useTheme'
+import { TILE_URL } from '../restaurant/basemap'
 
 const model = defineModel<AutoFillOrigin>({ required: true })
 
 const { theme } = useTheme()
-
-// CARTO basemaps matched to the app theme, mirroring RestaurantMap so the picker reads the same.
-const TILE_URL: Record<Theme, string> = {
-  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-}
 
 // Fallback view (Tallinn, where the catalog lives) when the origin has no coordinates yet.
 const DEFAULT_CENTER: L.LatLngTuple = [59.437, 24.7536]
