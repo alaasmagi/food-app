@@ -104,11 +104,11 @@ describe('DashboardView with a specific environment selected', () => {
     const names = wrapper.findAll('.restaurant__name').map((n) => n.text())
     expect(names).toEqual(['Alpha'])
 
-    // Members expose Remove; the inline "Add to environment" toggle is gone
+    // Members expose Remove; the inline "Add to place" toggle is gone
     // (adding now happens through the picker).
     const buttons = wrapper.findAll('button').map((b) => b.text())
-    expect(buttons).toContain('Remove from environment')
-    expect(buttons).not.toContain('Add to environment')
+    expect(buttons).toContain('Remove from place')
+    expect(buttons).not.toContain('Add to place')
     // The picker entry point is present.
     expect(buttons).toContain('Add restaurants')
   })
@@ -138,8 +138,8 @@ describe('DashboardView with a specific environment selected', () => {
     await showList(wrapper)
 
     const buttons = wrapper.findAll('button').map((b) => b.text())
-    expect(buttons).not.toContain('Add to environment')
-    expect(buttons).not.toContain('Remove from environment')
+    expect(buttons).not.toContain('Add to place')
+    expect(buttons).not.toContain('Remove from place')
     expect(buttons).not.toContain('Add restaurants')
     // The viewport set is visible under "All".
     expect(wrapper.findAll('.restaurant__name').map((n) => n.text())).toEqual(['Alpha'])

@@ -24,67 +24,13 @@ const model = defineModel<boolean>({ default: false })
 </template>
 
 <style scoped>
-.ds-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.ds-switch--disabled {
-  color: var(--text-disabled);
-  cursor: not-allowed;
-}
-
-.ds-switch__input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.ds-switch__track {
-  position: relative;
-  flex-shrink: 0;
-  width: 34px;
-  height: 20px;
-  background: var(--neutral-4);
-  border-radius: var(--radius-full);
-  transition: background var(--duration-normal) var(--ease-standard);
-}
-
-.ds-switch__thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  background: var(--neutral-9);
-  border-radius: var(--radius-full);
-  transition: left var(--duration-normal) var(--ease-standard);
-}
-
-.ds-switch__input:checked ~ .ds-switch__track {
-  background: var(--accent-7);
-}
-
-.ds-switch__input:checked ~ .ds-switch__track .ds-switch__thumb {
-  left: 16px;
-}
-
-.ds-switch__input:focus-visible ~ .ds-switch__track {
-  box-shadow: var(--shadow-focus-ring);
-}
-
-.ds-switch--disabled .ds-switch__track {
-  background: var(--neutral-3);
-}
+/* Figma "Switch": 40x24 track, accent when on, 20px thumb; Label/Default. */
+.ds-switch { display: inline-flex; align-items: center; gap: var(--space-2-5); min-height: 44px; cursor: pointer; font-family: var(--font-body); font-size: 14px; line-height: 20px; font-weight: var(--weight-semibold); color: var(--color-text-primary); }
+.ds-switch__input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.ds-switch__track { position: relative; flex-shrink: 0; width: 40px; height: 24px; border-radius: var(--radius-full); background: var(--color-border-strong); transition: background-color var(--duration-normal) var(--ease-standard); }
+.ds-switch__thumb { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: var(--radius-full); background: var(--color-bg-surface); box-shadow: var(--shadow-sm); transition: left var(--duration-normal) var(--ease-standard), background-color var(--duration-normal); }
+.ds-switch__input:checked + .ds-switch__track { background: var(--color-accent-solid); }
+.ds-switch__input:checked + .ds-switch__track .ds-switch__thumb { left: 18px; background: var(--color-text-on-accent); }
+.ds-switch__input:focus-visible + .ds-switch__track { outline: var(--border-thick) solid var(--color-focus-ring); outline-offset: 2px; }
+.ds-switch--disabled { cursor: not-allowed; color: var(--color-text-disabled); }
 </style>

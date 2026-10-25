@@ -48,7 +48,7 @@ describe('RestaurantCard', () => {
 
   it('shows the no-offers badge when hasOffers is false', () => {
     const wrapper = mount(RestaurantCard, { props: { restaurant: restaurant({ hasOffers: false }) } })
-    expect(wrapper.text()).toContain('No offers today')
+    expect(wrapper.text()).toContain('No lunch offers today')
   })
 
   it('renders the city tag and restaurant details', () => {
@@ -81,7 +81,7 @@ describe('RestaurantCard', () => {
     const wrapper = mount(RestaurantCard, { props: { restaurant: restaurant() } })
     expect(wrapper.findComponent(OfferList).exists()).toBe(false)
 
-    await wrapper.find('button').trigger('click')
+    await wrapper.findAll('button').find((b) => b.text() === 'See offers')!.trigger('click')
     await flushPromises()
 
     expect(fetchMock).toHaveBeenCalledTimes(1)

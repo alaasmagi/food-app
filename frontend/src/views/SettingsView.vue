@@ -22,7 +22,7 @@ const saving = ref(false)
 const loadError = ref(false)
 
 const envOptions = computed<SelectOption[]>(() => [
-  { value: ALL, label: 'All environments' },
+  { value: ALL, label: 'All places' },
   ...environments.list.map((environment) => ({ value: environment.id, label: environment.name })),
 ])
 
@@ -75,7 +75,7 @@ async function save(): Promise<void> {
       <Switch v-model="sendNotifications" label="Send me the daily recommendation email" />
       <Select
         v-model="envValue"
-        label="Cover which environment"
+        label="Cover which place"
         :options="envOptions"
         :disabled="!sendNotifications"
       />
@@ -88,44 +88,11 @@ async function save(): Promise<void> {
 </template>
 
 <style scoped>
-.settings {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: var(--space-10) var(--space-6) var(--space-16);
-}
-
-.settings__title {
-  margin: 0 0 var(--space-6);
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-tight);
-  color: var(--text-primary);
-}
-
-.settings__note {
-  margin: 0 0 var(--space-5);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-.settings__group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
-}
-
-.settings__group-title {
-  margin: 0;
-  font-family: var(--font-body);
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-}
-
-.settings__actions {
-  display: flex;
-  justify-content: flex-end;
-}
+/* Figma "11 Settings": 480px column, the email preference grouped in a card. */
+.settings { display: flex; flex-direction: column; gap: var(--space-6); max-width: 480px; }
+.settings__title { margin: 0; font-size: 36px; line-height: 44px; font-weight: var(--weight-bold); letter-spacing: -0.015em; color: var(--color-text-primary); }
+.settings__note { margin: 0; padding: var(--space-3) var(--space-4); border: var(--border-thin) solid var(--color-status-warning-border); border-radius: var(--radius-md); background: var(--color-status-warning-subtle); color: var(--color-text-primary); font-size: 14px; line-height: 20px; }
+.settings__group { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-6); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-lg); background: var(--color-bg-surface); }
+.settings__group-title { margin: 0; font-size: 18px; line-height: 24px; font-weight: var(--weight-semibold); color: var(--color-text-primary); }
+.settings__actions { display: flex; gap: var(--space-2); }
 </style>

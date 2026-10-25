@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import Card from '../design-system/data-display/Card.vue'
 import Badge from '../design-system/data-display/Badge.vue'
 import Tag from '../design-system/data-display/Tag.vue'
 import Button from '../design-system/forms/Button.vue'
+import Icon from '../design-system/Icon.vue'
 import OfferList from './OfferList.vue'
 import RatingStars from '../favourite/RatingStars.vue'
 import FavouriteEditorDialog from '../favourite/FavouriteEditorDialog.vue'
@@ -13,12 +14,16 @@ import { useFavouritesStore } from '../../stores/favourites'
 import { hasCoordinates } from './mapMarkers'
 import type { Restaurant } from '../../types/restaurant'
 
-const props = defineProps<{ restaurant: Restaurant }>()
+// Figma "Restaurant card": today's offers first, quiet details below, actions as icon buttons.
+const props = defineProps<{ restaurant: Restaurant; distance?: string | null }>()
 // The card has no map access; the dashboard listens for this and focuses the restaurant on the map.
 const emit = defineEmits<{ showOnMap: [restaurant: Restaurant] }>()
 const store = useRestaurantsStore()
 const environments = useEnvironmentsStore()
 const favourites = useFavouritesStore()
+
+// How many offers the card shows before "+N more".
+const PREVIEW = 2
 
 // "Show on map" only makes sense for a located restaurant (0/0 sentinel excluded).
 const locatable = computed(() => hasCoordinates(props.restaurant))
@@ -35,6 +40,13 @@ const noOffers = computed(() => {
   const e = entry.value
   return Boolean(e && e.loaded && e.offers.length === 0)
 })
+const offers = computed(() => entry.value?.offers ?? [])
+const hiddenCount = computed(() => Math.max(0, offers.value.length - PREVIEW))
+const details = computed(() =>
+  [props.restaurant.parkingInfo, props.restaurant.openingInfo && `Open ${props.restaurant.openingInfo}`]
+    .filter(Boolean)
+    .join(' · '),
+)
 
 // The membership action only appears when a specific environment (not "All") is selected.
 const showMembership = computed(() => environments.selectedEnvironmentId !== null)
@@ -55,169 +67,125 @@ async function toggleMembership(): Promise<void> {
     await environments.addRestaurant(props.restaurant.id)
   }
 }
+
+// Offers are the point of the card, so they load on their own once the card scrolls into view —
+// only for restaurants that report offers today, and only once (the store caches per id).
+const root = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
+onMounted(() => {
+  if (!props.restaurant.hasOffers || typeof IntersectionObserver === 'undefined' || !root.value) return
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        store.loadOffers(props.restaurant.id)
+        observer?.disconnect()
+      }
+    },
+    { rootMargin: '200px' },
+  )
+  observer.observe(root.value)
+})
+onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
-  <Card>
-    <div class="restaurant__head">
-      <div class="restaurant__titles">
-        <h2 class="restaurant__name">{{ restaurant.name }}</h2>
-        <Tag>{{ restaurant.city }}</Tag>
+  <div ref="root">
+    <Card class="restaurant">
+      <div class="restaurant__head">
+        <div class="restaurant__titles">
+          <h2 class="restaurant__name">{{ restaurant.name }}</h2>
+          <Tag>{{ restaurant.city }}</Tag>
+          <Badge v-if="restaurant.isFastFood" tone="accent">Fast food</Badge>
+        </div>
+        <div class="restaurant__side">
+          <RatingStars v-if="favourite" class="restaurant__rating" :model-value="favourite.rating" />
+          <span v-if="distance" class="restaurant__distance">{{ distance }}</span>
+          <div class="restaurant__tools">
+            <Button
+              v-if="showMembership"
+              variant="ghost"
+              icon="bookmark"
+              icon-only
+              class="restaurant__member"
+              :class="{ 'restaurant__member--on': isMember }"
+              :aria-pressed="isMember"
+              :loading="membershipPending"
+              @click="toggleMembership"
+            >
+              {{ isMember ? 'Remove from place' : 'Add to place' }}
+            </Button>
+            <Button variant="ghost" icon="star" icon-only @click="editorOpen = true">
+              {{ favourite ? 'Edit rating' : 'Rate' }}
+            </Button>
+            <Button
+              v-if="locatable"
+              variant="ghost"
+              icon="map-pin"
+              icon-only
+              @click="emit('showOnMap', restaurant)"
+            >
+              Show on map
+            </Button>
+          </div>
+        </div>
       </div>
-      <div class="restaurant__badges">
-        <Badge v-if="restaurant.isFastFood" tone="accent">Fast food</Badge>
-        <Badge v-if="noOffers" tone="neutral">No offers today</Badge>
+
+      <div v-if="noOffers" class="restaurant__no-offers">
+        <Icon name="info" :size="16" />
+        No lunch offers today
       </div>
-    </div>
-
-    <RatingStars v-if="favourite" class="restaurant__rating" :model-value="favourite.rating" />
-
-    <dl class="restaurant__meta">
-      <div class="restaurant__row">
-        <dt>Offer time</dt>
-        <dd>{{ restaurant.offerTimeText }}</dd>
-      </div>
-      <div class="restaurant__row">
-        <dt>Parking</dt>
-        <dd>{{ restaurant.parkingInfo }}</dd>
-      </div>
-      <div class="restaurant__row">
-        <dt>Opening</dt>
-        <dd>{{ restaurant.openingInfo }}</dd>
-      </div>
-    </dl>
-
-    <div class="restaurant__actions">
-      <!-- Left cluster: the primary action and, next to it, the destructive one it pairs with. -->
-      <Button
-        variant="secondary"
-        size="sm"
-        :icon="expanded ? 'chevron-up' : 'chevron-down'"
-        iconPosition="right"
-        @click="toggleOffers"
-      >
-        {{ expanded ? 'Hide offers' : 'See offers' }}
-      </Button>
-
-      <Button
-        v-if="showMembership"
-        :variant="isMember ? 'danger' : 'secondary'"
-        size="sm"
-        :icon="isMember ? 'minus' : 'plus'"
-        :loading="membershipPending"
-        @click="toggleMembership"
-      >
-        {{ isMember ? 'Remove from environment' : 'Add to environment' }}
-      </Button>
-
-      <!-- Quiet utilities, pushed to the right and set off from the cluster on the left. -->
-      <div class="restaurant__utils">
-        <Button variant="ghost" size="sm" @click="editorOpen = true">
-          {{ favourite ? 'Edit rating' : 'Rate' }}
-        </Button>
-
+      <div v-else class="restaurant__today">
+        <div class="restaurant__today-head">
+          <span class="restaurant__kicker">Today</span>
+          <span v-if="restaurant.offerTimeText" class="restaurant__time">{{ restaurant.offerTimeText }}</span>
+        </div>
+        <OfferList v-if="entry && (entry.loaded || entry.error)" :restaurant-id="restaurant.id" :limit="expanded ? undefined : PREVIEW" />
         <Button
-          v-if="locatable"
+          v-if="!entry || (!entry.loaded && !entry.error)"
           variant="ghost"
-          size="sm"
-          icon="arrow-right"
-          iconPosition="right"
-          @click="emit('showOnMap', restaurant)"
+          class="restaurant__more"
+          :loading="entry?.loading"
+          @click="toggleOffers"
         >
-          Show on map
+          See offers
         </Button>
+        <button v-else-if="hiddenCount > 0" type="button" class="restaurant__more-link" @click="expanded = !expanded">
+          {{ expanded ? 'Show fewer offers' : `+${hiddenCount} more offer${hiddenCount > 1 ? 's' : ''}` }}
+        </button>
       </div>
-    </div>
 
-    <OfferList v-if="expanded" :restaurant-id="restaurant.id" />
+      <p v-if="details" class="restaurant__details">{{ details }}</p>
 
-    <FavouriteEditorDialog
-      :open="editorOpen"
-      :restaurant-id="restaurant.id"
-      @close="editorOpen = false"
-    />
-  </Card>
+      <FavouriteEditorDialog
+        :open="editorOpen"
+        :restaurant-id="restaurant.id"
+        @close="editorOpen = false"
+      />
+    </Card>
+  </div>
 </template>
 
 <style scoped>
-.restaurant__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
-}
-
-.restaurant__titles {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-.restaurant__name {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-tight);
-  color: var(--text-primary);
-}
-
-.restaurant__badges {
-  display: flex;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.restaurant__meta {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-4);
-}
-
-.restaurant__rating {
-  margin-bottom: var(--space-4);
-}
-
-/* A distinct action footer: a divider sets it off from the card body, and the row is organised into
-   two clusters — primary + destructive on the left, quiet utilities on the right — rather than a
-   flat strip of look-alike buttons. */
-.restaurant__actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border-subtle);
-}
-
-.restaurant__utils {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  /* Push the utilities to the right, opening a clear gap from the See-offers / Remove cluster on
-     the left so the row reads as two groups, not one long strip. */
-  margin-left: auto;
-}
-
-.restaurant__row {
-  display: flex;
-  gap: var(--space-4);
-  font-size: var(--text-sm);
-}
-
-.restaurant__row dt {
-  flex-shrink: 0;
-  width: 88px;
-  color: var(--text-secondary);
-}
-
-.restaurant__row dd {
-  margin: 0;
-  color: var(--text-primary);
+.restaurant { padding: var(--space-6); }
+.restaurant__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.restaurant__titles { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-width: 0; }
+.restaurant__name { margin: 0; font-family: var(--font-display); font-size: 18px; line-height: 24px; font-weight: var(--weight-semibold); letter-spacing: -0.005em; color: var(--color-text-primary); }
+.restaurant__side { display: flex; align-items: center; gap: var(--space-3); margin-left: auto; }
+.restaurant__distance { font-size: 14px; line-height: 20px; color: var(--color-text-muted); white-space: nowrap; }
+.restaurant__tools { display: flex; align-items: center; }
+.restaurant__member--on :deep(svg) { color: var(--color-accent-solid); fill: var(--color-accent-solid); }
+.restaurant__today { display: flex; flex-direction: column; gap: var(--space-1); }
+.restaurant__today-head { display: flex; align-items: center; gap: var(--space-2); }
+.restaurant__kicker { font-size: 12px; line-height: 16px; font-weight: var(--weight-medium); letter-spacing: 0.005em; text-transform: uppercase; color: var(--color-accent-text); }
+.restaurant__time { font-size: 12px; line-height: 16px; font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.restaurant__more { align-self: flex-start; margin-left: calc(-1 * var(--space-5)); }
+.restaurant__more-link { align-self: flex-start; padding: var(--space-1) 0; border: 0; background: none; color: var(--color-accent-text); font-family: var(--font-body); font-size: 14px; line-height: 20px; font-weight: var(--weight-semibold); cursor: pointer; }
+.restaurant__more-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.restaurant__no-offers { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-bg-sunken); color: var(--color-text-secondary); font-size: 14px; line-height: 20px; }
+.restaurant__no-offers :deep(svg) { color: var(--color-text-muted); }
+.restaurant__details { margin: 0; font-size: 12px; line-height: 16px; color: var(--color-text-muted); }
+@media (max-width: 599px) {
+  .restaurant { padding: var(--space-4); }
+  .restaurant__side { margin-left: 0; width: 100%; justify-content: space-between; }
 }
 </style>

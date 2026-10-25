@@ -73,7 +73,7 @@ describe('EnvironmentEditorDialog', () => {
     await deleteButton.trigger('click')
 
     // confirmation step shown, delete not yet called
-    expect(wrapper.text()).toContain('Delete this environment?')
+    expect(wrapper.text()).toContain('Delete this place?')
     expect(deleteSpy).not.toHaveBeenCalled()
 
     const confirmButton = wrapper.findAll('button').find((b) => b.text() === 'Confirm delete')!
@@ -91,8 +91,8 @@ describe('RestaurantCard membership action', () => {
     const store = useEnvironmentsStore()
     store.selectEnvironment(null)
     const wrapper = mount(RestaurantCard, { props: { restaurant: restaurant() } })
-    expect(wrapper.text()).not.toContain('Add to environment')
-    expect(wrapper.text()).not.toContain('Remove from environment')
+    expect(wrapper.text()).not.toContain('Add to place')
+    expect(wrapper.text()).not.toContain('Remove from place')
   })
 
   it('shows add under a specific environment and calls addRestaurant', async () => {
@@ -101,7 +101,7 @@ describe('RestaurantCard membership action', () => {
     const addSpy = vi.spyOn(store, 'addRestaurant').mockResolvedValue()
 
     const wrapper = mount(RestaurantCard, { props: { restaurant: restaurant() } })
-    const addButton = wrapper.findAll('button').find((b) => b.text() === 'Add to environment')!
+    const addButton = wrapper.findAll('button').find((b) => b.text() === 'Add to place')!
     expect(addButton).toBeTruthy()
 
     await addButton.trigger('click')
@@ -114,6 +114,6 @@ describe('RestaurantCard membership action', () => {
     store.membershipByEnv['e1'] = { r1: { joinId: 'm1', concurrencyToken: 't' } }
 
     const wrapper = mount(RestaurantCard, { props: { restaurant: restaurant() } })
-    expect(wrapper.text()).toContain('Remove from environment')
+    expect(wrapper.text()).toContain('Remove from place')
   })
 })

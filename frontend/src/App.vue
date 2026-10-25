@@ -41,7 +41,18 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* Screen-reader-only text (icon buttons keep their label for assistive tech). */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 body {
+  line-height: 24px;
   background: var(--surface-app);
   color: var(--text-primary);
   font-family: var(--font-body);

@@ -29,84 +29,29 @@ const icon = computed(() => TONE_ICON[props.tone])
 <template>
   <div class="ds-toast" :class="`ds-toast--${tone}`">
     <span class="ds-toast__icon">
-      <Icon :name="icon" :size="16" />
+      <Icon :name="icon" :size="20" />
     </span>
     <div class="ds-toast__body">
       <span class="ds-toast__title">{{ title }}</span>
       <span v-if="description" class="ds-toast__description">{{ description }}</span>
     </div>
     <button type="button" class="ds-toast__close" aria-label="Dismiss" @click="emit('close')">
-      <Icon name="x" :size="13" />
+      <Icon name="x" :size="16" />
     </button>
   </div>
 </template>
 
 <style scoped>
-.ds-toast {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  width: 320px;
-  padding: 13px 14px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-}
-
-.ds-toast__icon {
-  display: flex;
-  margin-top: 1px;
-}
-
-.ds-toast--info .ds-toast__icon {
-  color: var(--accent-9);
-}
-
-.ds-toast--success .ds-toast__icon {
-  color: var(--status-success);
-}
-
-.ds-toast--warning .ds-toast__icon {
-  color: var(--status-warning);
-}
-
-.ds-toast--danger .ds-toast__icon {
-  color: var(--status-danger);
-}
-
-.ds-toast__body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-}
-
-.ds-toast__title {
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-}
-
-.ds-toast__description {
-  font-family: var(--font-body);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
-.ds-toast__close {
-  display: flex;
-  margin-top: 1px;
-  padding: 0;
-  color: var(--text-secondary);
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color var(--duration-fast) var(--ease-standard);
-}
-
-.ds-toast__close:hover {
-  color: var(--text-primary);
-}
+/* Figma "Toast": neutral raised surface, the tone only colours the icon; Shadow/md; 360px. */
+.ds-toast { display: flex; align-items: flex-start; gap: var(--space-3); width: 360px; max-width: 100%; box-sizing: border-box; padding: var(--space-3) var(--space-4); background: var(--color-bg-raised); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-family: var(--font-body); }
+.ds-toast__icon { display: inline-flex; padding-top: 2px; }
+.ds-toast--info .ds-toast__icon { color: var(--color-status-info-text); }
+.ds-toast--success .ds-toast__icon { color: var(--color-status-success-text); }
+.ds-toast--warning .ds-toast__icon { color: var(--color-status-warning-text); }
+.ds-toast--danger .ds-toast__icon { color: var(--color-status-danger-text); }
+.ds-toast__body { display: flex; flex-direction: column; gap: var(--space-0-5); flex: 1; min-width: 0; }
+.ds-toast__title { font-size: 14px; line-height: 20px; font-weight: var(--weight-semibold); color: var(--color-text-primary); }
+.ds-toast__description { font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
+.ds-toast__close { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--radius-xs); background: none; color: var(--color-text-secondary); cursor: pointer; }
+.ds-toast__close:hover { background: var(--color-bg-hover); color: var(--color-text-primary); }
 </style>

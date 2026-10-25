@@ -21,42 +21,11 @@ withDefaults(
 </template>
 
 <style scoped>
-.ds-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 7px;
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-medium);
-  letter-spacing: var(--tracking-wide);
-  /* Deliberate uppercase treatment - the one sanctioned exception to sentence case. */
-  text-transform: uppercase;
-  border-radius: var(--radius-sm);
-}
-
-.ds-badge--neutral {
-  color: var(--text-primary);
-  background: var(--neutral-3);
-}
-
-.ds-badge--accent {
-  color: var(--accent-9);
-  background: var(--accent-2);
-}
-
-.ds-badge--success {
-  color: var(--status-success);
-  background: var(--status-success-bg);
-}
-
-.ds-badge--warning {
-  color: var(--status-warning);
-  background: var(--status-warning-bg);
-}
-
-.ds-badge--danger {
-  color: var(--status-danger);
-  background: var(--status-danger-bg);
-}
+/* Figma "Badge": pill, Label 12/16 500, tone border + subtle fill. */
+.ds-badge { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-0-5) var(--space-2); border: var(--border-thin) solid; border-radius: var(--radius-full); font-family: var(--font-body); font-size: 12px; line-height: 16px; font-weight: var(--weight-medium); letter-spacing: 0.005em; white-space: nowrap; }
+.ds-badge--neutral { background: var(--color-bg-sunken); border-color: var(--color-border-default); color: var(--color-text-secondary); }
+.ds-badge--accent { background: var(--color-accent-subtle); border-color: var(--color-accent-border); color: var(--color-accent-text); }
+.ds-badge--success { background: var(--color-status-success-subtle); border-color: var(--color-status-success-border); color: var(--color-status-success-text); }
+.ds-badge--warning { background: var(--color-status-warning-subtle); border-color: var(--color-status-warning-border); color: var(--color-status-warning-text); }
+.ds-badge--danger { background: var(--color-status-danger-subtle); border-color: var(--color-status-danger-border); color: var(--color-status-danger-text); }
 </style>

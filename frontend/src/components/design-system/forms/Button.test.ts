@@ -45,14 +45,19 @@ describe('Button', () => {
     expect(wrapper.find('.ds-icon--spin').exists()).toBe(true)
   })
 
-  it('places the icon after the label when iconPosition is right', () => {
+  it('always leads with the icon (Figma Button rule), even when iconPosition is right', () => {
     const wrapper = mount(Button, {
       props: { icon: 'arrow-right', iconPosition: 'right' },
       slots: { default: 'Continue' },
     })
     const children = wrapper.find('button').element.children
-    // last child is the trailing icon
-    expect(children[children.length - 1].tagName.toLowerCase()).toBe('svg')
-    expect(children[0].tagName.toLowerCase()).toBe('span')
+    expect(children[0].tagName.toLowerCase()).toBe('svg')
+    expect(children[children.length - 1].tagName.toLowerCase()).toBe('span')
+  })
+
+  it('renders an icon-only button with the label kept for screen readers', () => {
+    const wrapper = mount(Button, { props: { icon: 'star', iconOnly: true }, slots: { default: 'Rate' } })
+    expect(wrapper.find('button').classes()).toContain('ds-button--icon-only')
+    expect(wrapper.find('.visually-hidden').text()).toBe('Rate')
   })
 })

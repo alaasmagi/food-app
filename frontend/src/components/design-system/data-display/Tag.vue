@@ -37,38 +37,8 @@ const emit = defineEmits<{ remove: [] }>()
 </template>
 
 <style scoped>
-.ds-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  font-family: var(--font-body);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  color: var(--text-primary);
-  background: var(--surface-hover);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-full);
-}
-
-.ds-tag--selected {
-  color: var(--accent-9);
-  background: var(--accent-2);
-  border-color: var(--accent-3);
-}
-
-.ds-tag__remove {
-  display: flex;
-  align-items: center;
-  padding: 0;
-  color: inherit;
-  background: none;
-  border: none;
-  cursor: pointer;
-  opacity: 0.7;
-}
-
-.ds-tag__remove:hover {
-  opacity: 1;
-}
+/* Figma "Tag": Off = surface + default border, On (selected) = accent subtle. */
+.ds-tag { display: inline-flex; align-items: center; gap: var(--space-1); min-height: 28px; padding: var(--space-1) var(--space-3); border: var(--border-thin) solid var(--color-border-default); border-radius: var(--radius-full); background: var(--color-bg-surface); color: var(--color-text-secondary); font-family: var(--font-body); font-size: 14px; line-height: 20px; font-weight: var(--weight-medium); white-space: nowrap; }
+.ds-tag--selected { background: var(--color-accent-subtle); border-color: var(--color-accent-border); color: var(--color-accent-text); }
+.ds-tag__remove { display: inline-flex; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
 </style>

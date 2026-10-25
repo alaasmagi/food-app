@@ -51,7 +51,7 @@ function select(value: number): void {
 <style scoped>
 .stars {
   display: inline-flex;
-  gap: 2px;
+  gap: var(--space-0-5);
 }
 
 .stars__star {
@@ -67,14 +67,15 @@ function select(value: number): void {
 }
 
 .stars__star--filled {
-  color: var(--status-warning);
+  /* Figma rating: filled stars use accent/solid, empty ones border/strong. */
+  color: var(--color-accent-solid);
 }
 
 .stars__glyph {
   display: block;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.5;
+  stroke-width: 2;
 }
 
 .stars__star--filled .stars__glyph {

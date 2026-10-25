@@ -85,9 +85,10 @@ function escapeHtml(value: string): string {
 // A marker is the green dot plus a small name label above it. The icon is built per restaurant (not
 // shared) because each carries its own name; the dot stays anchored on the coordinate and the label
 // floats above it via CSS, so iconSize/iconAnchor only account for the dot.
-function markerIconFor(name: string): L.DivIcon {
+// Figma: a filled dot means the restaurant has lunch offers today, a hollow one that it has none.
+function markerIconFor(name: string, hasOffers = true): L.DivIcon {
   return L.divIcon({
-    className: 'restaurant-map__marker',
+    className: hasOffers ? 'restaurant-map__marker' : 'restaurant-map__marker restaurant-map__marker--no-offers',
     html:
       '<span class="restaurant-map__marker-dot"></span>' +
       `<span class="restaurant-map__marker-label">${escapeHtml(name)}</span>`,
@@ -138,7 +139,7 @@ function renderMarkers(): void {
   markerLayer.clearLayers()
   for (const restaurant of markerable.value) {
     const latlng = L.latLng(restaurant.latitude, restaurant.longitude)
-    const marker = L.marker(latlng, { icon: markerIconFor(restaurant.name), title: restaurant.name })
+    const marker = L.marker(latlng, { icon: markerIconFor(restaurant.name, restaurant.hasOffers), title: restaurant.name })
     marker.on('click', () => openPopupFor(restaurant, latlng))
     marker.addTo(markerLayer)
   }
@@ -360,6 +361,10 @@ onUnmounted(() => {
     <p v-if="truncated" class="restaurant-map__hint" role="status">
       Showing the closest restaurants — zoom in to see more.
     </p>
+    <ul class="restaurant-map__legend" aria-label="Legend">
+      <li><span class="restaurant-map__legend-dot" />Offers today</li>
+      <li><span class="restaurant-map__legend-dot restaurant-map__legend-dot--none" />No offers today</li>
+    </ul>
     <p v-if="!markerable.length" class="restaurant-map__empty">
       No restaurants have a location to show in this area.
     </p>
@@ -387,120 +392,29 @@ onUnmounted(() => {
 .restaurant-map {
   position: relative;
   /* Leaflet gives its panes/controls z-indexes up to 1000. Without an isolated stacking context
-     those leak into the page and paint over higher-level UI like modals (whose overlay is z-index
-     100). isolate traps all of Leaflet's z-indexes inside the map. */
+     those leak into the page and paint over higher-level UI like modals. isolate traps them. */
   isolation: isolate;
 }
-
-.restaurant-map__canvas {
-  height: 480px;
-  width: 100%;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--surface-card);
-  overflow: hidden;
-}
-
-.restaurant-map__empty {
-  margin: var(--space-4) 0 0;
-  font-family: var(--font-body);
-  font-size: var(--text-base);
-  color: var(--text-secondary);
-}
-
+.restaurant-map__canvas { height: 640px; width: 100%; border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-lg); background: var(--color-bg-sunken); overflow: hidden; }
+.restaurant-map__empty { margin: var(--space-4) 0 0; font-family: var(--font-body); font-size: 16px; line-height: 24px; color: var(--color-text-secondary); }
 /* Floating "Search this area" button, centred near the top of the map (above Leaflet panes). */
-.restaurant-map__search-area {
-  position: absolute;
-  top: var(--space-3);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 500;
-}
-
-/* Cap hint floats at the bottom so it never collides with the search-area button up top. */
-.restaurant-map__hint {
-  position: absolute;
-  bottom: var(--space-3);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 500;
-  margin: 0;
-  padding: var(--space-2) var(--space-4);
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  background: var(--surface-overlay);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-full);
-  box-shadow: var(--shadow-sm);
-  pointer-events: none;
-}
-
-/* Token-styled marker, replacing Leaflet's default PNG icon. The label floats above the dot, so the
-   marker box stays centred on the dot and the label is allowed to overflow it. */
-:deep(.restaurant-map__marker) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-}
-
-/* Small name label sitting above the dot. Centred on the dot, one line, with a subtle pill
-   background so it stays legible over the map tiles. pointer-events:none so it never intercepts the
-   dot's click. */
-:deep(.restaurant-map__marker-label) {
-  position: absolute;
-  bottom: calc(100% + 3px);
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 140px;
-  padding: 1px var(--space-2);
-  overflow: hidden;
-  font-family: var(--font-body);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  line-height: var(--leading-snug);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--text-primary);
-  background: var(--surface-overlay);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-full);
-  box-shadow: var(--shadow-sm);
-  pointer-events: none;
-}
-
-:deep(.restaurant-map__marker-dot) {
-  display: block;
-  width: 14px;
-  height: 14px;
-  border-radius: var(--radius-full);
-  background: var(--accent-7);
-  border: 2px solid var(--surface-app);
-  box-shadow: var(--shadow-sm);
-}
-
-/* User's own location: a blue dot with a soft halo. The design system has no blue (restaurant
-   markers are teal accent), so this uses an explicit blue — the universal "you are here" convention —
-   harmonized to the neutrals' hue (~250) so it still sits with the palette. */
-:deep(.restaurant-map__user) {
-  --user-location: oklch(60% 0.18 255);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-:deep(.restaurant-map__user-dot) {
-  display: block;
-  width: 14px;
-  height: 14px;
-  border-radius: var(--radius-full);
-  background: var(--user-location);
-  border: 2px solid var(--surface-app);
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--user-location) 30%, transparent),
-    var(--shadow-sm);
-}
+.restaurant-map__search-area { position: absolute; top: var(--space-4); left: 50%; transform: translateX(-50%); z-index: 500; }
+/* Figma: hint card bottom-left, legend bottom-right — both on the raised surface. */
+.restaurant-map__hint, .restaurant-map__legend { position: absolute; bottom: var(--space-4); z-index: 500; margin: 0; padding: var(--space-2) var(--space-3); background: var(--color-bg-raised); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); font-family: var(--font-body); pointer-events: none; }
+.restaurant-map__hint { left: var(--space-4); right: 220px; max-width: max-content; font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
+.restaurant-map__legend { right: var(--space-4); display: flex; gap: var(--space-4); list-style: none; font-size: 12px; line-height: 16px; color: var(--color-text-secondary); }
+.restaurant-map__legend li { display: flex; align-items: center; gap: var(--space-1-5); }
+.restaurant-map__legend-dot { width: 10px; height: 10px; border-radius: var(--radius-full); background: var(--color-accent-solid); border: var(--border-thick) solid var(--color-bg-surface); box-shadow: 0 0 0 1px var(--color-accent-solid); }
+.restaurant-map__legend-dot--none { background: var(--color-bg-surface); }
+/* Token-styled marker (Figma map marker): dot + name pill. */
+:deep(.restaurant-map__marker) { display: flex; align-items: center; justify-content: center; overflow: visible; }
+:deep(.restaurant-map__marker-label) { position: absolute; left: calc(100% + 4px); top: 50%; transform: translateY(-50%); max-width: 160px; padding: var(--space-0-5) var(--space-2); overflow: hidden; font-family: var(--font-body); font-size: 12px; line-height: 16px; font-weight: var(--weight-medium); white-space: nowrap; text-overflow: ellipsis; color: var(--color-text-primary); background: var(--color-bg-raised); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-full); box-shadow: var(--shadow-sm); pointer-events: none; }
+:deep(.restaurant-map__marker-dot) { display: block; width: 16px; height: 16px; box-sizing: border-box; border-radius: var(--radius-full); background: var(--color-accent-solid); border: var(--border-thick) solid var(--color-bg-surface); box-shadow: var(--shadow-sm); }
+:deep(.restaurant-map__marker--no-offers .restaurant-map__marker-dot) { background: var(--color-bg-surface); border-color: var(--color-accent-solid); }
+:deep(.restaurant-map__marker--no-offers .restaurant-map__marker-label) { color: var(--color-text-secondary); }
+/* User's own location: Figma uses status/info for "you are here". */
+:deep(.restaurant-map__user) { display: flex; align-items: center; justify-content: center; }
+:deep(.restaurant-map__user-dot) { display: block; width: 18px; height: 18px; box-sizing: border-box; border-radius: var(--radius-full); background: var(--color-status-info-solid); border: var(--border-thick) solid var(--color-bg-surface); box-shadow: 0 0 0 4px var(--color-status-info-subtle), var(--shadow-sm); }
 </style>
 
 <!--
@@ -522,11 +436,12 @@ onUnmounted(() => {
 }
 
 .restaurant-map__popup-wrap .leaflet-popup-content-wrapper {
-  background: var(--surface-raised);
-  color: var(--text-primary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  background: var(--color-bg-raised);
+  color: var(--color-text-primary);
+  border: var(--border-thin) solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 0;
 }
 
 .restaurant-map__popup-wrap .leaflet-popup-tip {
@@ -574,13 +489,11 @@ onUnmounted(() => {
 
 .restaurant-map__popup-name {
   margin: 0;
-  padding-right: var(--space-5);
   font-family: var(--font-display);
-  font-size: var(--text-md);
+  font-size: 18px;
+  line-height: 24px;
   font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-tight);
-  line-height: var(--leading-snug);
-  color: var(--text-primary);
+  color: var(--color-text-primary);
 }
 
 .leaflet-control-zoom a {

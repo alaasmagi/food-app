@@ -20,9 +20,12 @@ const redirectTarget = computed(() => {
 <template>
   <main class="login">
     <div class="login__panel">
-      <h1 class="login__title">Sign in</h1>
-      <p class="login__body">Sign in with your account to continue.</p>
-      <Button variant="primary" size="lg" icon="arrow-right" iconPosition="right" @click="auth.login(redirectTarget)">
+      <div class="login__brand"><span class="login__mark" aria-hidden="true">FR</span>FoodRoulette</div>
+      <div class="login__copy">
+        <h1 class="login__title">Sign in</h1>
+        <p class="login__body">Sign in with your account to continue.</p>
+      </div>
+      <Button variant="primary" icon="arrow-right" full-width @click="auth.login(redirectTarget)">
         Log in
       </Button>
     </div>
@@ -30,42 +33,12 @@ const redirectTarget = computed(() => {
 </template>
 
 <style scoped>
-.login {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: var(--space-6);
-  background: var(--surface-app);
-}
-
-.login__panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  align-items: flex-start;
-  width: 100%;
-  max-width: 380px;
-  padding: var(--space-10);
-  background: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-}
-
-.login__title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-tight);
-  color: var(--text-primary);
-}
-
-.login__body {
-  margin: 0 0 var(--space-4);
-  font-family: var(--font-body);
-  font-size: var(--text-base);
-  line-height: var(--leading-normal);
-  color: var(--text-secondary);
-}
+/* Figma "01 Sign in": centred card with the brand mark. */
+.login { display: flex; align-items: center; justify-content: center; min-height: 100vh; box-sizing: border-box; padding: var(--space-6) var(--space-4); background: var(--color-bg-canvas); }
+.login__panel { display: flex; flex-direction: column; gap: var(--space-6); width: 100%; max-width: 420px; box-sizing: border-box; padding: var(--space-8); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-lg); background: var(--color-bg-surface); }
+.login__brand { display: flex; align-items: center; gap: var(--space-3); font-size: 18px; line-height: 24px; font-weight: var(--weight-semibold); color: var(--color-text-primary); }
+.login__mark { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--color-accent-solid); color: var(--color-text-on-accent); font-size: 12px; font-weight: var(--weight-bold); }
+.login__copy { display: flex; flex-direction: column; gap: var(--space-2); }
+.login__title { margin: 0; font-size: 28px; line-height: 34px; font-weight: var(--weight-bold); letter-spacing: -0.015em; color: var(--color-text-primary); }
+.login__body { margin: 0; font-size: 16px; line-height: 24px; color: var(--color-text-secondary); }
 </style>

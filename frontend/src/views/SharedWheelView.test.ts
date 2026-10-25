@@ -50,11 +50,10 @@ describe('SharedWheelView', () => {
     const wrapper = mount(SharedWheelView)
     await flushPromises()
 
-    const toggle = wrapper.get('.shared-wheel__actions button')
-    const initialLabel = toggle.attributes('aria-label')
-    expect(initialLabel).toMatch(/Switch to (light|dark) mode/)
-
-    await toggle.trigger('click')
-    expect(toggle.attributes('aria-label')).not.toBe(initialLabel)
+    // Figma: the public page carries the "Dark mode" switch in its top bar.
+    const toggle = wrapper.get('.shared-wheel__bar input[role="switch"]')
+    const before = document.documentElement.getAttribute('data-theme')
+    await toggle.setValue(before !== 'dark')
+    expect(document.documentElement.getAttribute('data-theme')).not.toBe(before)
   })
 })

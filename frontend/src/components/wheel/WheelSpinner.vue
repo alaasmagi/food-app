@@ -2,18 +2,18 @@
 import { computed, ref } from 'vue'
 import Button from '../design-system/forms/Button.vue'
 
-const props = defineProps<{ names: string[] }>()
+const props = defineProps<{
+  names: string[]
+  /** Hide the built-in winner line (the page shows its own winner panel). */
+  hideResult?: boolean
+  /** Hide the built-in Spin button (the page drives `spin()` itself). */
+  hideControls?: boolean
+}>()
 const emit = defineEmits<{ result: [name: string] }>()
 
 // Token-only segment palette (no hardcoded colors), cycled by index.
-const PALETTE = [
-  'var(--accent-7)',
-  'var(--status-success)',
-  'var(--status-warning)',
-  'var(--status-danger)',
-  'var(--accent-5)',
-  'var(--neutral-5)',
-]
+// Figma: wheel segments use the categorical chart series tokens (color/chart/series-1…8).
+const PALETTE = [1, 2, 3, 4, 5, 6, 7, 8].map((i) => `var(--color-chart-series-${i})`)
 
 const CENTER = 100
 const RADIUS = 92
@@ -87,6 +87,8 @@ function onTransitionEnd(event: TransitionEvent): void {
   result.value = props.names[chosenIndex]
   emit('result', props.names[chosenIndex])
 }
+
+defineExpose({ spin, canSpin, spinning })
 </script>
 
 <template>
@@ -105,7 +107,7 @@ function onTransitionEnd(event: TransitionEvent): void {
             class="spinner__seg"
             :class="{ 'spinner__seg--dim': winnerIndex !== null && seg.index !== winnerIndex }"
           >
-            <path :d="seg.path" :fill="seg.color" stroke="var(--surface-app)" stroke-width="1" />
+            <path :d="seg.path" :fill="seg.color" stroke="var(--color-bg-canvas)" stroke-width="1" />
             <text
               :x="seg.lx"
               :y="seg.ly"
@@ -120,13 +122,13 @@ function onTransitionEnd(event: TransitionEvent): void {
         <!-- Outer rim + hub (static, drawn over the rotor) frame the wheel. -->
         <circle :cx="CENTER" :cy="CENTER" r="93" fill="none" stroke="var(--border-subtle)" stroke-width="2" />
         <circle :cx="CENTER" :cy="CENTER" r="10" fill="var(--surface-raised)" stroke="var(--border-strong)" stroke-width="1.5" />
-        <circle :cx="CENTER" :cy="CENTER" r="3.5" fill="var(--accent-7)" />
+        <circle :cx="CENTER" :cy="CENTER" r="3.5" fill="var(--color-accent-solid)" />
       </svg>
     </div>
 
-    <div class="spinner__controls">
+    <div v-if="!hideControls" class="spinner__controls">
       <Button variant="primary" :disabled="!canSpin" :loading="spinning" @click="spin">Spin</Button>
-      <p v-if="result" class="spinner__result">
+      <p v-if="result && !hideResult" class="spinner__result">
         <span class="spinner__result-tag">Winner</span>
         <span class="spinner__result-name">{{ result }}</span>
       </p>
@@ -136,96 +138,20 @@ function onTransitionEnd(event: TransitionEvent): void {
 </template>
 
 <style scoped>
-.spinner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-5);
-}
-
-.spinner__wheel-wrap {
-  position: relative;
-  width: 280px;
-  max-width: 100%;
-}
-
-.spinner__wheel {
-  display: block;
-  width: 100%;
-  height: auto;
-  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.12));
-}
-
-.spinner__rotor {
-  transform-origin: 100px 100px;
-  transition: transform 3.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
+/* Figma wheel: chart-series segments, text/on-accent labels, text/primary pointer, raised hub. */
+.spinner { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); width: 100%; }
+.spinner__wheel-wrap { position: relative; width: 100%; max-width: 440px; aspect-ratio: 1; padding-top: 12px; box-sizing: content-box; }
+.spinner__wheel { display: block; width: 100%; height: 100%; }
+.spinner__rotor { transform-origin: 100px 100px; transition: transform 3.2s cubic-bezier(0.16, 1, 0.3, 1); }
 /* After the wheel settles, fade the losing segments so the winner under the pointer stands out. */
-.spinner__seg {
-  transition: opacity 0.35s var(--ease-standard);
-}
-
-.spinner__seg--dim {
-  opacity: 0.3;
-}
-
-.spinner__label {
-  font-family: var(--font-body);
-  font-size: 7px;
-  font-weight: var(--weight-semibold);
-  fill: var(--text-on-accent);
-}
-
-.spinner__pointer {
-  position: absolute;
-  top: -2px;
-  left: 50%;
-  z-index: 1;
-  width: 0;
-  height: 0;
-  transform: translateX(-50%);
-  border-right: 8px solid transparent;
-  border-left: 8px solid transparent;
-  border-top: 14px solid var(--text-primary);
-}
-
-.spinner__controls {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.spinner__result {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-}
-
-.spinner__result-tag {
-  padding: 2px var(--space-2);
-  font-family: var(--font-body);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-on-accent);
-  background: var(--accent-7);
-  border-radius: var(--radius-full);
-}
-
-.spinner__result-name {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-}
-
-.spinner__hint {
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
+.spinner__seg { transition: opacity var(--duration-slow) var(--ease-standard); }
+.spinner__seg--dim { opacity: 0.35; }
+.spinner__label { fill: var(--color-text-on-accent); font-family: var(--font-body); font-size: 7px; font-weight: var(--weight-medium); pointer-events: none; }
+.spinner__pointer { position: absolute; top: 0; left: 50%; z-index: 1; width: 0; height: 0; transform: translateX(-50%); border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 22px solid var(--color-text-primary); filter: drop-shadow(0 0 1px var(--color-bg-canvas)); }
+.spinner__controls { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+.spinner__result { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
+.spinner__result-tag { padding: var(--space-0-5) var(--space-2); border: var(--border-thin) solid var(--color-accent-border); border-radius: var(--radius-full); background: var(--color-accent-subtle); color: var(--color-accent-text); font-size: 12px; line-height: 16px; font-weight: var(--weight-medium); }
+.spinner__result-name { font-size: 22px; line-height: 28px; font-weight: var(--weight-semibold); color: var(--color-text-primary); }
+.spinner__hint { margin: 0; font-size: 14px; line-height: 20px; color: var(--color-text-muted); }
+@media (prefers-reduced-motion: reduce) { .spinner__rotor { transition-duration: 0.01s; } }
 </style>

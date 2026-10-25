@@ -6,6 +6,8 @@ import DashboardView from '../views/DashboardView.vue'
 import WheelView from '../views/WheelView.vue'
 import SharedWheelView from '../views/SharedWheelView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import PlacesView from '../views/PlacesView.vue'
+import NewPlaceView from '../views/NewPlaceView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -39,6 +41,8 @@ export const router = createRouter({
     { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
     { path: '/w/:id', name: 'shared-wheel', component: SharedWheelView, meta: { public: true } },
     { path: '/', name: 'dashboard', component: DashboardView },
+    { path: '/places', name: 'places', component: PlacesView },
+    { path: '/places/new', name: 'new-place', component: NewPlaceView },
     { path: '/wheel', name: 'wheel', component: WheelView },
     { path: '/settings', name: 'settings', component: SettingsView },
   ],

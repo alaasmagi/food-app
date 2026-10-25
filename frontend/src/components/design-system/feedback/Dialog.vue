@@ -11,7 +11,7 @@ withDefaults(
     width?: string
   }>(),
   {
-    width: '420px',
+    width: '440px',
   },
 )
 
@@ -25,7 +25,7 @@ const emit = defineEmits<{ close: [] }>()
         <div class="ds-dialog__head">
           <span class="ds-dialog__title">{{ title }}</span>
           <button type="button" class="ds-dialog__close" aria-label="Close" @click="emit('close')">
-            <Icon name="x" :size="16" />
+            <Icon name="x" :size="20" />
           </button>
         </div>
         <div class="ds-dialog__body">
@@ -40,88 +40,15 @@ const emit = defineEmits<{ close: [] }>()
 </template>
 
 <style scoped>
-.ds-dialog__overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-4);
-  background: var(--surface-overlay);
-}
-
-.ds-dialog__panel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  max-width: 90%;
-  padding: 20px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-}
-
-.ds-dialog__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.ds-dialog__title {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-}
-
-.ds-dialog__close {
-  display: flex;
-  padding: 0;
-  color: var(--text-secondary);
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color var(--duration-fast) var(--ease-standard);
-}
-
-.ds-dialog__close:hover {
-  color: var(--text-primary);
-}
-
-.ds-dialog__body {
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  line-height: var(--leading-normal);
-  color: var(--text-secondary);
-}
-
-.ds-dialog__footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-/* Open/close transition (Vue Transition, not JS handlers). */
-.ds-dialog-enter-active,
-.ds-dialog-leave-active {
-  transition: opacity var(--duration-normal) var(--ease-standard);
-}
-
-.ds-dialog-enter-active .ds-dialog__panel,
-.ds-dialog-leave-active .ds-dialog__panel {
-  transition: transform var(--duration-normal) var(--ease-standard);
-}
-
-.ds-dialog-enter-from,
-.ds-dialog-leave-to {
-  opacity: 0;
-}
-
-.ds-dialog-enter-from .ds-dialog__panel,
-.ds-dialog-leave-to .ds-dialog__panel {
-  transform: translateY(8px) scale(0.98);
-}
+/* Figma "Dialog": bg/raised, border/subtle, radius/lg, Shadow/lg, 24px padding; Desktop/H3 title, ghost close button. */
+.ds-dialog__overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: var(--space-4); background: var(--color-overlay-scrim); }
+.ds-dialog__panel { display: flex; flex-direction: column; gap: var(--space-4); max-width: 100%; max-height: calc(100vh - 2 * var(--space-4)); box-sizing: border-box; padding: var(--space-6); overflow-y: auto; background: var(--color-bg-raised); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); color: var(--color-text-primary); }
+.ds-dialog__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.ds-dialog__title { font-family: var(--font-body); font-size: 22px; line-height: 28px; font-weight: var(--weight-semibold); letter-spacing: -0.005em; }
+.ds-dialog__close { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; border: 0; border-radius: var(--radius-md); background: none; color: var(--color-text-secondary); cursor: pointer; }
+.ds-dialog__close:hover { background: var(--color-bg-hover); color: var(--color-text-primary); }
+.ds-dialog__body { display: flex; flex-direction: column; gap: var(--space-4); font-family: var(--font-body); font-size: 16px; line-height: 24px; color: var(--color-text-secondary); }
+.ds-dialog__footer { display: flex; justify-content: flex-end; gap: var(--space-2); padding-top: var(--space-1); }
+.ds-dialog-enter-active, .ds-dialog-leave-active { transition: opacity var(--duration-normal) var(--ease-out); }
+.ds-dialog-enter-from, .ds-dialog-leave-to { opacity: 0; }
 </style>

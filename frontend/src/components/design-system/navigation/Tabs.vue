@@ -31,49 +31,11 @@ const model = defineModel<string>()
 </template>
 
 <style scoped>
-.ds-tabs {
-  display: flex;
-  gap: 4px;
-  /* Scroll horizontally when the tabs overflow, but never vertically: setting
-     overflow-x alone makes overflow-y compute to auto, and the active tab's 2px
-     underline overflows by a sub-pixel, which would surface a stray vertical
-     scrollbar. Chrome is hidden — the tab strip scrolls without a visible bar. */
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.ds-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.ds-tabs__tab {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  margin-bottom: -1px;
-  padding: 10px 4px;
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--text-secondary);
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  transition: color var(--duration-fast) var(--ease-standard);
-}
-
-.ds-tabs__tab:hover {
-  color: var(--text-primary);
-}
-
-.ds-tabs__tab--active {
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-  border-bottom-color: var(--accent-7);
-}
+/* Figma "Tabs": Label/Default, active tab = text/primary with a 2px accent underline. */
+.ds-tabs { display: flex; gap: var(--space-1); border-bottom: var(--border-thin) solid var(--color-border-subtle); overflow-x: auto; }
+.ds-tabs__tab { position: relative; min-height: 44px; padding: var(--space-2-5) var(--space-3); border: 0; background: none; color: var(--color-text-secondary); font-family: var(--font-body); font-size: 14px; line-height: 20px; font-weight: var(--weight-semibold); white-space: nowrap; cursor: pointer; transition: color var(--duration-fast) var(--ease-standard); }
+.ds-tabs__tab:hover { color: var(--color-text-primary); }
+.ds-tabs__tab--active { color: var(--color-text-primary); }
+.ds-tabs__tab--active::after { content: ''; position: absolute; left: var(--space-3); right: var(--space-3); bottom: -1px; height: var(--border-thick); border-radius: var(--radius-full); background: var(--color-accent-solid); }
+.ds-tabs__tab:focus-visible { outline: var(--border-thick) solid var(--color-focus-ring); outline-offset: -2px; border-radius: var(--radius-sm); }
 </style>

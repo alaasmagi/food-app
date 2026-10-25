@@ -66,12 +66,12 @@ describe('SettingsView', () => {
     expect(wrapper.find('.ds-select').classes()).toContain('ds-select--disabled')
   })
 
-  it('offers only "All environments" when the user has none', async () => {
+  it('offers only "All places" when the user has none', async () => {
     const { wrapper } = await mountWith(appUser({ sendNotifications: true }), [])
     await wrapper.find('.ds-select__trigger').trigger('click')
     const options = wrapper.findAll('.ds-select__option')
     expect(options).toHaveLength(1)
-    expect(options[0].text()).toContain('All environments')
+    expect(options[0].text()).toContain('All places')
   })
 
   it('saves preferences (sentinel mapped to null) and shows a success toast', async () => {
@@ -84,7 +84,7 @@ describe('SettingsView', () => {
     const toasts = useToastsStore()
     const pushSpy = vi.spyOn(toasts, 'push')
 
-    // envValue defaults to the "All environments" sentinel -> should send null.
+    // envValue defaults to the "All places" sentinel -> should send null.
     const saveButton = wrapper.findAll('button').find((b) => b.text() === 'Save')!
     await saveButton.trigger('click')
     await flushPromises()

@@ -7,7 +7,7 @@ withDefaults(
     hoverable?: boolean
   }>(),
   {
-    padding: '20px',
+    padding: '24px',
     hoverable: false,
   },
 )
@@ -20,17 +20,8 @@ withDefaults(
 </template>
 
 <style scoped>
-.ds-card {
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  transition:
-    background var(--duration-fast) var(--ease-standard),
-    border-color var(--duration-fast) var(--ease-standard);
-}
-
-.ds-card--hoverable:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-strong);
-}
+/* Figma "Card": bg/surface, border/subtle, radius/lg. */
+.ds-card { display: flex; flex-direction: column; gap: var(--space-4); background: var(--color-bg-surface); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-lg); }
+.ds-card--hoverable { cursor: pointer; transition: border-color var(--duration-fast) var(--ease-standard); }
+.ds-card--hoverable:hover { border-color: var(--color-border-strong); background-image: linear-gradient(var(--color-bg-hover), var(--color-bg-hover)); }
 </style>

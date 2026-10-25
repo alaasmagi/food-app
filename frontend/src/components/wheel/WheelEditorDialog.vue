@@ -138,12 +138,12 @@ async function save(): Promise<void> {
         <Select
           v-if="environmentOptions.length"
           v-model="importEnvId"
-          label="Import from environment"
-          placeholder="Choose an environment"
+          label="Start from a place"
+          placeholder="Choose a place"
           :options="environmentOptions"
         />
         <p v-else class="wheel-editor__hint">
-          Create an environment to import its restaurants here.
+          Create a place to import its restaurants here.
         </p>
 
         <Input v-model="searchInput" placeholder="Search restaurants" icon="search" size="sm" />

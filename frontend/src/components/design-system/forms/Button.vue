@@ -17,6 +17,8 @@ const props = withDefaults(
     disabled?: boolean
     fullWidth?: boolean
     type?: 'button' | 'submit' | 'reset'
+    /** Figma Icon button: square 44px, the label stays available to screen readers only. */
+    iconOnly?: boolean
   }>(),
   {
     variant: 'primary',
@@ -26,6 +28,7 @@ const props = withDefaults(
     disabled: false,
     fullWidth: false,
     type: 'button',
+    iconOnly: false,
   },
 )
 
@@ -37,7 +40,8 @@ const hasLabel = computed(() => !!slots.default)
 const isDisabled = computed(() => props.disabled || props.loading)
 
 // Icon pixel size per button size, matching the design system's SIZE map.
-const iconSize = computed(() => (props.size === 'sm' ? 14 : props.size === 'lg' ? 16 : 15))
+// Figma Button has a single size; `size` is kept for API compatibility and no longer changes the look.
+const iconSize = computed(() => 18)
 
 function onClick(e: MouseEvent) {
   if (isDisabled.value) return
@@ -49,133 +53,39 @@ function onClick(e: MouseEvent) {
   <button
     :type="type"
     :disabled="isDisabled"
+    :aria-busy="loading || undefined"
     class="ds-button"
-    :class="[`ds-button--${variant}`, `ds-button--${size}`, { 'ds-button--full': fullWidth }]"
+    :class="[`ds-button--${variant}`, `ds-button--${size}`, { 'ds-button--full': fullWidth, 'ds-button--icon-only': iconOnly || !hasLabel }]"
     @click="onClick"
   >
     <Icon v-if="loading" name="spinner" :size="iconSize" />
-    <Icon
-      v-else-if="icon && iconPosition === 'left'"
-      :name="icon"
-      :size="iconSize"
-    />
-    <span v-if="hasLabel"><slot /></span>
-    <Icon
-      v-if="!loading && icon && iconPosition === 'right'"
-      :name="icon"
-      :size="iconSize"
-    />
+    <!-- Figma: the icon always leads the label (iconPosition is accepted but no longer moves it). -->
+    <Icon v-else-if="icon" :name="icon" :size="iconSize" />
+    <span v-if="hasLabel" :class="{ 'visually-hidden': iconOnly }"><slot /></span>
   </button>
 </template>
 
 <style scoped>
+/* Figma "Button": one size (44px), radius/md, Label/Default; icon (18px) always leads the label. */
 .ds-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-body);
-  font-weight: var(--weight-medium);
-  letter-spacing: var(--tracking-normal);
-  cursor: pointer;
-  transition:
-    background var(--duration-fast) var(--ease-standard),
-    border-color var(--duration-fast) var(--ease-standard);
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: 44px; padding: var(--space-3) var(--space-5);
+  border: var(--border-thin) solid transparent; border-radius: var(--radius-md); background: transparent;
+  font-family: var(--font-body); font-size: 14px; line-height: 20px; font-weight: var(--weight-semibold);
+  white-space: nowrap; cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
 }
-
-.ds-button--full {
-  width: 100%;
-}
-
-/* ---- Sizes ---- */
-.ds-button--sm {
-  gap: 6px;
-  padding: 6px 10px;
-  font-size: var(--text-xs);
-  border-radius: var(--radius-sm);
-}
-
-.ds-button--md {
-  gap: 7px;
-  padding: 9px 14px;
-  font-size: var(--text-sm);
-  border-radius: var(--radius-md);
-}
-
-.ds-button--lg {
-  gap: 8px;
-  padding: 12px 18px;
-  font-size: var(--text-base);
-  border-radius: var(--radius-md);
-}
-
-/* ---- Variants ---- */
-.ds-button--primary {
-  color: var(--action-primary-text);
-  background: var(--action-primary);
-  border: 1px solid transparent;
-}
-
-.ds-button--primary:hover:not(:disabled) {
-  background: var(--action-primary-hover);
-}
-
-.ds-button--primary:active:not(:disabled) {
-  background: var(--action-primary-press);
-}
-
-.ds-button--secondary {
-  color: var(--text-primary);
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-}
-
-.ds-button--secondary:hover:not(:disabled) {
-  background: var(--surface-hover);
-}
-
-.ds-button--secondary:active:not(:disabled) {
-  background: var(--neutral-4);
-}
-
-.ds-button--ghost {
-  color: var(--text-primary);
-  background: transparent;
-  border: 1px solid transparent;
-}
-
-.ds-button--ghost:hover:not(:disabled) {
-  background: var(--surface-hover);
-}
-
-.ds-button--ghost:active:not(:disabled) {
-  background: var(--neutral-4);
-}
-
-.ds-button--danger {
-  color: var(--status-danger);
-  background: var(--status-danger-bg);
-  border: 1px solid var(--status-danger-bg);
-}
-
-.ds-button--danger:hover:not(:disabled) {
-  background: var(--status-danger-bg);
-}
-
-.ds-button--danger:active:not(:disabled) {
-  background: var(--status-danger-bg);
-}
-
-/* ---- Focus ---- */
-.ds-button:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-focus-ring);
-}
-
-/* ---- Disabled ---- */
-.ds-button:disabled {
-  color: var(--text-disabled);
-  background: var(--neutral-2);
-  border: 1px solid var(--border-subtle);
-  cursor: not-allowed;
-}
+.ds-button:focus-visible { outline: var(--border-thick) solid var(--color-focus-ring); outline-offset: 2px; }
+.ds-button--full { display: flex; width: 100%; }
+.ds-button--icon-only { width: 44px; padding: 0; }
+.ds-button--primary { background: var(--color-accent-solid); color: var(--color-text-on-accent); }
+.ds-button--primary:hover:not(:disabled) { background: var(--color-accent-solid-hover); }
+.ds-button--secondary { background: var(--color-bg-surface); border-color: var(--color-border-strong); color: var(--color-text-primary); }
+.ds-button--ghost { color: var(--color-text-primary); }
+.ds-button--ghost.ds-button--icon-only { color: var(--color-text-secondary); }
+.ds-button--secondary:hover:not(:disabled), .ds-button--ghost:hover:not(:disabled) { background-image: linear-gradient(var(--color-bg-hover), var(--color-bg-hover)); color: var(--color-text-primary); }
+.ds-button--danger { background: var(--color-status-danger-solid); color: var(--color-text-on-accent); }
+.ds-button--danger:hover:not(:disabled) { background-image: linear-gradient(var(--color-bg-pressed), var(--color-bg-pressed)); }
+.ds-button:disabled { cursor: not-allowed; background: var(--color-bg-sunken); border-color: transparent; color: var(--color-text-disabled); }
+.ds-button--ghost:disabled { background: transparent; }
 </style>

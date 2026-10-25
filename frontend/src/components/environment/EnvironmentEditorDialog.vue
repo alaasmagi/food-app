@@ -174,7 +174,7 @@ async function fill(id: string): Promise<void> {
           : result.added === 1
             ? 'Added 1 restaurant'
             : `Added ${result.added} restaurants`,
-      description: `This environment now has ${total} ${total === 1 ? 'restaurant' : 'restaurants'}.`,
+      description: `This place now has ${total} ${total === 1 ? 'restaurant' : 'restaurants'}.`,
     })
   } catch {
     fail()
@@ -203,7 +203,7 @@ function close(): void {
 </script>
 
 <template>
-  <Dialog :open="open" title="Manage environments" width="520px" @close="close">
+  <Dialog :open="open" title="Manage places" width="520px" @close="close">
     <div class="editor">
       <p v-if="error" class="editor__error">{{ error }}</p>
 
@@ -213,7 +213,7 @@ function close(): void {
             <Input v-model="drafts[environment.id]" size="sm" />
             <div class="editor__row-actions">
               <template v-if="confirmingDeleteId === environment.id">
-                <span class="editor__confirm">Delete this environment?</span>
+                <span class="editor__confirm">Delete this place?</span>
                 <Button variant="danger" size="sm" @click="confirmDelete(environment.id)">
                   Confirm delete
                 </Button>
@@ -252,10 +252,10 @@ function close(): void {
           </div>
         </li>
       </ul>
-      <p v-else class="editor__empty">You have no environments yet.</p>
+      <p v-else class="editor__empty">You have no places yet.</p>
 
       <div class="editor__create">
-        <Input v-model="newName" label="New environment" placeholder="Work" size="sm" />
+        <Input v-model="newName" label="New place" placeholder="Work" size="sm" />
         <Input
           v-model="newDescription"
           label="Description"

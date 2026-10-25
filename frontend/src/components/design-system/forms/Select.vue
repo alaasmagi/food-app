@@ -73,7 +73,7 @@ onBeforeUnmount(() => {
       </span>
       <Icon
         name="chevron-down"
-        :size="14"
+        :size="20"
         class="ds-select__chevron"
         :class="{ 'ds-select__chevron--open': open }"
       />
@@ -90,104 +90,25 @@ onBeforeUnmount(() => {
         @click="choose(option.value)"
       >
         <span>{{ option.label }}</span>
-        <Icon v-if="option.value === model" name="check" :size="13" color="var(--accent-7)" />
+        <Icon v-if="option.value === model" name="check" :size="13" color="var(--color-accent-text)" />
       </button>
     </div>
   </div>
 </template>
 
 <style scoped>
-.ds-select {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
-
-.ds-select__label {
-  font-family: var(--font-body);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  color: var(--text-secondary);
-}
-
-.ds-select__trigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 9px 10px;
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition:
-    border-color var(--duration-fast) var(--ease-standard),
-    box-shadow var(--duration-fast) var(--ease-standard);
-}
-
-.ds-select__trigger--open {
-  border-color: var(--border-focus);
-  box-shadow: var(--shadow-focus-ring);
-}
-
-.ds-select__value--placeholder {
-  color: var(--text-secondary);
-}
-
-.ds-select__chevron {
-  flex-shrink: 0;
-  transition: transform var(--duration-fast) var(--ease-standard);
-}
-
-.ds-select__chevron--open {
-  transform: rotate(180deg);
-}
-
-.ds-select--disabled .ds-select__trigger {
-  color: var(--text-disabled);
-  background: var(--neutral-1);
-  cursor: not-allowed;
-}
-
-.ds-select__list {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 4px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-}
-
-.ds-select__option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 8px;
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  text-align: left;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.ds-select__option:hover,
-.ds-select__option--selected {
-  background: var(--surface-hover);
-}
+/* Figma "Select": same field as Input, chevron on the right; the open list uses the Dropdown menu surface. */
+.ds-select { position: relative; display: flex; flex-direction: column; gap: var(--space-1-5); width: 100%; }
+.ds-select__label { font-family: var(--font-body); font-size: 14px; line-height: 20px; font-weight: var(--weight-semibold); color: var(--color-text-secondary); }
+.ds-select__trigger { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; text-align: left; cursor: pointer; min-height: 44px; box-sizing: border-box; padding: var(--space-2-5) var(--space-3); background: var(--color-bg-sunken); border: var(--border-thin) solid var(--color-border-default); border-radius: var(--radius-md); font-family: var(--font-body); font-size: 16px; line-height: 24px; color: var(--color-text-primary); transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
+.ds-select__trigger:focus-visible, .ds-select__trigger--open { outline: none; background: var(--color-bg-surface); border-color: var(--color-accent-solid); box-shadow: 0 0 0 1px var(--color-accent-solid); }
+.ds-select__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-select__value--placeholder { color: var(--color-text-muted); }
+.ds-select__chevron { flex-shrink: 0; color: var(--color-text-secondary); transition: transform var(--duration-fast) var(--ease-standard); }
+.ds-select__chevron--open { transform: rotate(180deg); }
+.ds-select--disabled .ds-select__trigger { background: var(--color-bg-canvas); border-color: var(--color-border-subtle); color: var(--color-text-disabled); cursor: not-allowed; }
+.ds-select__list { position: absolute; top: calc(100% + var(--space-1)); left: 0; right: 0; z-index: 30; display: flex; flex-direction: column; gap: var(--space-0-5); max-height: 280px; overflow-y: auto; padding: var(--space-1); background: var(--color-bg-raised); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
+.ds-select__option { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 40px; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-sm); background: none; color: var(--color-text-primary); font-family: var(--font-body); font-size: 14px; line-height: 20px; text-align: left; cursor: pointer; }
+.ds-select__option:hover { background: var(--color-bg-hover); }
+.ds-select__option--selected { color: var(--color-accent-text); font-weight: var(--weight-semibold); }
 </style>
