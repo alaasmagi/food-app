@@ -489,6 +489,8 @@ onUnmounted(() => {
   line-height: 24px;
   font-weight: var(--weight-semibold);
   color: var(--color-text-primary);
+  /* Reserve the corner the absolutely positioned close button occupies so long names wrap before it. */
+  padding-right: calc(22px + var(--space-2));
 }
 
 .leaflet-control-zoom a {
