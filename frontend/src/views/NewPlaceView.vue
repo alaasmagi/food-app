@@ -96,8 +96,10 @@ async function create(): Promise<void> {
 
     <Card class="new-place__form">
       <p v-if="error" class="new-place__error" role="alert">{{ error }}</p>
-      <Input v-model="name" label="Name" placeholder="Work" />
-      <Input v-model="description" label="Description" placeholder="Optional" />
+      <div class="new-place__fields">
+        <Input v-model="name" label="Name" placeholder="Work" />
+        <Input v-model="description" label="Description" placeholder="Optional" />
+      </div>
       <div class="new-place__location">
         <h2 class="new-place__section">Location</h2>
         <p class="new-place__hint">Search for an address or click the map.</p>
@@ -120,13 +122,14 @@ async function create(): Promise<void> {
 </template>
 
 <style scoped>
-.new-place { display: flex; flex-direction: column; gap: var(--space-6); max-width: 720px; }
+.new-place { display: flex; flex-direction: column; gap: var(--space-6); }
 .new-place__back { align-self: flex-start; margin-left: calc(-1 * var(--space-5)); }
 .new-place__title { margin: 0; font-size: 36px; line-height: 44px; font-weight: var(--weight-bold); letter-spacing: -0.015em; color: var(--color-text-primary); }
 .new-place__steps { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: 0; padding: 0; list-style: none; font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
 .new-place__steps li { display: flex; align-items: center; gap: var(--space-2); }
 .new-place__steps span { padding: var(--space-0-5) var(--space-2); border: var(--border-thin) solid var(--color-accent-border); border-radius: var(--radius-sm); background: var(--color-accent-subtle); color: var(--color-accent-text); font-weight: var(--weight-semibold); }
 .new-place__form { gap: var(--space-5); padding: var(--space-6); }
+.new-place__fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--space-5); }
 .new-place__location { display: flex; flex-direction: column; gap: var(--space-3); }
 .new-place__section { margin: 0; font-size: 18px; line-height: 24px; font-weight: var(--weight-semibold); color: var(--color-text-primary); }
 .new-place__hint { margin: 0; font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
