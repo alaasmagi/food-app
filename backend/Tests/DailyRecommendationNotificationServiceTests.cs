@@ -5,7 +5,6 @@ using Application.Messaging;
 using Base.Message;
 using Contracts.Application;
 using Contracts.DataAccess;
-using Contracts.External;
 using DataAccess;
 using DataAccess.Context;
 using Domain;
@@ -33,7 +32,7 @@ public class DailyRecommendationNotificationServiceTests
         await context.SaveChangesAsync();
 
         var fetch = new FakeOfferFetchService();
-        fetch.SetSuccess(restaurant.Id, OffersJson(("Soup", "4,50 €"), ("Water", null), ("Pasta", "6 €")));
+        fetch.SetSuccess(restaurant.Id, Offers(("Soup", "4,50 €"), ("Water", null), ("Pasta", "6 €")));
 
         var publisher = new FakeEventPublisher();
         var service = CreateService(context, new FakeOfferCacheRepository(), fetch, publisher);
@@ -77,8 +76,8 @@ public class DailyRecommendationNotificationServiceTests
         await context.SaveChangesAsync();
 
         var fetch = new FakeOfferFetchService();
-        fetch.SetSuccess(early.Id, OffersJson(("A", "5 €")));
-        fetch.SetSuccess(late.Id, OffersJson(("B", "5 €")));
+        fetch.SetSuccess(early.Id, Offers(("A", "5 €")));
+        fetch.SetSuccess(late.Id, Offers(("B", "5 €")));
 
         var publisher = new FakeEventPublisher();
         var service = CreateService(context, new FakeOfferCacheRepository(), fetch, publisher);
@@ -106,7 +105,7 @@ public class DailyRecommendationNotificationServiceTests
         await context.SaveChangesAsync();
 
         var fetch = new FakeOfferFetchService();
-        fetch.SetSuccess(restaurant.Id, "[]");
+        fetch.SetSuccess(restaurant.Id, []);
 
         var publisher = new FakeEventPublisher();
         var service = CreateService(context, new FakeOfferCacheRepository(), fetch, publisher);
@@ -125,7 +124,7 @@ public class DailyRecommendationNotificationServiceTests
         await context.SaveChangesAsync();
 
         var fetch = new FakeOfferFetchService();
-        fetch.SetSuccess(restaurant.Id, OffersJson(("Soup", null), ("Water", "free")));
+        fetch.SetSuccess(restaurant.Id, Offers(("Soup", null), ("Water", "free")));
 
         var publisher = new FakeEventPublisher();
         var service = CreateService(context, new FakeOfferCacheRepository(), fetch, publisher);
@@ -146,7 +145,7 @@ public class DailyRecommendationNotificationServiceTests
         await context.SaveChangesAsync();
 
         var fetch = new FakeOfferFetchService();
-        fetch.SetSuccess(restaurant.Id, OffersJson(("Porridge", "3 €")));
+        fetch.SetSuccess(restaurant.Id, Offers(("Porridge", "3 €")));
 
         var publisher = new FakeEventPublisher();
         var service = CreateService(context, new FakeOfferCacheRepository(), fetch, publisher);
@@ -192,7 +191,7 @@ public class DailyRecommendationNotificationServiceTests
         await context.SaveChangesAsync();
 
         var fetch = new FakeOfferFetchService();
-        fetch.SetSuccess(restaurant.Id, OffersJson(("Soup", "4 €")));
+        fetch.SetSuccess(restaurant.Id, Offers(("Soup", "4 €")));
 
         var publisher = new FakeEventPublisher();
         var store = new PublishedRecommendationStore(context);
@@ -213,7 +212,7 @@ public class DailyRecommendationNotificationServiceTests
         await context.SaveChangesAsync();
 
         var fetch = new FakeOfferFetchService();
-        fetch.SetSuccess(restaurant.Id, OffersJson(("Soup", "4 €")));
+        fetch.SetSuccess(restaurant.Id, Offers(("Soup", "4 €")));
 
         var deterministicId = DeterministicGuid
             .CreateV5(DeterministicGuid.LunchRecommendationNamespace, $"{userId}:2026-07-15")
@@ -290,12 +289,16 @@ public class DailyRecommendationNotificationServiceTests
         return cache;
     }
 
-    private static string OffersJson(params (string Text, string? Price)[] offers)
+    private static List<DailyOfferItem> Offers(params (string Text, string? Price)[] offers)
     {
-        var items = offers
+        return offers
             .Select(offer => new DailyOfferItem { Text = offer.Text, PriceText = offer.Price })
             .ToList();
-        return JsonSerializer.Serialize(items, JsonOptions);
+    }
+
+    private static string OffersJson(params (string Text, string? Price)[] offers)
+    {
+        return JsonSerializer.Serialize(Offers(offers), JsonOptions);
     }
 
     private static Guid AddUser(AppDbContext context, bool sendNotifications, bool isEnabled)

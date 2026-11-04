@@ -5,7 +5,6 @@ using Base.Contracts.Message;
 using Base.Message;
 using Contracts.Application;
 using Contracts.DataAccess;
-using Contracts.External;
 using Domain;
 using DTO.Messaging;
 using Microsoft.Extensions.Logging;
@@ -239,7 +238,7 @@ public class DailyRecommendationNotificationService(
                 return null;
             }
 
-            offersJson = fetchResult.Value;
+            return fetchResult.Value.ToList();
         }
         else
         {

@@ -20,7 +20,8 @@ namespace Web.API.Controllers;
 public class RestaurantsController(
     IRestaurantService restaurantService,
     IOfferFetchService offerFetchService,
-    IMapper mapper) : ControllerBase
+    IMapper mapper,
+    IMapper<DailyOfferDto, Domain.DailyOfferItem> dailyOfferMapper) : ControllerBase
 {
     // Default cap when the client omits `limit` on a bounded query. Keeps a zoomed-out viewport from
     // returning the whole catalog; the client shows a "zoom in to see more" hint once the cap is hit.
@@ -124,7 +125,7 @@ public class RestaurantsController(
     }
 
     [HttpGet("{restaurantId:guid}/offers")]
-    public async Task<IActionResult> GetDailyOffers(Guid restaurantId)
+    public async Task<ActionResult<IEnumerable<DailyOfferDto>>> GetDailyOffers(Guid restaurantId)
     {
         var result = await offerFetchService.GetDailyOffersAsync(restaurantId);
         if (!result.Successful)
@@ -132,7 +133,7 @@ public class RestaurantsController(
             return ToProblem(result.Error);
         }
 
-        return Content(result.Value ?? "[]", "application/json");
+        return Ok(dailyOfferMapper.Map(result.Value)?.ToList() ?? []);
     }
 
     [HttpPost]
