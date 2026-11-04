@@ -128,9 +128,11 @@ async function create(): Promise<void> {
 .new-place__steps { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: 0; padding: 0; list-style: none; font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
 .new-place__steps li { display: flex; align-items: center; gap: var(--space-2); }
 .new-place__steps span { padding: var(--space-0-5) var(--space-2); border: var(--border-thin) solid var(--color-accent-border); border-radius: var(--radius-sm); background: var(--color-accent-subtle); color: var(--color-accent-text); font-weight: var(--weight-semibold); }
-.new-place__form { gap: var(--space-5); padding: var(--space-6); }
+.new-place__form { flex: 1; gap: var(--space-5); padding: var(--space-6); }
 .new-place__fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--space-5); }
-.new-place__location { display: flex; flex-direction: column; gap: var(--space-3); }
+/* The location picker's map takes the viewport height left in the form; in the editor dialog it stays at its 240px minimum. */
+.new-place__location { flex: 1; display: flex; flex-direction: column; gap: var(--space-3); }
+.new-place__location :deep(.env-location-picker) { flex: 1; }
 .new-place__section { margin: 0; font-size: 18px; line-height: 24px; font-weight: var(--weight-semibold); color: var(--color-text-primary); }
 .new-place__hint { margin: 0; font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
 .new-place__error { margin: 0; padding: var(--space-3) var(--space-4); border: var(--border-thin) solid var(--color-status-danger-border); border-radius: var(--radius-md); background: var(--color-status-danger-subtle); color: var(--color-status-danger-text); font-size: 14px; line-height: 20px; }

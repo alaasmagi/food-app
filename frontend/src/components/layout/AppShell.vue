@@ -108,7 +108,9 @@ function isActive(to: string): boolean {
 .shell__user-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
 .shell__logout { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: var(--radius-md); background: none; color: var(--color-text-secondary); cursor: pointer; }
 .shell__logout:hover, .shell__menu:hover { background: var(--color-bg-hover); color: var(--color-text-primary); }
-.shell__main { min-width: 0; padding: var(--space-10) var(--space-12) var(--space-16); }
+.shell__main { display: flex; flex-direction: column; min-width: 0; padding: var(--space-10) var(--space-12) var(--space-16); }
+/* Pages fill the viewport height so their main element (e.g. a map) can take the remaining space. */
+.shell__main > :deep(*) { flex: 1; }
 
 @media (max-width: 959px) {
   .shell { grid-template-columns: 1fr; }

@@ -357,9 +357,11 @@ function spinPlace(): void {
 .dashboard__view-btn:hover { color: var(--color-text-primary); }
 .dashboard__view-btn--active { background: var(--color-bg-surface); border-color: var(--color-accent-border); color: var(--color-text-primary); box-shadow: var(--shadow-sm); }
 .dashboard__content, .dashboard__list-pane { display: flex; flex-direction: column; gap: var(--space-6); }
-/* Split view: map beside a list pane that scrolls within the map's height. */
-.dashboard__content--split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
-.dashboard__content--split .dashboard__list-pane { max-height: 640px; overflow-y: auto; padding-right: var(--space-2); }
+/* The map takes the viewport height left under the header and toolbar. */
+.dashboard__content, .dashboard__map { flex: 1; }
+/* Split view: map beside a list pane that scrolls within the map's height (size containment keeps the list from growing the row). */
+.dashboard__content--split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+.dashboard__content--split .dashboard__list-pane { contain: size; overflow-y: auto; padding-right: var(--space-2); }
 .dashboard__filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .dashboard__search { flex: 1 1 280px; }
 .dashboard__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
