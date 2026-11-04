@@ -13,6 +13,7 @@ import L from 'leaflet'
 import Input from '../design-system/forms/Input.vue'
 import Button from '../design-system/forms/Button.vue'
 import { useTheme } from '../../composables/useTheme'
+import { useElementResize } from '../../composables/useElementResize'
 import { TILE_URL } from '../restaurant/basemap'
 
 const model = defineModel<AutoFillOrigin>({ required: true })
@@ -170,6 +171,9 @@ onMounted(async () => {
   map.invalidateSize({ pan: false })
 })
 
+// The canvas can grow with the page layout (New place), not just the window.
+useElementResize(mapEl, () => map?.invalidateSize({ pan: false }))
+
 onUnmounted(() => {
   map?.remove()
   map = null
@@ -237,7 +241,8 @@ onUnmounted(() => {
 }
 
 .env-location-picker__canvas {
-  height: 240px;
+  flex: 1;
+  min-height: 240px;
   width: 100%;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);

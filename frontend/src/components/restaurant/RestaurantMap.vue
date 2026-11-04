@@ -9,6 +9,7 @@ import MapMarker from '../design-system/map/MapMarker.vue'
 import OfferList from './OfferList.vue'
 import { useRestaurantsStore } from '../../stores/restaurants'
 import { useTheme } from '../../composables/useTheme'
+import { useElementResize } from '../../composables/useElementResize'
 import type { Bounds, Restaurant } from '../../types/restaurant'
 import { collapsedIds, hasCoordinates, markerableRestaurants, type MarkerBox } from './mapMarkers'
 import { TILE_URL } from './basemap'
@@ -279,6 +280,9 @@ onMounted(async () => {
   programmaticMove = false
 })
 
+// The canvas fills its container, so it resizes with the layout, not just the window (which Leaflet tracks itself).
+useElementResize(mapEl, () => withProgrammaticMove(() => map?.invalidateSize({ pan: false })))
+
 watch(markerable, () => {
   renderMarkers()
   if (props.autoFit) fitToMarkers()
@@ -360,10 +364,12 @@ onUnmounted(() => {
 <style scoped>
 .restaurant-map {
   position: relative;
+  display: flex;
+  flex-direction: column;
   /* Trap Leaflet's pane/control z-indexes (up to 1000) so they don't paint over modals. */
   isolation: isolate;
 }
-.restaurant-map__canvas { height: 640px; width: 100%; border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-lg); background: var(--color-bg-sunken); overflow: hidden; }
+.restaurant-map__canvas { flex: 1; min-height: 480px; width: 100%; border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-lg); background: var(--color-bg-sunken); overflow: hidden; }
 .restaurant-map__empty { margin: var(--space-4) 0 0; font-family: var(--font-body); font-size: 16px; line-height: 24px; color: var(--color-text-secondary); }
 .restaurant-map__search-area { position: absolute; top: var(--space-4); left: 50%; transform: translateX(-50%); z-index: 500; }
 .restaurant-map__overlays { position: absolute; left: var(--space-4); right: var(--space-4); bottom: var(--space-4); z-index: 500; display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); pointer-events: none; }
