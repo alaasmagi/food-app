@@ -21,6 +21,7 @@ import type { TabItem } from '../components/design-system/navigation/Tabs.vue'
 import type { Bounds, Restaurant } from '../types/restaurant'
 import { useEnvironmentFilteredRestaurants } from '../composables/useEnvironmentFilteredRestaurants'
 import { debounce } from '../utils/debounce'
+import { useMediaQuery } from '../composables/useMediaQuery'
 
 const store = useRestaurantsStore()
 const environments = useEnvironmentsStore()
@@ -47,6 +48,10 @@ const viewTabs: TabItem[] = [
   { value: 'list', label: 'List' },
   { value: 'map', label: 'Map' },
 ]
+// Wide screens show the map and list side by side; the toggle only applies below the breakpoint.
+const wide = useMediaQuery('(min-width: 1280px)')
+const showMap = computed(() => wide.value || view.value === 'map')
+const showList = computed(() => wide.value || view.value === 'list')
 
 // Router is optional here: the view is also mounted on its own in unit tests.
 const route = useRoute() as ReturnType<typeof useRoute> | undefined
@@ -114,12 +119,13 @@ const commitSearch = debounce((value: string) => {
 watch(searchInput, (value) => commitSearch(value))
 
 watch(
-  [view, isAllView, listPage, search],
+  [showList, isAllView, listPage, search],
   () => {
-    if (isAllView.value && view.value === 'list') {
+    if (isAllView.value && showList.value) {
       store.loadPage({ page: listPage.value, pageSize: PAGE_SIZE, search: search.value })
     }
   },
+  { immediate: true },
 )
 
 function goToPage(page: number): void {
@@ -231,8 +237,8 @@ function spinPlace(): void {
     </Card>
 
     <EnvironmentTabs class="dashboard__tabs" />
-    <div class="dashboard__toolbar">
-      <div class="dashboard__view-toggle" role="tablist">
+    <div v-if="!wide || selectedEnvironment" class="dashboard__toolbar">
+      <div v-if="!wide" class="dashboard__view-toggle" role="tablist">
         <button
           v-for="tab in viewTabs"
           :key="tab.value"
@@ -248,7 +254,7 @@ function spinPlace(): void {
       </div>
       <div class="dashboard__toolbar-actions">
         <Button
-          v-if="selectedEnvironment && view === 'list'"
+          v-if="selectedEnvironment && showList"
           variant="secondary"
           icon="plus"
           @click="addOpen = true"
@@ -260,72 +266,74 @@ function spinPlace(): void {
         </Button>
       </div>
     </div>
-    <!-- Rendered independently of loading so a viewport fetch never unmounts the map. -->
-    <RestaurantMap
-      v-if="view === 'map'"
-      :restaurants="mapRestaurants"
-      :truncated="isAllView && areaTruncated"
-      :auto-fit="!isAllView"
-      :focus-restaurant="focusRestaurant"
-      class="dashboard__map"
-      @bounds-change="onBoundsChange"
-    />
-    <template v-else>
-      <div class="dashboard__filters">
-        <Input
-          v-if="isAllView"
-          v-model="searchInput"
-          icon="search"
-          placeholder="Search restaurants by name or city"
-          class="dashboard__search"
-        />
-        <div class="dashboard__chips" role="group" aria-label="Filters">
-          <button type="button" class="dashboard__chip" :aria-pressed="offersOnly" @click="offersOnly = !offersOnly">
-            <Tag :selected="offersOnly">Offers today</Tag>
-          </button>
-          <button type="button" class="dashboard__chip" :aria-pressed="fastFoodOnly" @click="fastFoodOnly = !fastFoodOnly">
-            <Tag :selected="fastFoodOnly">Fast food</Tag>
-          </button>
-          <button type="button" class="dashboard__chip" :aria-pressed="ratedOnly" @click="ratedOnly = !ratedOnly">
-            <Tag :selected="ratedOnly">Rated 4★+</Tag>
-          </button>
-        </div>
-        <div class="dashboard__sort">
-          <Select v-model="sortBy" :options="sortOptions" />
-        </div>
-      </div>
-      <p v-if="loading" class="dashboard__status">Loading restaurants.</p>
-      <p v-else-if="loadError" class="dashboard__status dashboard__status--error">
-        Restaurants could not be loaded.
-      </p>
-      <p v-else-if="!listRestaurants.length" class="dashboard__status">
-        <template v-if="selectedEnvironment">
-          No restaurants in {{ selectedEnvironment.name }} yet — use “Add restaurants” to build it up.
-        </template>
-        <template v-else-if="search">No restaurants match “{{ search }}”.</template>
-        <template v-else>No restaurants found.</template>
-      </p>
-      <p v-else-if="!visibleRestaurants.length" class="dashboard__status">
-        No restaurants match these filters.
-      </p>
-      <template v-else>
-        <p class="dashboard__count">{{ resultLabel }}</p>
-        <div class="dashboard__list">
-          <RestaurantCard
-            v-for="restaurant in visibleRestaurants"
-            :key="restaurant.id"
-            :restaurant="restaurant"
-            :distance="distanceLabel(restaurant)"
-            @show-on-map="focusOnMap"
+    <div class="dashboard__content" :class="{ 'dashboard__content--split': wide }">
+      <!-- Rendered independently of loading so a viewport fetch never unmounts the map. -->
+      <RestaurantMap
+        v-if="showMap"
+        :restaurants="mapRestaurants"
+        :truncated="isAllView && areaTruncated"
+        :auto-fit="!isAllView"
+        :focus-restaurant="focusRestaurant"
+        class="dashboard__map"
+        @bounds-change="onBoundsChange"
+      />
+      <div v-if="showList" class="dashboard__list-pane">
+        <div class="dashboard__filters">
+          <Input
+            v-if="isAllView"
+            v-model="searchInput"
+            icon="search"
+            placeholder="Search restaurants by name or city"
+            class="dashboard__search"
           />
+          <div class="dashboard__chips" role="group" aria-label="Filters">
+            <button type="button" class="dashboard__chip" :aria-pressed="offersOnly" @click="offersOnly = !offersOnly">
+              <Tag :selected="offersOnly">Offers today</Tag>
+            </button>
+            <button type="button" class="dashboard__chip" :aria-pressed="fastFoodOnly" @click="fastFoodOnly = !fastFoodOnly">
+              <Tag :selected="fastFoodOnly">Fast food</Tag>
+            </button>
+            <button type="button" class="dashboard__chip" :aria-pressed="ratedOnly" @click="ratedOnly = !ratedOnly">
+              <Tag :selected="ratedOnly">Rated 4★+</Tag>
+            </button>
+          </div>
+          <div class="dashboard__sort">
+            <Select v-model="sortBy" :options="sortOptions" />
+          </div>
         </div>
-      </template>
-      <div v-if="isAllView && listPage < totalPages && listRestaurants.length" class="dashboard__pager">
-        <Button variant="secondary" :loading="pagedLoading" @click="goToPage(listPage + 1)">
-          Load more restaurants
-        </Button>
+        <p v-if="loading" class="dashboard__status">Loading restaurants.</p>
+        <p v-else-if="loadError" class="dashboard__status dashboard__status--error">
+          Restaurants could not be loaded.
+        </p>
+        <p v-else-if="!listRestaurants.length" class="dashboard__status">
+          <template v-if="selectedEnvironment">
+            No restaurants in {{ selectedEnvironment.name }} yet — use “Add restaurants” to build it up.
+          </template>
+          <template v-else-if="search">No restaurants match “{{ search }}”.</template>
+          <template v-else>No restaurants found.</template>
+        </p>
+        <p v-else-if="!visibleRestaurants.length" class="dashboard__status">
+          No restaurants match these filters.
+        </p>
+        <template v-else>
+          <p class="dashboard__count">{{ resultLabel }}</p>
+          <div class="dashboard__list">
+            <RestaurantCard
+              v-for="restaurant in visibleRestaurants"
+              :key="restaurant.id"
+              :restaurant="restaurant"
+              :distance="distanceLabel(restaurant)"
+              @show-on-map="focusOnMap"
+            />
+          </div>
+        </template>
+        <div v-if="isAllView && listPage < totalPages && listRestaurants.length" class="dashboard__pager">
+          <Button variant="secondary" :loading="pagedLoading" @click="goToPage(listPage + 1)">
+            Load more restaurants
+          </Button>
+        </div>
       </div>
-    </template>
+    </div>
     <AddRestaurantsDialog
       v-if="selectedEnvironment"
       :open="addOpen"
@@ -338,16 +346,20 @@ function spinPlace(): void {
 
 <style scoped>
 /* Figma "Desktop / 02–04 Restaurants" and "13 First run". */
-.dashboard { display: flex; flex-direction: column; gap: var(--space-6); max-width: 960px; }
+.dashboard { display: flex; flex-direction: column; gap: var(--space-6); }
 .dashboard__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); }
 .dashboard__title { margin: 0; font-family: var(--font-display); font-size: 36px; line-height: 44px; font-weight: var(--weight-bold); letter-spacing: -0.015em; color: var(--color-text-primary); }
 .dashboard__toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
-.dashboard__toolbar-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.dashboard__toolbar-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-left: auto; }
 /* View switch = Figma Segmented control. */
 .dashboard__view-toggle { display: inline-flex; gap: var(--space-1); padding: var(--space-1); border-radius: var(--radius-md); background: var(--color-bg-sunken); }
 .dashboard__view-btn { padding: var(--space-2) var(--space-3); border: var(--border-thin) solid transparent; border-radius: var(--radius-sm); background: none; color: var(--color-text-secondary); font-family: var(--font-body); font-size: 14px; line-height: 20px; font-weight: var(--weight-semibold); cursor: pointer; }
 .dashboard__view-btn:hover { color: var(--color-text-primary); }
 .dashboard__view-btn--active { background: var(--color-bg-surface); border-color: var(--color-accent-border); color: var(--color-text-primary); box-shadow: var(--shadow-sm); }
+.dashboard__content, .dashboard__list-pane { display: flex; flex-direction: column; gap: var(--space-6); }
+/* Split view: map beside a list pane that scrolls within the map's height. */
+.dashboard__content--split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+.dashboard__content--split .dashboard__list-pane { max-height: 640px; overflow-y: auto; padding-right: var(--space-2); }
 .dashboard__filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .dashboard__search { flex: 1 1 280px; }
 .dashboard__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }

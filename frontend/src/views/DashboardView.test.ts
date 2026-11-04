@@ -263,3 +263,23 @@ describe('DashboardView list/map toggle', () => {
     expect((map.props('restaurants') as Restaurant[]).map((r) => r.id)).toEqual(['r1', 'r3'])
   })
 })
+
+describe('DashboardView on wide screens', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} }))
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('shows the map and list side by side without the List/Map toggle', async () => {
+    stubFetch([restaurant('r1', 'Alpha'), restaurant('r2', 'Beta')], ['r1'])
+
+    const wrapper = mountWithMapStub()
+    await flushPromises()
+
+    expect(wrapper.find('.dashboard__view-toggle').exists()).toBe(false)
+    expect(wrapper.find('.dashboard__content--split').exists()).toBe(true)
+    expect(wrapper.findComponent(RestaurantMap).exists()).toBe(true)
+    expect(wrapper.findAll('.restaurant__name').map((n) => n.text())).toEqual(['Alpha', 'Beta'])
+  })
+})
