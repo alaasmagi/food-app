@@ -126,6 +126,55 @@ public class OfferProviderFetcherTests
     }
 
     [Fact]
+    public async Task Html_PriceNestedInOffer_IsLeftOutOfText()
+    {
+        const string html = """
+            <div class="offer">Kodune seljanka. <strong>3,90&euro;</strong></div>
+            <div class="offer">Koorene veiselihakaste.</div>
+            """;
+
+        var result = await FetchHtml(html, ".offer", ".", "strong");
+
+        Assert.Collection(result.Value!,
+            offer => { Assert.Equal("Kodune seljanka.", offer.Text); Assert.Equal("3,90€", offer.PriceText); },
+            offer => { Assert.Equal("Koorene veiselihakaste.", offer.Text); Assert.Null(offer.PriceText); });
+    }
+
+    [Fact]
+    public async Task Html_PriceNestedInTextElement_IsLeftOutOfText()
+    {
+        const string html = """<ul><li><span class="name">Soup <b>4 €</b> of the day</span></li></ul>""";
+
+        var result = await FetchHtml(html, "li", ".name", "b");
+
+        var offer = Assert.Single(result.Value!);
+        Assert.Equal("Soup of the day", offer.Text);
+        Assert.Equal("4 €", offer.PriceText);
+    }
+
+    [Fact]
+    public async Task Html_PriceOutsideTextElement_KeepsFullText()
+    {
+        const string html = """<li><span class="name">Soup 4 €</span><b>4 €</b></li>""";
+
+        var result = await FetchHtml(html, "li", ".name", "b");
+
+        Assert.Equal("Soup 4 €", Assert.Single(result.Value!).Text);
+    }
+
+    [Fact]
+    public async Task Html_TextAndPriceSameElement_KeepsFullText()
+    {
+        const string html = """<li>Soup 4 €</li>""";
+
+        var result = await FetchHtml(html, "li", ".", ".");
+
+        var offer = Assert.Single(result.Value!);
+        Assert.Equal("Soup 4 €", offer.Text);
+        Assert.Equal("Soup 4 €", offer.PriceText);
+    }
+
+    [Fact]
     public async Task Html_NoMatches_ReturnsNoOffers()
     {
         var result = await FetchHtml(Html, "#missing > .menu-item", ".dish-name", ".price");

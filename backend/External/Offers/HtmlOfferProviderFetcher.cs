@@ -39,10 +39,15 @@ public class HtmlOfferProviderFetcher(HttpClient httpClient) : IOfferProviderFet
             var parser = new HtmlParser();
             var document = await parser.ParseDocumentAsync(html, ct);
             var offers = document.QuerySelectorAll(ToSelector(provider.OfferLocator))
-                .Select(node => new DailyOfferItem
+                .Select(node =>
                 {
-                    Text = ExtractText(node, provider.OfferTextLocator) ?? string.Empty,
-                    PriceText = ExtractText(node, provider.OfferPriceLocator)
+                    var textElement = FindElement(node, provider.OfferTextLocator);
+                    var priceElement = FindElement(node, provider.OfferPriceLocator);
+                    return new DailyOfferItem
+                    {
+                        Text = ExtractText(textElement, priceElement) ?? string.Empty,
+                        PriceText = Normalize(priceElement?.TextContent)
+                    };
                 })
                 .Where(offer => !string.IsNullOrWhiteSpace(offer.Text))
                 .ToList();
@@ -69,13 +74,32 @@ public class HtmlOfferProviderFetcher(HttpClient httpClient) : IOfferProviderFet
         }
     }
 
-    private static string? ExtractText(IElement node, string locator)
+    private static IElement? FindElement(IElement node, string locator)
     {
-        var element = OfferProvider.SplitLocator(locator).Count == 0
+        return OfferProvider.SplitLocator(locator).Count == 0
             ? node
             : node.QuerySelector(ToSelector(locator));
+    }
 
-        return Normalize(element?.TextContent);
+    // A price nested inside the text element (e.g. <strong> in the offer line) is left out of the text.
+    private static string? ExtractText(IElement? textElement, IElement? priceElement)
+    {
+        if (textElement == null)
+        {
+            return null;
+        }
+
+        if (priceElement == null || priceElement == textElement || !textElement.Contains(priceElement))
+        {
+            return Normalize(textElement.TextContent);
+        }
+
+        var text = string.Concat(textElement.GetDescendants()
+            .OfType<IText>()
+            .Where(textNode => !priceElement.Contains(textNode))
+            .Select(textNode => textNode.Data));
+
+        return Normalize(text);
     }
 
     // Segments are validated as .class, #id or tag, so joining them gives a descendant CSS selector.
