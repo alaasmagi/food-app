@@ -1,4 +1,4 @@
-namespace Contracts.External;
+namespace Domain;
 
 public class DailyOfferItem
 {

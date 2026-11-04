@@ -109,6 +109,7 @@ public static class ServiceConfiguration
         services.AddScoped<IMapper<UserWheel, UserWheel>, UserWheelIdentityMapper>();
         services.AddScoped<IMapper<UserWheelDto, UserWheel>, UserWheelDtoMapper>();
         services.AddScoped<IMapper<PublicUserWheelDto, UserWheel>, PublicUserWheelDtoMapper>();
+        services.AddScoped<IMapper<DailyOfferDto, DailyOfferItem>, DailyOfferDtoMapper>();
 
         services.AddScoped<IAppUserRepository, AppUserRepository>();
         services.AddScoped<IOfferProviderRepository, OfferProviderRepository>();

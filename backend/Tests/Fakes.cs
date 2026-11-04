@@ -4,6 +4,7 @@ using Base.Contracts.Message;
 using Base.DTO;
 using Contracts.Application;
 using Contracts.DataAccess;
+using Domain;
 
 namespace Tests;
 
@@ -25,18 +26,18 @@ internal sealed class FakeOfferCacheRepository : IOfferCacheRepository
 
 internal sealed class FakeOfferFetchService : IOfferFetchService
 {
-    private readonly Dictionary<Guid, IMethodResponse<string>> _results = new();
+    private readonly Dictionary<Guid, IMethodResponse<IReadOnlyCollection<DailyOfferItem>>> _results = new();
 
-    public void SetSuccess(Guid restaurantId, string offersJson)
-        => _results[restaurantId] = MethodResponse<string>.Success(offersJson);
+    public void SetSuccess(Guid restaurantId, IReadOnlyCollection<DailyOfferItem> offers)
+        => _results[restaurantId] = MethodResponse<IReadOnlyCollection<DailyOfferItem>>.Success(offers);
 
     public void SetFailure(Guid restaurantId)
-        => _results[restaurantId] = MethodResponse<string>.Failure(new Error("fetch.failed", "boom"));
+        => _results[restaurantId] = MethodResponse<IReadOnlyCollection<DailyOfferItem>>.Failure(new Error("fetch.failed", "boom"));
 
-    public Task<IMethodResponse<string>> GetDailyOffersAsync(Guid restaurantId, CancellationToken ct = default)
+    public Task<IMethodResponse<IReadOnlyCollection<DailyOfferItem>>> GetDailyOffersAsync(Guid restaurantId, CancellationToken ct = default)
         => Task.FromResult(_results.TryGetValue(restaurantId, out var result)
             ? result
-            : MethodResponse<string>.Failure(new Error("not.configured", "no result configured")));
+            : MethodResponse<IReadOnlyCollection<DailyOfferItem>>.Failure(new Error("not.configured", "no result configured")));
 }
 
 // Records confirmed publishes with their AMQP expiration. FailIds forces an unconfirmed result for

@@ -1,7 +1,6 @@
 using System.Net;
 using Base.Contracts.DTO;
 using Contracts.Application;
-using Contracts.External;
 using Domain;
 using External.Offers;
 

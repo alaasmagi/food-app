@@ -16,11 +16,9 @@ public class OfferFetchService(
     OfferCacheOptions offerCacheOptions)
     : IOfferFetchService
 {
-    private const string EmptyOffersJson = "[]";
-
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public async Task<IMethodResponse<string>> GetDailyOffersAsync(Guid restaurantId, CancellationToken ct = default)
+    public async Task<IMethodResponse<IReadOnlyCollection<DailyOfferItem>>> GetDailyOffersAsync(Guid restaurantId, CancellationToken ct = default)
     {
         var restaurantResult = await restaurantRepository.GetByIdAsync(restaurantId);
         if (!restaurantResult.Successful)
@@ -34,7 +32,7 @@ public class OfferFetchService(
         var restaurant = restaurantResult.Value;
         if (restaurant == null)
         {
-            return MethodResponse<string>.Failure(new Error(
+            return MethodResponse<IReadOnlyCollection<DailyOfferItem>>.Failure(new Error(
                 ErrorDefaults.Codes.NotFound,
                 "Restaurant not found."));
         }
@@ -45,12 +43,12 @@ public class OfferFetchService(
 
         if (IsFresh(cacheEntry, businessDate, now))
         {
-            return MethodResponse<string>.Success(cacheEntry!.OffersJson);
+            return Success(cacheEntry!.OffersJson);
         }
 
         if (restaurant.OfferProviderId == null)
         {
-            return MethodResponse<string>.Success(cacheEntry?.OffersJson ?? EmptyOffersJson);
+            return Success(cacheEntry?.OffersJson);
         }
 
         var providerResult = await offerProviderRepository.GetByIdAsync(restaurant.OfferProviderId.Value);
@@ -65,20 +63,20 @@ public class OfferFetchService(
         var provider = providerResult.Value;
         if (provider == null)
         {
-            return MethodResponse<string>.Failure(new Error(
+            return MethodResponse<IReadOnlyCollection<DailyOfferItem>>.Failure(new Error(
                 ErrorDefaults.Codes.NotFound,
                 "OfferProvider not found."));
         }
 
         if (provider.ProviderType == EOfferProviderType.Manual)
         {
-            return MethodResponse<string>.Success(cacheEntry?.OffersJson ?? EmptyOffersJson);
+            return Success(cacheEntry?.OffersJson);
         }
 
         var fetcher = offerProviderFetcherResolver.Resolve(provider.ProviderType);
         if (fetcher == null)
         {
-            return MethodResponse<string>.Failure(new Error(
+            return MethodResponse<IReadOnlyCollection<DailyOfferItem>>.Failure(new Error(
                 OfferFetchErrorCodes.UnsupportedProviderType,
                 $"OfferProvider type '{provider.ProviderType}' is not supported."));
         }
@@ -92,7 +90,8 @@ public class OfferFetchService(
                 "Offer provider fetch failed.");
         }
 
-        var offersJson = JsonSerializer.Serialize(fetchResult.Value ?? [], JsonOptions);
+        var offers = fetchResult.Value ?? [];
+        var offersJson = JsonSerializer.Serialize(offers, JsonOptions);
         await offerCacheRepository.UpsertAsync(new OfferCacheEntry
         {
             RestaurantId = restaurantId,
@@ -101,7 +100,7 @@ public class OfferFetchService(
             FetchedAtUtc = now
         }, ct);
 
-        return MethodResponse<string>.Success(offersJson);
+        return MethodResponse<IReadOnlyCollection<DailyOfferItem>>.Success(offers);
     }
 
     private bool IsFresh(OfferCacheEntry? cacheEntry, DateOnly businessDate, DateTime now)
@@ -118,8 +117,17 @@ public class OfferFetchService(
         return fetchedAtUtc.Add(offerCacheOptions.Ttl) > now;
     }
 
-    private static IMethodResponse<string> Failure(IError? error, string fallbackCode, string fallbackMessage)
+    private static IMethodResponse<IReadOnlyCollection<DailyOfferItem>> Success(string? offersJson)
     {
-        return MethodResponse<string>.Failure(error ?? new Error(fallbackCode, fallbackMessage));
+        var offers = offersJson == null
+            ? []
+            : JsonSerializer.Deserialize<List<DailyOfferItem>>(offersJson, JsonOptions) ?? [];
+
+        return MethodResponse<IReadOnlyCollection<DailyOfferItem>>.Success(offers);
+    }
+
+    private static IMethodResponse<IReadOnlyCollection<DailyOfferItem>> Failure(IError? error, string fallbackCode, string fallbackMessage)
+    {
+        return MethodResponse<IReadOnlyCollection<DailyOfferItem>>.Failure(error ?? new Error(fallbackCode, fallbackMessage));
     }
 }
