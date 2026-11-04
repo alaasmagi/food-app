@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Web.MVC.Areas.Admin.Controllers;
 
-public sealed class AppUsersController : AdminCrudController<AppUserDto, AppUser>
+public class AppUsersController : AdminCrudController<AppUserDto, AppUser>
 {
     private readonly IDiningEnvironmentService _diningEnvironmentService;
 

@@ -31,10 +31,7 @@ const model = defineModel<string>()
 </template>
 
 <style scoped>
-/* Figma "Tabs": Label/Default, active tab = text/primary with a 2px accent underline. */
-/* The divider is an inset shadow (not a border) so the active underline can sit on it at bottom: 0;
-   an underline hanging below the box made overflow-x: auto also scroll vertically. Horizontal overflow
-   still scrolls by swipe/trackpad, with the scrollbar hidden. */
+/* Inset-shadow divider, not a border: an underline below the box made overflow-x: auto scroll vertically too. */
 .ds-tabs { display: flex; gap: var(--space-1); box-shadow: inset 0 calc(-1 * var(--border-thin)) 0 var(--color-border-subtle); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 .ds-tabs::-webkit-scrollbar { display: none; }
 .ds-tabs__tab { position: relative; min-height: 44px; padding: var(--space-2-5) var(--space-3); border: 0; background: none; color: var(--color-text-secondary); font-family: var(--font-body); font-size: 14px; line-height: 20px; font-weight: var(--weight-semibold); white-space: nowrap; cursor: pointer; transition: color var(--duration-fast) var(--ease-standard); }

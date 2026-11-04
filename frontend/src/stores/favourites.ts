@@ -27,11 +27,7 @@ export const useFavouritesStore = defineStore('favourites', () => {
     return pending.value.has(restaurantId)
   }
 
-  /**
-   * Create-or-update the restaurant's favourite (no upsert endpoint exists): PUT the
-   * existing one with its If-Match token, or POST a new one, then cache the response.
-   * Throws on API failure so callers can surface it.
-   */
+  // No upsert endpoint exists: PUT the existing favourite with its If-Match token, or POST a new one.
   async function upsert(restaurantId: string, rating: number, note: string | null): Promise<void> {
     if (pending.value.has(restaurantId)) return
     pending.value.add(restaurantId)

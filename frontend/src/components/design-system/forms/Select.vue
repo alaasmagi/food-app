@@ -97,7 +97,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* Figma "Select": same field as Input, chevron on the right; the open list uses the Dropdown menu surface. */
 .ds-select { position: relative; display: flex; flex-direction: column; gap: var(--space-1-5); width: 100%; }
 .ds-select__label { font-family: var(--font-body); font-size: 14px; line-height: 20px; font-weight: var(--weight-semibold); color: var(--color-text-secondary); }
 .ds-select__trigger { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; text-align: left; cursor: pointer; min-height: 44px; box-sizing: border-box; padding: var(--space-2-5) var(--space-3); background: var(--color-bg-sunken); border: var(--border-thin) solid var(--color-border-default); border-radius: var(--radius-md); font-family: var(--font-body); font-size: 16px; line-height: 24px; color: var(--color-text-primary); transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }

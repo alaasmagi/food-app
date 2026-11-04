@@ -7,7 +7,7 @@ namespace Web.Configuration;
 // instead of the OIDC cookie challenge (which would redirect a browser). MVC controllers keep the
 // cookie FallbackPolicy. Action-level [Authorize(Policy = Admin)] still applies and resolves roles
 // from the bearer token.
-public sealed class ApiBearerAuthorizeAttribute : AuthorizeAttribute
+public class ApiBearerAuthorizeAttribute : AuthorizeAttribute
 {
     public ApiBearerAuthorizeAttribute()
     {

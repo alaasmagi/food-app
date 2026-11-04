@@ -3,10 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, fonts, spacing, typography } from '@/theme/tokens';
 
-/**
- * Empty placeholder used by tab routes whose real content lands in later
- * feature changes. Keeps the navigator rendering without stubbing feature UI.
- */
+/** Empty placeholder screen. */
 export function PlaceholderScreen({ title }: { title: string }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

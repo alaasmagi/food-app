@@ -16,17 +16,12 @@ export interface FavouriteEditorDialogProps {
   restaurantId: string;
 }
 
-/** Mirrors the backend [Range(1,5)] validation before the API call. */
+// Mirrors the backend [Range(1,5)] validation.
 function isValidRating(rating: number): boolean {
   return Number.isInteger(rating) && rating >= 1 && rating <= 5;
 }
 
-/**
- * Rate a restaurant 1-5 with an optional note. Seeds its fields from the
- * restaurant's existing favourite on open, validates the rating client-side,
- * upserts via `useUpsertFavourite`, and confirms success or surfaces an error
- * via a toast. On error the dialog stays open for a retry.
- */
+/** Rate a restaurant 1-5 with an optional note; stays open on error for a retry. */
 export function FavouriteEditorDialog({
   open,
   onClose,
@@ -39,7 +34,6 @@ export function FavouriteEditorDialog({
   const [rating, setRating] = useState(0);
   const [note, setNote] = useState('');
 
-  // Seed the form from the existing favourite each time the dialog opens.
   useEffect(() => {
     if (open) {
       const existing = favouriteFor(restaurantId);

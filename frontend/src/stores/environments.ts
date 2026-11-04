@@ -56,7 +56,6 @@ export const useEnvironmentsStore = defineStore('environments', () => {
     selectedEnvironmentId.value = id
   }
 
-  /** Whether a restaurant belongs to the currently selected environment ("All" -> false). */
   function isMember(restaurantId: string): boolean {
     const envId = selectedEnvironmentId.value
     if (!envId) return false
@@ -76,9 +75,7 @@ export const useEnvironmentsStore = defineStore('environments', () => {
   async function renameEnvironment(id: string, input: EnvironmentInput): Promise<void> {
     const target = list.value.find((e) => e.id === id)
     if (!target) return
-    // Default the auto-fill origin to the stored values so a plain rename (which sends only
-    // name/description) never drops a saved location. Any auto-fill fields the caller supplies
-    // (including an explicit null to clear the origin) override these defaults.
+    // Default to the stored origin so a plain rename never drops a saved location; caller fields override.
     const payload: EnvironmentInput = {
       autoFillLatitude: target.autoFillLatitude,
       autoFillLongitude: target.autoFillLongitude,
@@ -89,11 +86,7 @@ export const useEnvironmentsStore = defineStore('environments', () => {
     list.value = list.value.map((e) => (e.id === id ? updated : e))
   }
 
-  /**
-   * Trigger the backend proximity import for an environment that has a stored origin, then refresh
-   * membership so the newly added join rows (needed to render/toggle membership) are reflected.
-   * Returns the summary so the caller can report how many were added.
-   */
+  // Membership is reloaded afterwards so the newly added join rows can be rendered and toggled.
   async function autoFill(id: string): Promise<DiningEnvironmentAutoFillResult> {
     const result = await autoFillEnvironment(id)
     membershipLoaded = false

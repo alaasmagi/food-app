@@ -6,14 +6,10 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 namespace Web.Configuration;
 
 /// <summary>
-/// The shared <c>BaseEntityWithConcurrency</c> marks <see cref="IBaseEntityConcurrency.ConcurrencyToken"/>
-/// as <c>[Required]</c>, which is correct for persisted entities but wrong for the request DTOs: a create
-/// has no token yet (the server assigns one) and update/delete carry the expected token in the
-/// <c>If-Match</c> header, never the body. Without this the automatic model validation rejects every POST
-/// with "The ConcurrencyToken field is required." This makes the property optional for model binding while
-/// leaving it on responses.
+/// Makes the base <c>[Required]</c> ConcurrencyToken optional on request DTOs; the expected token comes
+/// from the <c>If-Match</c> header and a create has none yet.
 /// </summary>
-public sealed class ConcurrencyTokenValidationMetadataProvider : IValidationMetadataProvider
+public class ConcurrencyTokenValidationMetadataProvider : IValidationMetadataProvider
 {
     public void CreateValidationMetadata(ValidationMetadataProviderContext context)
     {

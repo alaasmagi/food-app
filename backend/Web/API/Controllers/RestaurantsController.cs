@@ -1,6 +1,5 @@
 using Asp.Versioning;
 using Base.Contracts.DTO;
-using Base.DTO;
 using Contracts.Application;
 using DTO.Web;
 using Microsoft.AspNetCore.Authorization;
@@ -21,18 +20,21 @@ public class RestaurantsController(
     IRestaurantService restaurantService,
     IOfferFetchService offerFetchService,
     IMapper mapper,
-    IMapper<DailyOfferDto, Domain.DailyOfferItem> dailyOfferMapper) : ControllerBase
+    IMapper<DailyOfferDto, Domain.DailyOfferItem> dailyOfferMapper) : ApiControllerBase
 {
+    protected override IReadOnlyDictionary<string, int> ErrorStatusCodes { get; } = new Dictionary<string, int>
+    {
+        [OfferFetchErrorCodes.MissingOffersResourceUrl] = StatusCodes.Status400BadRequest,
+        [OfferFetchErrorCodes.UnsupportedProviderType] = StatusCodes.Status400BadRequest,
+        [OfferFetchErrorCodes.FetchFailed] = StatusCodes.Status502BadGateway,
+        [OfferFetchErrorCodes.ParseFailed] = StatusCodes.Status502BadGateway,
+    };
+
     // Default cap when the client omits `limit` on a bounded query. Keeps a zoomed-out viewport from
     // returning the whole catalog; the client shows a "zoom in to see more" hint once the cap is hit.
     private const int DefaultBoundsLimit = 250;
 
-    /// <summary>
-    /// Lists restaurants. With no query params, returns the full catalog (used by the wheel, environments
-    /// and the "add restaurants" picker). When a full bounding box (minLat/minLon/maxLat/maxLon) is
-    /// supplied, returns only the restaurants inside it, capped at <paramref name="limit"/> — this is the
-    /// map/viewport path. Supplying only some of the four bounds is a 400.
-    /// </summary>
+    // Without bounds returns the full catalog; with all four bounds returns the capped map viewport.
     [HttpGet]
     public async Task<ActionResult<IEnumerable<RestaurantDto>>> GetAll(
         [FromQuery] double? minLat,
@@ -85,11 +87,6 @@ public class RestaurantsController(
         return Ok(mapper.Map(result.Value)?.ToList() ?? []);
     }
 
-    /// <summary>
-    /// A single page of restaurants for the list view, optionally filtered by a case-insensitive search
-    /// on name or city. Returns items plus the total match count so the client can paginate without
-    /// fetching the whole catalog. An out-of-range page yields 400 (INVALID_PAGING).
-    /// </summary>
     [HttpGet("page")]
     public async Task<ActionResult<RestaurantPageDto>> GetPage(
         [FromQuery] int page = 1,
@@ -194,35 +191,5 @@ public class RestaurantsController(
         }
 
         return NoContent();
-    }
-
-    private static string? NormalizeConcurrencyToken(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value)
-            ? null
-            : value.Trim().Trim('"');
-    }
-
-    private ObjectResult ToProblem(IError? error)
-    {
-        var statusCode = error?.Code switch
-        {
-            ErrorDefaults.Codes.NotFound => StatusCodes.Status404NotFound,
-            ErrorDefaults.Codes.Forbidden => StatusCodes.Status403Forbidden,
-            ErrorDefaults.Codes.ConcurrencyConflict => StatusCodes.Status409Conflict,
-            ErrorDefaults.Codes.ConcurrencyTokenRequired => StatusCodes.Status428PreconditionRequired,
-            ErrorDefaults.Codes.InvalidPaging => StatusCodes.Status400BadRequest,
-            ErrorDefaults.Codes.MapFailed => StatusCodes.Status400BadRequest,
-            OfferFetchErrorCodes.MissingOffersResourceUrl => StatusCodes.Status400BadRequest,
-            OfferFetchErrorCodes.UnsupportedProviderType => StatusCodes.Status400BadRequest,
-            OfferFetchErrorCodes.FetchFailed => StatusCodes.Status502BadGateway,
-            OfferFetchErrorCodes.ParseFailed => StatusCodes.Status502BadGateway,
-            _ => StatusCodes.Status500InternalServerError
-        };
-
-        return Problem(
-            statusCode: statusCode,
-            title: error?.Code ?? "REQUEST_FAILED",
-            detail: error?.Message ?? "The request failed.");
     }
 }

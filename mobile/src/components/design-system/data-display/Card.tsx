@@ -3,19 +3,11 @@ import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
 
 import { colors, radius } from '@/theme/tokens';
 
-/**
- * Ported 1:1 from the design system Card. A surface one step brighter than the
- * app background, thin border, no shadow (depth comes from surface steps).
- * Web hover has no RN analog; when `onPress` is given the card becomes
- * pressable and shows the design system's hover emphasis on press instead.
- */
+/** Card surface; with `onPress` it becomes pressable and shows hover emphasis on press. */
 export interface CardProps {
   children?: React.ReactNode;
-  /** Inner padding. Default 20 (matches the web literal). */
   padding?: number;
-  /** Emphasize on interaction — for clickable cards. */
   hoverable?: boolean;
-  /** Optional press handler; makes the whole card pressable. */
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }

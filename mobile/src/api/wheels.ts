@@ -2,12 +2,7 @@ import { apiFetch } from '@/api/client';
 import { parseProblemDetails } from '@/api/errors';
 import type { UserWheel } from '@/types/wheel';
 
-/**
- * User-wheels API module. Every call goes through the shared authenticated
- * `apiFetch` (bearer + 401 refresh/retry). On ok the body is the bare payload;
- * on error we throw the parsed ProblemDetails. Update and delete round-trip the
- * wheel's concurrency token as `If-Match`.
- */
+/** User-wheels API; update/delete send the concurrency token as If-Match. */
 
 const WHEELS = '/api/v1/user-wheels';
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
@@ -31,13 +26,11 @@ async function expectOk(res: Response): Promise<void> {
   }
 }
 
-/** GET /api/v1/user-wheels — the current user's saved wheels. */
 export async function getWheels(): Promise<UserWheel[]> {
   const res = await apiFetch(WHEELS);
   return unwrap<UserWheel[]>(res);
 }
 
-/** POST /api/v1/user-wheels — create a wheel. */
 export async function createWheel(input: WheelInput): Promise<UserWheel> {
   const res = await apiFetch(WHEELS, {
     method: 'POST',
@@ -47,7 +40,6 @@ export async function createWheel(input: WheelInput): Promise<UserWheel> {
   return unwrap<UserWheel>(res);
 }
 
-/** PUT /api/v1/user-wheels/{id} — update, sending If-Match. */
 export async function updateWheel(
   id: string,
   input: WheelInput,
@@ -61,7 +53,6 @@ export async function updateWheel(
   return unwrap<UserWheel>(res);
 }
 
-/** DELETE /api/v1/user-wheels/{id} — delete, sending If-Match. */
 export async function deleteWheel(id: string, concurrencyToken: string): Promise<void> {
   const res = await apiFetch(`${WHEELS}/${id}`, {
     method: 'DELETE',

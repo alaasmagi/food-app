@@ -3,12 +3,7 @@ import { Tabs } from 'expo-router';
 import { Icon, IconName } from '@/components/design-system/icons/Icon';
 import { colors, fonts, typography } from '@/theme/tokens';
 
-/**
- * Authenticated tab shell: Dashboard, Map, Wheel, Settings. Dark theme, and
- * safe-area insets are handled by expo-router's Tabs (which sits inside the
- * SafeAreaProvider). Icons are placeholders from the ported set until feature
- * changes introduce dedicated glyphs.
- */
+/** Authenticated tab shell: Dashboard, Map, Wheel, Settings. */
 function tabIcon(name: IconName) {
   return ({ color, size }: { color: string; size: number }) => (
     <Icon name={name} color={color} size={size} />

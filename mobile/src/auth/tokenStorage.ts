@@ -1,11 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-/**
- * Persists OAuth tokens in the OS secure enclave (iOS Keychain / Android
- * Keystore) via expo-secure-store. Never AsyncStorage or memory-only — these
- * survive backgrounding and app restart. Missing/unreadable values simply read
- * as "no session", which the auth layer treats as unauthenticated.
- */
+/** Persists OAuth tokens in the OS secure store; unreadable values read as "no session". */
 const ACCESS_TOKEN_KEY = 'foodroulette.accessToken';
 const REFRESH_TOKEN_KEY = 'foodroulette.refreshToken';
 

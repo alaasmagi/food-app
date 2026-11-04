@@ -4,21 +4,13 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '@/components/design-system/icons/Icon';
 import { colors, fonts, radius, spacing, typography } from '@/theme/tokens';
 
-/**
- * Ported from the design system Dialog. The web absolutely-positioned overlay
- * becomes a React Native `Modal` with a translucent backdrop `Pressable` that
- * closes on outside press; an inner `Pressable` swallows presses so taps inside
- * the card do not dismiss it (the native analog of `stopPropagation`). `width`
- * is a number of dp here rather than a CSS string.
- */
+/** Modal dialog closed by backdrop press; an inner Pressable keeps taps inside the card from dismissing it. */
 export interface DialogProps {
   open: boolean;
   onClose: () => void;
   title?: string;
   children?: React.ReactNode;
-  /** Right-aligned action row, e.g. a Cancel + confirm Button pair. */
   footer?: React.ReactNode;
-  /** Card width in dp. Default 420. */
   width?: number;
 }
 

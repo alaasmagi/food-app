@@ -11,17 +11,10 @@ import NewPlaceView from '../views/NewPlaceView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
-    /** Route is reachable without authentication. */
     public?: boolean
   }
 }
 
-/**
- * Navigation guard: for protected routes, silently attempt a Keycloak token
- * refresh (via the auth store) when the store is not authenticated, then allow
- * entry if authenticated or redirect to the in-app login view otherwise. Public
- * routes always pass.
- */
 export async function authGuard(to: RouteLocationNormalized) {
   if (to.meta.public) return true
 

@@ -8,7 +8,6 @@ export function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: n
   return 2 * R * Math.asin(Math.sqrt(a))
 }
 
-/** "350 m" below a kilometre, "1.2 km" above. */
 export function formatDistance(meters: number): string {
   return meters < 1000 ? `${Math.round(meters / 10) * 10} m` : `${(meters / 1000).toFixed(1)} km`
 }

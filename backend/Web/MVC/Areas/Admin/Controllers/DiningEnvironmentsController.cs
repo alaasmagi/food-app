@@ -5,7 +5,7 @@ using DTO.Web;
 
 namespace Web.MVC.Areas.Admin.Controllers;
 
-public sealed class DiningEnvironmentsController : UserScopedAdminController<DiningEnvironmentDto, DiningEnvironment>
+public class DiningEnvironmentsController : UserScopedAdminController<DiningEnvironmentDto, DiningEnvironment>
 {
     public DiningEnvironmentsController(
         IDiningEnvironmentService service,

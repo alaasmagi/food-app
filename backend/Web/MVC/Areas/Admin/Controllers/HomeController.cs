@@ -6,7 +6,7 @@ namespace Web.MVC.Areas.Admin.Controllers;
 
 [Area("Admin")]
 [Authorize(Policy = AuthorizationPolicies.Admin)]
-public sealed class HomeController : Controller
+public class HomeController : Controller
 {
     public IActionResult Index() => View();
 }

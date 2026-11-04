@@ -7,10 +7,7 @@ using Base.DTO;
 namespace Application;
 
 /// <summary>
-/// Shared base for services whose entities implement <see cref="IBaseEntityUserId{TKey}"/>. Fetches the
-/// row unscoped first (bypassing BaseRepository's actor filter) so cross-user access to an existing row
-/// reports FORBIDDEN instead of the NOT_FOUND that BaseRepository's actor-scoped queries would otherwise
-/// produce for a foreign-owned row (see add-user-wheel design.md Decision 3).
+/// Base service for user-owned entities that reports FORBIDDEN (not NOT_FOUND) for another user's row.
 /// </summary>
 public abstract class OwnershipScopedService<TDomainEntity, TRepository>
     : BaseService<TDomainEntity, TDomainEntity, TRepository>

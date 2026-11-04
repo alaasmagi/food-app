@@ -5,19 +5,14 @@ import Icon, { type IconName } from '../Icon.vue'
 // Prop contract ported 1:1 from the design system's Button.d.ts.
 const props = withDefaults(
   defineProps<{
-    /** Visual style. Default "primary". */
     variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
-    /** Default "md". */
     size?: 'sm' | 'md' | 'lg'
-    /** Optional leading/trailing icon glyph. */
     icon?: IconName
     iconPosition?: 'left' | 'right'
-    /** Shows spinner in place of icon, disables interaction. */
     loading?: boolean
     disabled?: boolean
     fullWidth?: boolean
     type?: 'button' | 'submit' | 'reset'
-    /** Figma Icon button: square 44px, the label stays available to screen readers only. */
     iconOnly?: boolean
   }>(),
   {
@@ -39,8 +34,7 @@ const hasLabel = computed(() => !!slots.default)
 
 const isDisabled = computed(() => props.disabled || props.loading)
 
-// Icon pixel size per button size, matching the design system's SIZE map.
-// Figma Button has a single size; `size` is kept for API compatibility and no longer changes the look.
+// Figma Button has a single size; `size` is kept for API compatibility only.
 const iconSize = computed(() => 18)
 
 function onClick(e: MouseEvent) {
@@ -59,14 +53,13 @@ function onClick(e: MouseEvent) {
     @click="onClick"
   >
     <Icon v-if="loading" name="spinner" :size="iconSize" />
-    <!-- Figma: the icon always leads the label (iconPosition is accepted but no longer moves it). -->
+    <!-- Figma: the icon always leads the label; iconPosition is kept for API compatibility only. -->
     <Icon v-else-if="icon" :name="icon" :size="iconSize" />
     <span v-if="hasLabel" :class="{ 'visually-hidden': iconOnly }"><slot /></span>
   </button>
 </template>
 
 <style scoped>
-/* Figma "Button": one size (44px), radius/md, Label/Default; icon (18px) always leads the label. */
 .ds-button {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
   min-height: 44px; padding: var(--space-3) var(--space-5);

@@ -1,11 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 
-/**
- * Single app-wide React Query client. React Query's cache is the source of
- * truth for server data (restaurants, offers, ...); Zustand is reserved for
- * pure client state. Retries are kept low so a failed auth-gated request
- * surfaces quickly rather than hammering the backend.
- */
+/** App-wide React Query client; low retries so failed auth-gated requests surface quickly. */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

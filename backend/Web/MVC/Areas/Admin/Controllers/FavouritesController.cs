@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Web.MVC.Areas.Admin.Controllers;
 
-public sealed class FavouritesController : UserScopedAdminController<FavouriteDto, Favourite>
+public class FavouritesController : UserScopedAdminController<FavouriteDto, Favourite>
 {
     private readonly IRestaurantService _restaurantService;
 

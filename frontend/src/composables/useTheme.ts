@@ -1,9 +1,7 @@
 import { ref } from 'vue'
 
-// The app ships a dark and a light theme, opted into via `<html data-theme="...">`.
-// This composable owns the shared, persisted theme choice and keeps the document
-// attribute in sync. The initial attribute is set by a pre-paint script in index.html;
-// here we read it back so state and DOM agree from the first render.
+// Shared, persisted theme choice. The initial data-theme attribute is set by a pre-paint script in
+// index.html and read back here so state and DOM agree from the first render.
 
 export type Theme = 'light' | 'dark'
 

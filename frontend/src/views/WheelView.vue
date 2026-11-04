@@ -26,8 +26,6 @@ const confirmingDeleteId = ref<string | null>(null)
 
 onMounted(() => {
   wheels.loadWheels()
-  // The editor's restaurant picker fetches its own paged/searchable list, so there's no catalog to
-  // preload here.
 })
 
 // Router is optional (the view can be mounted on its own in tests).

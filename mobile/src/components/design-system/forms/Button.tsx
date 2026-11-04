@@ -11,17 +11,12 @@ import {
 import { Icon, IconName } from '@/components/design-system/icons/Icon';
 import { colors, fonts, radius, typography } from '@/theme/tokens';
 
-/** Props ported 1:1 from Button.d.ts; web `onClick`/`type` become `onPress`. */
 export interface ButtonProps {
   children?: React.ReactNode;
-  /** Visual style. Default "primary". */
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
-  /** Default "md". */
   size?: 'sm' | 'md' | 'lg';
-  /** Optional leading/trailing icon glyph. */
   icon?: IconName;
   iconPosition?: 'left' | 'right';
-  /** Shows spinner in place of icon, disables interaction. */
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;

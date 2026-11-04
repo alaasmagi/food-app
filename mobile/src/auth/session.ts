@@ -2,15 +2,10 @@ import { config } from '@/config/env';
 import { clearTokens, getRefreshToken, saveTokens } from '@/auth/tokenStorage';
 import { useAuthStore } from '@/stores/authStore';
 
-/**
- * Session lifecycle helpers shared by the API client and the auth provider,
- * kept separate so the client never imports React context. `refreshAccessToken`
- * de-duplicates concurrent callers onto a single in-flight request.
- */
+/** Session helpers shared by the API client and auth provider, kept free of React context. */
 
 let refreshPromise: Promise<string> | null = null;
 
-/** Clears stored tokens and flips in-app state to unauthenticated. */
 export async function signOut(): Promise<void> {
   await clearTokens();
   useAuthStore.getState().setUnauthenticated();
@@ -55,11 +50,7 @@ async function requestRefresh(): Promise<string> {
   return json.access_token;
 }
 
-/**
- * Exchanges the stored refresh token for a fresh access token. Concurrent
- * calls share one in-flight promise so a burst of 401s triggers a single
- * refresh. Throws if there is no refresh token or the exchange fails.
- */
+// Concurrent callers share one in-flight refresh so a burst of 401s triggers a single exchange.
 export function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
     refreshPromise = requestRefresh().finally(() => {

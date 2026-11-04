@@ -26,7 +26,6 @@ export const useToastsStore = defineStore('toasts', () => {
     items.value = items.value.filter((toast) => toast.id !== id)
   }
 
-  /** Enqueue a transient toast; it auto-dismisses after a fixed delay. Returns its id. */
   function push(input: ToastInput): number {
     const id = nextId++
     items.value.push({ id, tone: 'info', ...input })

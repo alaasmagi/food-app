@@ -13,11 +13,8 @@ import { environmentsQueryKey } from '@/hooks/useEnvironments';
 import { environmentRestaurantsQueryKey } from '@/hooks/useEnvironmentRestaurants';
 
 /**
- * Mutation hooks for dining environments and their memberships. Each
- * invalidates the queries it affects so the tabs, filtering, and per-card
- * membership state re-render from fresh server data (including the refreshed
- * concurrency token) without a manual refetch. Deleting an environment also
- * invalidates memberships, since the backend cascades the join rows.
+ * Environment and membership mutations. Deleting an environment also invalidates
+ * memberships because the backend cascades the join rows.
  */
 
 export function useCreateEnvironment() {
@@ -49,12 +46,6 @@ export function useDeleteEnvironment() {
   });
 }
 
-/**
- * Triggers the backend's proximity auto-fill for one environment, then
- * invalidates the membership query so the tabs and per-card membership
- * re-render with the newly added restaurants. Resolves to the summary
- * (`{ added, alreadyPresent, totalMembers }`) so the caller can toast the count.
- */
 export function useAutoFillEnvironment() {
   const qc = useQueryClient();
   return useMutation({

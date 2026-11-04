@@ -9,9 +9,7 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' }
 export interface EnvironmentInput {
   name: string
   description: string | null
-  // Optional saved auto-fill origin. Both-or-neither coordinates; radius only with coordinates;
-  // null radius means "unset" (the backend applies its 500 m default at run time). Omitted callers
-  // default these to null.
+  // null radius means unset; the backend applies its 500 m default at run time.
   autoFillLatitude?: number | null
   autoFillLongitude?: number | null
   autoFillRadiusMeters?: number | null

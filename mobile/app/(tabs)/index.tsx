@@ -9,11 +9,7 @@ import { useFavourites } from '@/hooks/useFavourites';
 import type { Restaurant } from '@/types/restaurant';
 import { colors, fonts, spacing, typography } from '@/theme/tokens';
 
-/**
- * Dashboard: the shared restaurant catalog with today's offers, filtered to the
- * selected environment via EnvironmentTabs. A refreshable, virtualized list of
- * cards, each expandable to lazily fetch its offers.
- */
+/** Dashboard: restaurant catalog with today's offers, filtered to the selected environment. */
 export default function DashboardScreen() {
   const { query, restaurants, membership, selectedEnvironmentId } =
     useEnvironmentFilteredRestaurants();

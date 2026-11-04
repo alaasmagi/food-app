@@ -1,8 +1,5 @@
 <script lang="ts">
-// The auto-fill origin the picker edits: a map point plus an optional radius (meters). Latitude and
-// longitude are set together (both null when no location); radiusMeters is null until the user types
-// one, in which case the backend applies its 500 m default at run time. Exported so the editor
-// dialog can type its drafts.
+// Auto-fill origin edited by the picker; a null radius means the backend applies its 500 m default.
 export interface AutoFillOrigin {
   latitude: number | null
   longitude: number | null
@@ -22,16 +19,13 @@ const model = defineModel<AutoFillOrigin>({ required: true })
 
 const { theme } = useTheme()
 
-// Fallback view (Tallinn, where the catalog lives) when the origin has no coordinates yet.
 const DEFAULT_CENTER: L.LatLngTuple = [59.437, 24.7536]
 const DEFAULT_ZOOM = 12
-// Zoom to snap to when a location is set or a search resolves.
 const LOCATED_ZOOM = 14
 // Radius used for the circle preview when no radius is entered, matching the backend default.
 const DEFAULT_RADIUS_METERS = 500
 
 const mapEl = ref<HTMLElement | null>(null)
-// Radius text is kept as a string for the Input; digits only, empty means "unset" (defaults to 500).
 const radiusText = ref(model.value.radiusMeters != null ? String(model.value.radiusMeters) : '')
 
 const searchQuery = ref('')
@@ -43,8 +37,6 @@ let tileLayer: L.TileLayer | null = null
 let marker: L.Marker | null = null
 let circle: L.Circle | null = null
 
-// A single teardrop-free dot marks the chosen origin; distinct from restaurant markers by its accent
-// ring. Draggable so the user can nudge the point after placing it.
 const originIcon = L.divIcon({
   className: 'env-location-picker__marker',
   html: '<span class="env-location-picker__dot"></span>',
@@ -56,17 +48,14 @@ function hasLocation(): boolean {
   return model.value.latitude != null && model.value.longitude != null
 }
 
-// The radius the circle overlay should preview: the entered value, or the 500 m default when empty.
 function effectiveRadius(): number {
   return model.value.radiusMeters ?? DEFAULT_RADIUS_METERS
 }
 
-// Write a new point into the model, preserving the current radius. Both axes move together.
 function setPoint(lat: number, lng: number): void {
   model.value = { ...model.value, latitude: lat, longitude: lng }
 }
 
-// Remove the location entirely: no point, no radius. Clears the radius input too.
 function clearLocation(): void {
   model.value = { latitude: null, longitude: null, radiusMeters: null }
   radiusText.value = ''
@@ -93,7 +82,6 @@ function renderCircle(): void {
   }
 }
 
-// Reflect the model's point in the map: place/move the draggable marker, or remove it when cleared.
 function renderPoint(): void {
   if (!map) return
   if (!hasLocation()) {
@@ -115,9 +103,7 @@ function renderPoint(): void {
   renderCircle()
 }
 
-// Geocode the typed address client-side via Nominatim. This is a third-party service, not our
-// backend, so it uses a plain fetch (never the bearer-token apiFetch wrapper) and is best-effort:
-// on no result or failure it shows a message and leaves the marker and view untouched.
+// Nominatim is third-party, so it gets a plain fetch, never the bearer-token apiFetch wrapper.
 async function runSearch(): Promise<void> {
   const query = searchQuery.value.trim()
   if (!query || searching.value) return
@@ -141,8 +127,6 @@ async function runSearch(): Promise<void> {
   }
 }
 
-// Radius input drives the model. Strip non-digits so the value is always a positive integer or
-// empty; empty means "unset" and the overlay falls back to the 500 m preview.
 watch(radiusText, (value) => {
   const cleaned = value.replace(/[^\d]/g, '')
   if (cleaned !== value) {
@@ -153,13 +137,11 @@ watch(radiusText, (value) => {
   renderCircle()
 })
 
-// External model changes (parent seeds the origin, our click/drag handlers) re-render the map layers.
 watch(
   () => [model.value.latitude, model.value.longitude, model.value.radiusMeters],
   () => renderPoint(),
 )
 
-// Swap the basemap in place when the app theme changes, matching RestaurantMap.
 watch(theme, (value) => {
   tileLayer?.setUrl(TILE_URL[value])
 })
@@ -173,10 +155,8 @@ onMounted(async () => {
     subdomains: 'abcd',
     maxZoom: 20,
   }).addTo(map)
-  // Clicking the map sets (or moves) the origin point.
   map.on('click', (event: L.LeafletMouseEvent) => setPoint(event.latlng.lat, event.latlng.lng))
 
-  // Centre on the existing point if there is one, else the default view.
   if (hasLocation()) {
     map.setView([model.value.latitude!, model.value.longitude!], LOCATED_ZOOM)
   } else {
@@ -242,8 +222,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  /* Trap Leaflet's pane/control z-indexes so they never paint over the dialog, matching the
-     restaurant map. */
+  /* Trap Leaflet's pane/control z-indexes so they never paint over the dialog. */
   isolation: isolate;
 }
 
@@ -290,7 +269,6 @@ onUnmounted(() => {
   color: var(--text-secondary);
 }
 
-/* Origin dot: an accent dot with a soft halo, distinct from restaurant markers. */
 :deep(.env-location-picker__marker) {
   display: flex;
   align-items: center;
@@ -311,25 +289,19 @@ onUnmounted(() => {
 }
 </style>
 
-<!--
-  The Leaflet radius circle and map chrome live in Leaflet's own DOM outside this component's scope,
-  so they are themed with unscoped rules referencing the design tokens, scoped under the picker's
-  class so they never leak. Mirrors the approach in RestaurantMap.
--->
+<!-- Leaflet's own DOM is outside this component's scope, so it is themed with unscoped rules under the picker's class. -->
 <style>
 .env-location-picker .leaflet-container {
   background: var(--surface-app);
   font-family: var(--font-body);
 }
 
-/* The dark CARTO basemap is very low-contrast on its own; lift only the tile pane so streets and
-   place names read. Light theme needs no correction. */
+/* The dark CARTO basemap is too low-contrast; lift only the tile pane. */
 :root[data-theme='dark'] .env-location-picker .leaflet-tile-pane {
   filter: brightness(1.8) contrast(1.25) saturate(1.1);
 }
 
-/* The radius overlay, styled with tokens. CSS wins over Leaflet's stroke/fill presentation
-   attributes, so the accent colour applies. */
+/* CSS wins over Leaflet's stroke/fill presentation attributes, so the token colours apply. */
 .env-location-picker__circle {
   stroke: var(--accent-7);
   stroke-width: 2;

@@ -7,7 +7,7 @@ namespace DTO.Messaging;
 // hours printed on the restaurant's door. link is this service's own restaurant URL (never a
 // Keycloak action-token URL). A restaurant with no offers is omitted entirely rather than sent with
 // an empty offers array.
-public sealed record RecommendationRow
+public record RecommendationRow
 {
     [JsonPropertyName("restaurantName")]
     public string RestaurantName { get; init; } = default!;

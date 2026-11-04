@@ -7,19 +7,6 @@ using Domain;
 
 namespace Application;
 
-public class AppUserIdentityMapper : IMapper<AppUser, AppUser>
-{
-    public AppUser? Map(AppUser? entity)
-    {
-        return entity;
-    }
-
-    public IEnumerable<AppUser>? Map(IEnumerable<AppUser>? entities)
-    {
-        return entities;
-    }
-}
-
 public class AppUserService(
     IAppUserRepository appUserRepository,
     Base.Contracts.DataAccess.IBaseUow uow,
@@ -68,11 +55,7 @@ public class AppUserService(
         return await base.UpdateAsync(id, entity, expectedConcurrencyToken, actor);
     }
 
-    /// <summary>
-    /// Loads the referenced DiningEnvironment unscoped (so a foreign-owned row reports FORBIDDEN rather
-    /// than NOT_FOUND) and requires it to belong to the current actor. Mirrors the NOT_FOUND-vs-FORBIDDEN
-    /// idiom used by <see cref="OwnershipScopedService{TDomainEntity,TRepository}"/> (see design.md Decision 3).
-    /// </summary>
+    // Fetches unscoped first so a foreign-owned environment reports FORBIDDEN instead of NOT_FOUND.
     private async Task<IError?> ValidateNotificationEnvironmentOwnershipAsync(Guid environmentId)
     {
         var actorId = currentActorAccessor.TryGetActorId();

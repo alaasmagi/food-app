@@ -3,7 +3,6 @@ import { Pressable, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } f
 
 import { colors, fonts, spacing, typography } from '@/theme/tokens';
 
-/** Ported 1:1 from Tabs.d.ts. */
 export interface TabItem {
   value: string;
   label: string;
@@ -11,20 +10,13 @@ export interface TabItem {
 
 export interface TabsProps {
   tabs: TabItem[];
-  /** Uncontrolled initial selection. */
   defaultValue?: string;
-  /** Controlled selection; when set, `onChange` drives selection. */
   value?: string;
   onChange?: (value: string) => void;
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Underline tabs with an accent indicator on the active tab. Ported from the
- * web Tabs: `<button>`/`onClick` become `Pressable`/`onPress`, the flex row
- * becomes a horizontal `ScrollView` so a long environment list can scroll, and
- * the CSS bottom border becomes a token-colored `borderBottomWidth`.
- */
+/** Underline tabs with an accent indicator, in a horizontal ScrollView so long lists scroll. */
 export function Tabs({
   tabs,
   defaultValue,

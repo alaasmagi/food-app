@@ -10,10 +10,7 @@ using Web.Configuration;
 namespace Web.MVC.Areas.Admin.Controllers;
 
 /// <summary>
-/// Shared CRUD scaffolding for the admin console. Each entity gets a thin subclass that supplies its
-/// concrete service + Web DTO mapper and (optionally) overrides the actor-resolution and dropdown hooks.
-/// The controllers reuse the existing application services, so all domain rules (validation, concurrency,
-/// ownership) stay in one place.
+/// Shared CRUD scaffolding for the admin console; each entity gets a thin subclass.
 /// </summary>
 [Area("Admin")]
 [Authorize(Policy = AuthorizationPolicies.Admin)]
@@ -30,26 +27,22 @@ public abstract class AdminCrudController<TDto, TDomain> : Controller
         Mapper = mapper;
     }
 
-    /// <summary>Human-readable singular name used in headings, links and flash messages.</summary>
     protected abstract string EntityName { get; }
 
-    /// <summary>Join rows (EnvironmentRestaurant) are create/delete only; set false to hide/deny editing.</summary>
     protected virtual bool SupportsEdit => true;
 
-    /// <summary>True when the domain entity is user-owned and a create needs an owner actor.</summary>
     protected bool RequiresOwner => typeof(IBaseEntityUserId<Guid>).IsAssignableFrom(typeof(TDomain));
 
     // Non-scoped entities use the empty actor (no ownership filter). User-scoped entities override these
     // to act as the row's owner (edit/delete/details) or the selected owner (create).
-    protected virtual Task<Guid> ResolveListActorAsync() => Task.FromResult(Guid.Empty);
+    protected Task<Guid> ResolveListActorAsync() => Task.FromResult(Guid.Empty);
     protected virtual Task<Guid> ResolveRowActorAsync(Guid id) => Task.FromResult(Guid.Empty);
     protected virtual Task<Guid> ResolveCreateActorAsync(TDto dto) => Task.FromResult(Guid.Empty);
 
-    /// <summary>Hook to load FK/enum dropdowns into ViewData before a form renders.</summary>
     protected virtual Task PopulateEditorAsync(TDto? dto) => Task.CompletedTask;
 
     [HttpGet]
-    public virtual async Task<IActionResult> Index()
+    public async Task<IActionResult> Index()
     {
         var actor = await ResolveListActorAsync();
         var result = await Service.GetAllAsync(actor);
@@ -64,14 +57,14 @@ public abstract class AdminCrudController<TDto, TDomain> : Controller
     }
 
     [HttpGet]
-    public virtual async Task<IActionResult> Details(Guid id)
+    public async Task<IActionResult> Details(Guid id)
     {
         var dto = await FindDtoAsync(id);
         return dto == null ? NotFound() : View(dto);
     }
 
     [HttpGet]
-    public virtual async Task<IActionResult> Create()
+    public async Task<IActionResult> Create()
     {
         await PopulateEditorAsync(null);
         return View(new TDto());
@@ -114,7 +107,7 @@ public abstract class AdminCrudController<TDto, TDomain> : Controller
     }
 
     [HttpGet]
-    public virtual async Task<IActionResult> Edit(Guid id)
+    public async Task<IActionResult> Edit(Guid id)
     {
         if (!SupportsEdit)
         {
@@ -168,7 +161,7 @@ public abstract class AdminCrudController<TDto, TDomain> : Controller
     }
 
     [HttpGet]
-    public virtual async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id)
     {
         var dto = await FindDtoAsync(id);
         return dto == null ? NotFound() : View(dto);
@@ -177,7 +170,7 @@ public abstract class AdminCrudController<TDto, TDomain> : Controller
     [HttpPost]
     [ActionName("Delete")]
     [ValidateAntiForgeryToken]
-    public virtual async Task<IActionResult> DeleteConfirmed(Guid id, string? concurrencyToken)
+    public async Task<IActionResult> DeleteConfirmed(Guid id, string? concurrencyToken)
     {
         var actor = await ResolveRowActorAsync(id);
         var result = await Service.RemoveAsync(id, NormalizeToken(concurrencyToken), actor);
@@ -186,10 +179,7 @@ public abstract class AdminCrudController<TDto, TDomain> : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    /// <summary>
-    /// Loads a single row as a DTO. For user-scoped entities <see cref="Service"/>.GetByIdAsync enforces
-    /// ownership, so the owner actor is resolved first (subclasses read it from the unscoped list).
-    /// </summary>
+    // GetByIdAsync enforces ownership for user-scoped entities, so the owner actor is resolved first.
     protected async Task<TDto?> FindDtoAsync(Guid id)
     {
         var actor = await ResolveRowActorAsync(id);
@@ -202,7 +192,7 @@ public abstract class AdminCrudController<TDto, TDomain> : Controller
         return Mapper.Map(result.Value);
     }
 
-    /// <summary>Resolve a user-scoped row's owner id via the unscoped list (empty actor bypasses filtering).</summary>
+    // The empty actor bypasses ownership filtering, so the unscoped list reveals the row's owner.
     protected async Task<Guid> OwnerFromListAsync(Guid id)
     {
         var all = await Service.GetAllAsync(Guid.Empty);
@@ -210,7 +200,6 @@ public abstract class AdminCrudController<TDto, TDomain> : Controller
         return row is IBaseEntityUserId<Guid> owner ? owner.UserId : Guid.Empty;
     }
 
-    /// <summary>Owner id chosen on a create form (posted as the "OwnerId" field).</summary>
     protected Guid FormOwnerId() =>
         Guid.TryParse(Request.Form["OwnerId"], out var ownerId) ? ownerId : Guid.Empty;
 

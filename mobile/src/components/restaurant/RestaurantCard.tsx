@@ -23,25 +23,12 @@ export interface RestaurantCardProps {
   restaurant: Restaurant;
   expanded: boolean;
   onToggle: () => void;
-  /** The environment the list is filtered to, or `null` for "All". */
   selectedEnvironmentId?: string | null;
-  /** This restaurant's membership in the selected environment, if any. */
   membershipEntry?: MembershipEntry;
-  /** This restaurant's favourite (rating + note), if the user has one. */
   favourite?: Favourite;
 }
 
-/**
- * Presentational restaurant card: name, city Tag, a "Fast food" Badge and a
- * "No offers today" Badge (from the static `hasOffers` hint or a resolved-empty
- * offers query), and an expand affordance that reveals the OfferList. Reading
- * the offers query here is deduped with OfferList's own use of it.
- *
- * The card always shows a favourite surface: read-only stars when a favourite
- * exists plus a "Rate" / "Edit rating" action opening the editor. When a
- * specific environment is selected (not "All"), it also shows an
- * "Add to / Remove from environment" action reflecting current membership.
- */
+/** Restaurant card: name, city, badges, expandable offers, favourite rating and environment membership action. */
 export function RestaurantCard({
   restaurant,
   expanded,

@@ -8,9 +8,7 @@ export interface UserWheel {
   isPublic: boolean
 }
 
-// Minimal public projection returned by GET /api/v1/public/wheels/{id}.
-// Intentionally omits concurrencyToken and isPublic: the public endpoint exposes
-// only what a logged-out shared-wheel view needs to render.
+// Public projection: omits concurrencyToken and isPublic, exposing only what a logged-out viewer needs.
 export interface PublicWheel {
   id: string
   name: string

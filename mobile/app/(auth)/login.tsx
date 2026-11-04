@@ -6,10 +6,7 @@ import { Button } from '@/components/design-system/forms/Button';
 import { useAuth } from '@/auth/AuthContext';
 import { colors, fonts, spacing, typography } from '@/theme/tokens';
 
-/**
- * Minimal dark login screen: a single "Log in" button that starts the OAuth
- * PKCE flow. All feature content lives behind authentication.
- */
+/** Login screen: a single button that starts the OAuth PKCE flow. */
 export default function LoginScreen() {
   const { login } = useAuth();
   const [busy, setBusy] = useState(false);

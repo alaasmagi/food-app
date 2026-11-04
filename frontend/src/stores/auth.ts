@@ -10,12 +10,7 @@ import {
 } from '../auth/keycloak'
 import type { AppUser } from '../types/appUser'
 
-/**
- * Best-effort extraction of realm roles from a Keycloak access token.
- * Assumes the default `realm_access.roles` claim shape; degrades to no roles if
- * the token is unreadable or the claim is absent. Confirm the claim shape before
- * relying on this for admin gating.
- */
+// Assumes the default `realm_access.roles` claim shape; confirm it before relying on this for admin gating.
 function decodeRoles(accessToken: string): string[] {
   try {
     const payload = accessToken.split('.')[1]
@@ -29,8 +24,7 @@ function decodeRoles(accessToken: string): string[] {
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  // In-memory only. Never written to localStorage/sessionStorage - the token does
-  // not survive a full page reload by design; startup silent SSO re-establishes it.
+  // In-memory only by design, never web storage; startup silent SSO re-establishes it after a reload.
   const token = ref<string | null>(null)
   const expiresAtUtc = ref<string | null>(null)
   const currentUser = ref<AppUser | null>(null)
@@ -49,7 +43,6 @@ export const useAuthStore = defineStore('auth', () => {
     return roles.value.includes(role)
   }
 
-  // Mirror the adapter's current token into the store, or clear if none is present.
   function syncFromKeycloak(): boolean {
     const current = getToken()
     if (!current) {
@@ -69,11 +62,6 @@ export const useAuthStore = defineStore('auth', () => {
     roles.value = []
   }
 
-  /**
-   * Silently ensure a valid Keycloak token and mirror it into the store. De-duplicated:
-   * parallel callers share one in-flight refresh. Resolves to whether the app is now
-   * authenticated. Replaces the former backend cookie exchange.
-   */
   function fetchToken(): Promise<boolean> {
     if (pending) return pending
     pending = (async () => {
@@ -91,23 +79,16 @@ export const useAuthStore = defineStore('auth', () => {
     return pending
   }
 
-  /** Populate `currentUser` from GET /api/v1/account/me (in-memory only). */
   async function fetchCurrentUser(): Promise<void> {
     currentUser.value = await getCurrentUser()
   }
 
-  /** Replace `currentUser` in memory, e.g. after a preferences update. */
   function setCurrentUser(user: AppUser): void {
     currentUser.value = user
   }
 
-  /**
-   * Start the Keycloak Authorization Code + PKCE login (full-page redirect to Keycloak).
-   * Pass the in-app path to land on after login (resolved against the current origin);
-   * it must be a guarded route so its navigation guard mirrors the token into the store.
-   * Defaults to the current URL - do NOT rely on that default from the public login page,
-   * which would loop back to login and never reach the app.
-   */
+  // The return path must be a guarded route so its guard mirrors the token into the store; the
+  // default (current URL) from the public login page would loop back to login.
   function login(returnTo?: string): void {
     const redirectUri = returnTo
       ? new URL(returnTo, window.location.origin).toString()
@@ -115,10 +96,6 @@ export const useAuthStore = defineStore('auth', () => {
     void kcLogin(redirectUri)
   }
 
-  /**
-   * Clear the in-memory token, then end the Keycloak session (redirect to Keycloak's
-   * end-session endpoint), returning to the app's login page.
-   */
   function logout(): void {
     clear()
     void kcLogout(new URL('/login', window.location.origin).toString())

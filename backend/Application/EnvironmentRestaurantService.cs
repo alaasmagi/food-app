@@ -7,19 +7,6 @@ using Domain;
 
 namespace Application;
 
-public class EnvironmentRestaurantIdentityMapper : IMapper<EnvironmentRestaurant, EnvironmentRestaurant>
-{
-    public EnvironmentRestaurant? Map(EnvironmentRestaurant? entity)
-    {
-        return entity;
-    }
-
-    public IEnumerable<EnvironmentRestaurant>? Map(IEnumerable<EnvironmentRestaurant>? entities)
-    {
-        return entities;
-    }
-}
-
 public class EnvironmentRestaurantService
     : BaseService<EnvironmentRestaurant, EnvironmentRestaurant, IEnvironmentRestaurantRepository>, IEnvironmentRestaurantService
 {
@@ -100,10 +87,7 @@ public class EnvironmentRestaurantService
         return await base.RemoveAsync(id, expectedConcurrencyToken, actor);
     }
 
-    /// <summary>
-    /// Same unscoped-fetch-first pattern as DiningEnvironmentService (see design.md Decision 3), so
-    /// cross-user access to an existing membership row surfaces as FORBIDDEN instead of NOT_FOUND.
-    /// </summary>
+    // Fetches unscoped first so cross-user access to an existing row reports FORBIDDEN instead of NOT_FOUND.
     private async Task<IError?> CheckOwnershipAsync(Guid id, Guid actor)
     {
         var unscopedResponse = await _environmentRestaurantRepository.GetByIdAsync(id);

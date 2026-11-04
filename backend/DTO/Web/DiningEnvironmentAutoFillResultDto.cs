@@ -1,9 +1,7 @@
 namespace DTO.Web;
 
 /// <summary>
-/// Response for POST /api/v1/dining-environments/{id}/auto-fill: how many nearby restaurants were
-/// newly added as memberships, how many were already members, and the environment's resulting total
-/// membership count. Auto-fill is additive, so the total can exceed the number of in-radius matches.
+/// Result of a dining environment auto-fill run.
 /// </summary>
 public class DiningEnvironmentAutoFillResultDto
 {

@@ -50,11 +50,6 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("OfferProviders");
             entity.HasIndex(e => e.Name);
-
-            entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
-            entity.Property(e => e.OfferLocator).HasMaxLength(1024).IsRequired();
-            entity.Property(e => e.OfferTextLocator).HasMaxLength(1024).IsRequired();
-            entity.Property(e => e.OfferPriceLocator).HasMaxLength(1024).IsRequired();
         });
 
         modelBuilder.Entity<RestaurantEntity>(entity =>
@@ -65,13 +60,6 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.OfferProviderId);
             // Backs the map viewport (bounding-box) query in RestaurantRepository.GetInBoundsAsync.
             entity.HasIndex(e => new { e.Latitude, e.Longitude });
-
-            entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
-            entity.Property(e => e.City).HasMaxLength(128).IsRequired();
-            entity.Property(e => e.OfferTimeText).HasMaxLength(512).IsRequired();
-            entity.Property(e => e.ParkingInfo).HasMaxLength(1024).IsRequired();
-            entity.Property(e => e.OpeningInfo).HasMaxLength(1024).IsRequired();
-            entity.Property(e => e.OffersResourceUrl).HasMaxLength(2048);
 
             entity
                 .HasOne(e => e.OfferProvider)
@@ -84,15 +72,6 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("DiningEnvironments");
             entity.HasIndex(e => e.UserId);
-
-            entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
-            entity.Property(e => e.Description).HasMaxLength(1024);
-
-            // Optional auto-fill origin: nullable, no default (a null radius stays null and the 500m
-            // default is applied only at auto-fill time, never persisted).
-            entity.Property(e => e.AutoFillLatitude).IsRequired(false);
-            entity.Property(e => e.AutoFillLongitude).IsRequired(false);
-            entity.Property(e => e.AutoFillRadiusMeters).IsRequired(false);
         });
 
         modelBuilder.Entity<EnvironmentRestaurantEntity>(entity =>
@@ -117,8 +96,6 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("Favourites");
             entity.HasIndex(e => new { e.UserId, e.RestaurantId }).IsUnique();
-
-            entity.Property(e => e.Note).HasMaxLength(1024);
 
             entity
                 .HasOne(e => e.Restaurant)
@@ -149,8 +126,6 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("UserWheels");
             entity.HasIndex(e => e.UserId);
-
-            entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
 
             entity
                 .Property(e => e.RestaurantNames)

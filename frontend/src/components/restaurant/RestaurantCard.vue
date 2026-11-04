@@ -22,10 +22,8 @@ const store = useRestaurantsStore()
 const environments = useEnvironmentsStore()
 const favourites = useFavouritesStore()
 
-// How many offers the card shows before "+N more".
 const PREVIEW = 2
 
-// "Show on map" only makes sense for a located restaurant (0/0 sentinel excluded).
 const locatable = computed(() => hasCoordinates(props.restaurant))
 
 // Expansion is local view state; the store owns only fetched data.
@@ -48,7 +46,6 @@ const details = computed(() =>
     .join(' · '),
 )
 
-// The membership action only appears when a specific environment (not "All") is selected.
 const showMembership = computed(() => environments.selectedEnvironmentId !== null)
 const isMember = computed(() => environments.isMember(props.restaurant.id))
 const membershipPending = computed(() => environments.isPending(props.restaurant.id))
@@ -68,8 +65,7 @@ async function toggleMembership(): Promise<void> {
   }
 }
 
-// Offers are the point of the card, so they load on their own once the card scrolls into view —
-// only for restaurants that report offers today, and only once (the store caches per id).
+// Offers are the point of the card, so they load on their own once it scrolls into view.
 const root = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 onMounted(() => {

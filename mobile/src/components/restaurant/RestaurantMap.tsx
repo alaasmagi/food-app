@@ -8,11 +8,9 @@ import { darkMapStyle, regionForCoordinates } from '@/components/restaurant/mapS
 
 export interface RestaurantMapProps {
   restaurants: Restaurant[];
-  /** Called with a restaurant id when its callout "See offers" is activated. */
   onSeeOffers: (restaurantId: string) => void;
 }
 
-/** A restaurant has a usable location if both coords are finite and not (0,0). */
 function hasCoordinates(r: Restaurant): boolean {
   return (
     Number.isFinite(r.latitude) &&
@@ -63,8 +61,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.surfaceApp,
   },
-  // Callouts render in a native light bubble on both platforms; keep text dark
-  // for legibility inside that bubble rather than using dark-on-dark tokens.
+  // Callouts render in a native light bubble, so keep text dark for legibility.
   callout: {
     minWidth: 140,
     paddingVertical: spacing[1],

@@ -5,27 +5,17 @@ import Svg, { Path } from 'react-native-svg';
 import { colors } from '@/theme/tokens';
 
 export interface RatingStarsProps {
-  /** Current rating (0-5). Stars up to this value render filled. */
   value: number;
-  /** Editable press-to-set mode; otherwise a read-only display. Default false. */
   editable?: boolean;
-  /** Pixel size (square) of each star. Default 20. */
   size?: number;
-  /** Called with the rating n when the nth star is activated (editable only). */
   onChange?: (value: number) => void;
 }
 
 const STARS = [1, 2, 3, 4, 5];
-// The design-system Icon set has no star, so RatingStars draws its own glyph,
-// matching the web control: filled for selected, outline otherwise.
 const STAR_PATH =
   'M12 2l2.9 6.26 6.9.53-5.2 4.52 1.6 6.79L12 17.27 5.8 20.6l1.6-6.79L2.2 8.79l6.9-.53L12 2z';
 
-/**
- * Five-star rating control. Read-only by default; in editable mode each star is
- * a Pressable that reports its value n. The glyph is a self-drawn SVG star
- * (warning tone when filled, muted border when empty).
- */
+/** Five-star rating control, read-only by default or press-to-set when editable. */
 export function RatingStars({
   value,
   editable = false,

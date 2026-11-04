@@ -4,7 +4,6 @@ import { Modal, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from '
 import { Icon } from '@/components/design-system/icons/Icon';
 import { colors, fonts, radius, spacing, typography } from '@/theme/tokens';
 
-/** Ported 1:1 from Select.d.ts. */
 export interface SelectOption {
   value: string;
   label: string;
@@ -21,13 +20,7 @@ export interface SelectProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Custom dropdown select with a checkmark on the current option. Ported from the
- * web Select: the `<button>` trigger becomes a `Pressable`, and the absolutely-
- * positioned dropdown becomes a `Modal` overlay (React Native has no page-level
- * absolute layer that escapes parent clipping) with a backdrop that dismisses on
- * outside press. Controlled when `value` is passed, else internal.
- */
+/** Dropdown select; the list is a Modal because RN has no absolute layer that escapes parent clipping. */
 export function Select({
   label,
   options,

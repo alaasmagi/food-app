@@ -2,12 +2,7 @@ import { config } from '@/config/env';
 import { refreshAccessToken, signOut } from '@/auth/session';
 import { getAccessToken } from '@/auth/tokenStorage';
 
-/**
- * Shared authenticated request helper. Every authenticated backend call goes
- * through here: it attaches `Authorization: Bearer <access token>` and, on a
- * 401, performs exactly one silent refresh + retry before giving up and
- * logging the user out. Concurrent refreshes are de-duplicated in session.ts.
- */
+/** Authenticated request helper: attaches the bearer token and retries once after a silent refresh on 401. */
 
 export class ApiError extends Error {
   constructor(
@@ -33,11 +28,6 @@ function withAuthHeader(init: RequestInit, token: string | null): RequestInit {
   return { ...init, headers };
 }
 
-/**
- * Authenticated fetch against the backend. Returns the raw Response so callers
- * (API modules) can parse the backend's `IMethodResponse<T>` envelope. Throws
- * ApiError only when auth cannot be recovered.
- */
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const url = resolveUrl(path);
   const token = await getAccessToken();
@@ -47,7 +37,6 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
     return res;
   }
 
-  // 401: attempt one silent refresh + retry.
   try {
     const newToken = await refreshAccessToken();
     res = await fetch(url, withAuthHeader(init, newToken));
@@ -59,10 +48,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   }
 }
 
-/**
- * Unauthenticated request path for public endpoints (e.g. shared wheels).
- * Never attaches a bearer token and never triggers refresh/logout.
- */
+// Public endpoints: never attaches a token or triggers refresh/logout.
 export async function publicFetch(path: string, init: RequestInit = {}): Promise<Response> {
   return fetch(resolveUrl(path), init);
 }

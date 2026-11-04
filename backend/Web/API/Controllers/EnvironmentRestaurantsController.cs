@@ -1,6 +1,4 @@
 using Asp.Versioning;
-using Base.Contracts.DTO;
-using Base.DTO;
 using Contracts.Application;
 using DTO.Web;
 using Microsoft.AspNetCore.RateLimiting;
@@ -19,12 +17,17 @@ namespace Web.API.Controllers;
 public class EnvironmentRestaurantsController(
     IEnvironmentRestaurantService environmentRestaurantService,
     ICurrentActorAccessor currentActorAccessor,
-    IMapper mapper) : ControllerBase
+    IMapper mapper) : ApiControllerBase
 {
+    protected override IReadOnlyDictionary<string, int> ErrorStatusCodes { get; } = new Dictionary<string, int>
+    {
+        [EnvironmentRestaurantErrorCodes.DuplicateMembership] = StatusCodes.Status409Conflict,
+    };
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<EnvironmentRestaurantDto>>> GetAll()
     {
-        if (!TryGetActorId(out var actorId, out var unauthorized))
+        if (!TryGetActorId(currentActorAccessor, out var actorId, out var unauthorized))
         {
             return unauthorized;
         }
@@ -41,7 +44,7 @@ public class EnvironmentRestaurantsController(
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<EnvironmentRestaurantDto>> GetById(Guid id)
     {
-        if (!TryGetActorId(out var actorId, out var unauthorized))
+        if (!TryGetActorId(currentActorAccessor, out var actorId, out var unauthorized))
         {
             return unauthorized;
         }
@@ -58,7 +61,7 @@ public class EnvironmentRestaurantsController(
     [HttpPost]
     public async Task<ActionResult<EnvironmentRestaurantDto>> Create(EnvironmentRestaurantDto input)
     {
-        if (!TryGetActorId(out var actorId, out var unauthorized))
+        if (!TryGetActorId(currentActorAccessor, out var actorId, out var unauthorized))
         {
             return unauthorized;
         }
@@ -84,7 +87,7 @@ public class EnvironmentRestaurantsController(
         Guid id,
         [FromHeader(Name = "If-Match")] string? expectedConcurrencyToken)
     {
-        if (!TryGetActorId(out var actorId, out var unauthorized))
+        if (!TryGetActorId(currentActorAccessor, out var actorId, out var unauthorized))
         {
             return unauthorized;
         }
@@ -96,47 +99,5 @@ public class EnvironmentRestaurantsController(
         }
 
         return NoContent();
-    }
-
-    private bool TryGetActorId(out Guid actorId, out ActionResult unauthorizedResult)
-    {
-        var resolved = currentActorAccessor.TryGetActorId();
-        if (resolved == null)
-        {
-            actorId = default;
-            unauthorizedResult = Unauthorized();
-            return false;
-        }
-
-        actorId = resolved.Value;
-        unauthorizedResult = null!;
-        return true;
-    }
-
-    private static string? NormalizeConcurrencyToken(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value)
-            ? null
-            : value.Trim().Trim('"');
-    }
-
-    private ObjectResult ToProblem(IError? error)
-    {
-        var statusCode = error?.Code switch
-        {
-            ErrorDefaults.Codes.NotFound => StatusCodes.Status404NotFound,
-            ErrorDefaults.Codes.Forbidden => StatusCodes.Status403Forbidden,
-            ErrorDefaults.Codes.ConcurrencyConflict => StatusCodes.Status409Conflict,
-            ErrorDefaults.Codes.ConcurrencyTokenRequired => StatusCodes.Status428PreconditionRequired,
-            ErrorDefaults.Codes.InvalidPaging => StatusCodes.Status400BadRequest,
-            ErrorDefaults.Codes.MapFailed => StatusCodes.Status400BadRequest,
-            EnvironmentRestaurantErrorCodes.DuplicateMembership => StatusCodes.Status409Conflict,
-            _ => StatusCodes.Status500InternalServerError
-        };
-
-        return Problem(
-            statusCode: statusCode,
-            title: error?.Code ?? "REQUEST_FAILED",
-            detail: error?.Message ?? "The request failed.");
     }
 }

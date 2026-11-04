@@ -12,8 +12,7 @@ const props = defineProps<{ open: boolean; environmentId: string; environmentNam
 const emit = defineEmits<{ close: [] }>()
 
 const environments = useEnvironmentsStore()
-// Paged, searchable picker — no full-catalog fetch. Rows already in this environment are shown as
-// "Added" rather than filtered out, so a page never appears empty just because it is all members.
+// Members are shown as "Added" rather than filtered out, so a page never looks empty.
 const { items, page, totalPages, searchInput, loading, error: loadError, load, goToPage, reset } =
   useRestaurantSearch()
 
@@ -99,7 +98,7 @@ async function add(restaurantId: string): Promise<void> {
 </template>
 
 <style scoped>
-/* Figma "06 Add restaurants": rows with a bookmark toggle (filled = already in the place). */
+/* Figma "06 Add restaurants". */
 .picker { display: flex; flex-direction: column; gap: var(--space-3); }
 .picker__error { margin: 0; padding: var(--space-3) var(--space-4); border: var(--border-thin) solid var(--color-status-danger-border); border-radius: var(--radius-md); background: var(--color-status-danger-subtle); color: var(--color-status-danger-text); font-size: 14px; line-height: 20px; }
 .picker__list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
@@ -107,7 +106,6 @@ async function add(restaurantId: string): Promise<void> {
 .picker__titles { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
 .picker__name { font-size: 14px; line-height: 20px; font-weight: var(--weight-semibold); color: var(--color-text-primary); }
 .picker__empty { margin: 0; padding: var(--space-4) 0; font-size: 14px; line-height: 20px; color: var(--color-text-muted); }
-/* "Added": the bookmark is filled with the accent instead of looking disabled. */
 .picker__added:disabled { background: transparent; color: var(--color-accent-solid); cursor: default; }
 .picker__added :deep(svg) { fill: var(--color-accent-solid); }
 </style>

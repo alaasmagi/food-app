@@ -4,16 +4,10 @@ import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-n
 import { Icon } from '@/components/design-system/icons/Icon';
 import { colors, fonts, radius, typography } from '@/theme/tokens';
 
-/**
- * Ported 1:1 from the design system Tag — a full-pill chip for user-facing
- * categorization. `selected` gives the accent-tinted filter look; `onRemove`
- * adds a trailing pressable x.
- */
+/** Full-pill chip for categorization, with an optional selected look and remove action. */
 export interface TagProps {
   children?: React.ReactNode;
-  /** Accent-tinted "selected" look, e.g. an active filter. Default false. */
   selected?: boolean;
-  /** When set, renders a trailing x that calls this. */
   onRemove?: () => void;
   style?: StyleProp<ViewStyle>;
 }
