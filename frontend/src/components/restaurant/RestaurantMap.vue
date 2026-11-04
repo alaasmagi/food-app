@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, h, nextTick, onMounted, onUnmounted, ref, render, watch } from 'vue'
 import L from 'leaflet'
 import Button from '../design-system/forms/Button.vue'
+import MapDot from '../design-system/map/MapDot.vue'
+import MapHint from '../design-system/map/MapHint.vue'
+import MapLegend from '../design-system/map/MapLegend.vue'
+import MapMarker from '../design-system/map/MapMarker.vue'
 import OfferList from './OfferList.vue'
 import { useRestaurantsStore } from '../../stores/restaurants'
 import { useTheme } from '../../composables/useTheme'
 import type { Bounds, Restaurant } from '../../types/restaurant'
-import { hasCoordinates, markerableRestaurants } from './mapMarkers'
+import { collapsedIds, hasCoordinates, markerableRestaurants, type MarkerBox } from './mapMarkers'
 import { TILE_URL } from './basemap'
 
 // Leaflet map over the given restaurants. Viewport mode asks the parent to fetch via "Search this area";
@@ -36,6 +40,7 @@ let popup: L.Popup | null = null
 let tileLayer: L.TileLayer | null = null
 // Kept outside markerLayer so viewport re-fetches (which clear that layer) never remove it.
 let userMarker: L.Marker | null = null
+let userDotEl: HTMLElement | null = null
 // Focused restaurant whose popup must survive the marker re-render triggered by its own viewport fetch.
 let focusId: string | null = null
 // Set while we move the map ourselves, so only a user's own pan/zoom raises "Search this area".
@@ -49,44 +54,74 @@ popupHost.className = 'restaurant-map__popup'
 const selectedRestaurant = ref<Restaurant | null>(null)
 const offersExpanded = ref(false)
 
-// Restaurant names come from data and go into marker HTML, so escape them to avoid injection.
-const HTML_ESCAPES: Record<string, string> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
+// Leaflet positions a zero-size icon element on the coordinate; the design-system marker rendered into it
+// places itself around that point (tail tip for a pill, centre for a dot).
+interface MarkerEntry {
+  restaurant: Restaurant
+  el: HTMLElement
+  collapsed: boolean
 }
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char])
+const markerEntries = new Map<string, MarkerEntry>()
+let selectedId: string | null = null
+
+function iconFor(el: HTMLElement): L.DivIcon {
+  return L.divIcon({ className: 'restaurant-map__icon', html: el, iconSize: [0, 0] })
 }
 
-// Built per restaurant because each carries its name; the label is positioned by CSS, so iconSize/iconAnchor cover only the dot.
-function markerIconFor(name: string, hasOffers = true): L.DivIcon {
-  return L.divIcon({
-    className: hasOffers ? 'restaurant-map__marker' : 'restaurant-map__marker restaurant-map__marker--no-offers',
-    html:
-      '<span class="restaurant-map__marker-dot"></span>' +
-      `<span class="restaurant-map__marker-label">${escapeHtml(name)}</span>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-  })
+function paintMarker({ restaurant, el, collapsed }: MarkerEntry): void {
+  const selected = restaurant.id === selectedId
+  render(
+    collapsed && !selected
+      ? h(MapDot, { kind: 'place', x: 0, y: 0, label: restaurant.name })
+      : h(MapMarker, { name: restaurant.name, offers: restaurant.hasOffers, selected, x: 0, y: 0 }),
+    el,
+  )
 }
 
-const userIcon = L.divIcon({
-  className: 'restaurant-map__user',
-  html: '<span class="restaurant-map__user-dot"></span>',
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
-})
+// Every marker is measured as a full pill, so a collapsed one expands again as soon as its pill fits.
+function collapseOverlapping(): void {
+  const entries = [...markerEntries.values()]
+  for (const entry of entries) {
+    entry.collapsed = false
+    paintMarker(entry)
+  }
+  const boxes: MarkerBox[] = []
+  for (const { restaurant, el } of entries) {
+    const pill = el.firstElementChild
+    if (!pill) continue
+    boxes.push({
+      id: restaurant.id,
+      rect: pill.getBoundingClientRect(),
+      offers: restaurant.hasOffers,
+      selected: restaurant.id === selectedId,
+    })
+  }
+  for (const id of collapsedIds(boxes)) {
+    const entry = markerEntries.get(id)
+    if (!entry) continue
+    entry.collapsed = true
+    paintMarker(entry)
+  }
+}
+
+function clearMarkers(): void {
+  for (const { el } of markerEntries.values()) render(null, el)
+  markerEntries.clear()
+  markerLayer?.clearLayers()
+}
 
 async function openPopupFor(restaurant: Restaurant, latlng: L.LatLng): Promise<void> {
   if (!map || !popup) return
   selectedRestaurant.value = restaurant
   offersExpanded.value = false
+  selectedId = restaurant.id
+  collapseOverlapping()
   // Leaflet sizes and centres the popup at open time, so wait for Vue to teleport the real content in.
   await nextTick()
   if (!map || !popup) return
+  // The pill sits above the coordinate, so lift the popup tip (default offset 7) above the pill.
+  const height = markerEntries.get(restaurant.id)?.el.firstElementChild?.getBoundingClientRect().height ?? 0
+  popup.options.offset = L.point(0, 7 - height)
   popup.setLatLng(latlng).setContent(popupHost).openOn(map)
 }
 
@@ -109,36 +144,17 @@ function renderMarkers(): void {
   // Focusing triggers a viewport re-fetch that lands here; closing its popup would undo "Show on map".
   const preserveFocusPopup = focusId !== null && markerable.value.some((r) => r.id === focusId)
   if (!preserveFocusPopup) map.closePopup()
-  markerLayer.clearLayers()
+  clearMarkers()
   for (const restaurant of markerable.value) {
     const latlng = L.latLng(restaurant.latitude, restaurant.longitude)
-    const marker = L.marker(latlng, { icon: markerIconFor(restaurant.name, restaurant.hasOffers), title: restaurant.name })
+    const entry: MarkerEntry = { restaurant, el: document.createElement('div'), collapsed: false }
+    markerEntries.set(restaurant.id, entry)
+    paintMarker(entry)
+    const marker = L.marker(latlng, { icon: iconFor(entry.el), title: restaurant.name })
     marker.on('click', () => openPopupFor(restaurant, latlng))
     marker.addTo(markerLayer)
   }
-  declutterLabels()
-}
-
-// Uses visibility, not display, so hidden labels keep their layout box and can still be measured.
-function declutterLabels(): void {
-  if (!markerLayer) return
-  const labels: HTMLElement[] = []
-  markerLayer.eachLayer((layer) => {
-    const icon = (layer as L.Marker & { _icon?: HTMLElement })._icon
-    const label = icon?.querySelector<HTMLElement>('.restaurant-map__marker-label')
-    if (!label) return
-    label.style.visibility = '' // reset from any previous pass before measuring
-    labels.push(label)
-  })
-  const placed: DOMRect[] = []
-  for (const label of labels) {
-    const rect = label.getBoundingClientRect()
-    const overlaps = placed.some(
-      (p) => rect.left < p.right && rect.right > p.left && rect.top < p.bottom && rect.bottom > p.top,
-    )
-    if (overlaps) label.style.visibility = 'hidden'
-    else placed.push(rect)
-  }
+  collapseOverlapping()
 }
 
 // Callers pass animate:false so moveend/zoomend fire synchronously, inside the programmatic window.
@@ -181,8 +197,11 @@ function centreOnUserLocation(): void {
       if (!map) return
       const latlng = L.latLng(position.coords.latitude, position.coords.longitude)
       userMarker?.remove()
+      if (userDotEl) render(null, userDotEl)
+      userDotEl = document.createElement('div')
+      render(h(MapDot, { kind: 'user', x: 0, y: 0, label: 'Your location' }), userDotEl)
       userMarker = L.marker(latlng, {
-        icon: userIcon,
+        icon: iconFor(userDotEl),
         title: 'Your location',
         interactive: false,
         keyboard: false,
@@ -228,11 +247,13 @@ onMounted(async () => {
     selectedRestaurant.value = null
     offersExpanded.value = false
     focusId = null
+    selectedId = null
+    collapseOverlapping()
   })
   map.on('moveend', onUserMove)
   map.on('zoomend', onUserMove)
-  // Zooming changes how far apart markers sit on screen, so re-run label decluttering after it.
-  map.on('zoomend', declutterLabels)
+  // Zooming changes how far apart markers sit on screen, so re-run the overlap check after it.
+  map.on('zoomend', collapseOverlapping)
 
   // Everything below moves the map ourselves and must not raise the "Search this area" prompt.
   programmaticMove = true
@@ -283,6 +304,9 @@ watch(theme, (value) => {
 })
 
 onUnmounted(() => {
+  clearMarkers()
+  if (userDotEl) render(null, userDotEl)
+  userDotEl = null
   map?.remove()
   map = null
   markerLayer = null
@@ -302,13 +326,14 @@ onUnmounted(() => {
       </Button>
     </div>
 
-    <p v-if="truncated" class="restaurant-map__hint" role="status">
-      Showing the closest restaurants — zoom in to see more.
-    </p>
-    <ul class="restaurant-map__legend" aria-label="Legend">
-      <li><span class="restaurant-map__legend-dot" />Offers today</li>
-      <li><span class="restaurant-map__legend-dot restaurant-map__legend-dot--none" />No offers today</li>
-    </ul>
+    <div class="restaurant-map__overlays">
+      <div v-if="truncated" class="restaurant-map__hint" role="status">
+        <MapHint>Showing the closest restaurants. Zoom in to see more.</MapHint>
+      </div>
+      <div class="restaurant-map__legend" role="group" aria-label="Legend">
+        <MapLegend />
+      </div>
+    </div>
     <p v-if="!markerable.length" class="restaurant-map__empty">
       No restaurants have a location to show in this area.
     </p>
@@ -341,19 +366,10 @@ onUnmounted(() => {
 .restaurant-map__canvas { height: 640px; width: 100%; border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-lg); background: var(--color-bg-sunken); overflow: hidden; }
 .restaurant-map__empty { margin: var(--space-4) 0 0; font-family: var(--font-body); font-size: 16px; line-height: 24px; color: var(--color-text-secondary); }
 .restaurant-map__search-area { position: absolute; top: var(--space-4); left: 50%; transform: translateX(-50%); z-index: 500; }
-.restaurant-map__hint, .restaurant-map__legend { position: absolute; bottom: var(--space-4); z-index: 500; margin: 0; padding: var(--space-2) var(--space-3); background: var(--color-bg-raised); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); font-family: var(--font-body); pointer-events: none; }
-.restaurant-map__hint { left: var(--space-4); right: 220px; max-width: max-content; font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
-.restaurant-map__legend { right: var(--space-4); display: flex; gap: var(--space-4); list-style: none; font-size: 12px; line-height: 16px; color: var(--color-text-secondary); }
-.restaurant-map__legend li { display: flex; align-items: center; gap: var(--space-1-5); }
-.restaurant-map__legend-dot { width: 10px; height: 10px; border-radius: var(--radius-full); background: var(--color-accent-solid); border: var(--border-thick) solid var(--color-bg-surface); box-shadow: 0 0 0 1px var(--color-accent-solid); }
-.restaurant-map__legend-dot--none { background: var(--color-bg-surface); }
-:deep(.restaurant-map__marker) { display: flex; align-items: center; justify-content: center; overflow: visible; }
-:deep(.restaurant-map__marker-label) { position: absolute; left: calc(100% + 4px); top: 50%; transform: translateY(-50%); max-width: 160px; padding: var(--space-0-5) var(--space-2); overflow: hidden; font-family: var(--font-body); font-size: 12px; line-height: 16px; font-weight: var(--weight-medium); white-space: nowrap; text-overflow: ellipsis; color: var(--color-text-primary); background: var(--color-bg-raised); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-full); box-shadow: var(--shadow-sm); pointer-events: none; }
-:deep(.restaurant-map__marker-dot) { display: block; width: 16px; height: 16px; box-sizing: border-box; border-radius: var(--radius-full); background: var(--color-accent-solid); border: var(--border-thick) solid var(--color-bg-surface); box-shadow: var(--shadow-sm); }
-:deep(.restaurant-map__marker--no-offers .restaurant-map__marker-dot) { background: var(--color-bg-surface); border-color: var(--color-accent-solid); }
-:deep(.restaurant-map__marker--no-offers .restaurant-map__marker-label) { color: var(--color-text-secondary); }
-:deep(.restaurant-map__user) { display: flex; align-items: center; justify-content: center; }
-:deep(.restaurant-map__user-dot) { display: block; width: 18px; height: 18px; box-sizing: border-box; border-radius: var(--radius-full); background: var(--color-status-info-solid); border: var(--border-thick) solid var(--color-bg-surface); box-shadow: 0 0 0 4px var(--color-status-info-subtle), var(--shadow-sm); }
+.restaurant-map__overlays { position: absolute; left: var(--space-4); right: var(--space-4); bottom: var(--space-4); z-index: 500; display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); pointer-events: none; }
+.restaurant-map__legend { margin-left: auto; }
+:deep(.restaurant-map__icon:focus-visible) { outline: none; }
+:deep(.restaurant-map__icon:focus-visible .ds-map-marker), :deep(.restaurant-map__icon:focus-visible .ds-map-dot) { outline: var(--border-thick) solid var(--color-focus-ring); outline-offset: 2px; }
 </style>
 
 <!-- Leaflet's own DOM is outside this component's scope, so it is themed with unscoped rules. -->
