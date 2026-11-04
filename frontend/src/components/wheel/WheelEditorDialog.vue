@@ -20,26 +20,19 @@ const emit = defineEmits<{ close: [] }>()
 
 const wheels = useWheelsStore()
 const toasts = useToastsStore()
-// Import-from-environment reads environment membership (restaurant ids) and the restaurant catalog
-// (id -> name) — both already cached client-side. No backend call is involved.
 const environments = useEnvironmentsStore()
 const restaurants = useRestaurantsStore()
 const { copyShareLink } = useShareWheelLink()
-// Paged, searchable restaurant picker — never loads the whole catalog into the dialog.
 const { items, page, totalPages, searchInput, loading, error, load, goToPage, reset } = useRestaurantSearch()
 
-// A share link is meaningful only once the wheel is saved (has an id) and public.
 const canShare = computed(() => Boolean(props.wheel?.id) && isPublic.value)
 
 const name = ref('')
 const isPublic = ref(false)
-// Wheels are stored by restaurant NAME, so selection is tracked by name. This survives paging and
-// search (the picker only ever holds one page) and pre-fills straight from an edited wheel without
-// needing the full catalog to map names back to ids.
+// Wheels store restaurant names, so selection is tracked by name; this survives paging and search.
 const selected = reactive<Set<string>>(new Set())
 const saving = ref(false)
-// Transient: the environment chosen in the import control. It only triggers one import and is reset
-// afterward — the wheel records names, never which environment they came from.
+// Reset after each import; the wheel records names, never which environment they came from.
 const importEnvId = ref('')
 
 watch(
@@ -61,12 +54,10 @@ watch(
   { immediate: true },
 )
 
-// Environments offered by the import control; empty when the user has none.
 const environmentOptions = computed<SelectOption[]>(() =>
   environments.list.map((environment) => ({ value: environment.id, label: environment.name })),
 )
 
-// At least 2 restaurants make a meaningful wheel; a name is required.
 const valid = computed(() => name.value.trim().length > 0 && selected.size >= 2)
 
 function toggle(restaurantName: string, checked: boolean): void {
@@ -74,9 +65,6 @@ function toggle(restaurantName: string, checked: boolean): void {
   else selected.delete(restaurantName)
 }
 
-// Merge an environment's current restaurants into the selection, by name. Additive and
-// de-duplicating: existing selections are kept and no name is added twice. Membership ids that no
-// longer resolve to a catalog restaurant (deleted since) are skipped. Reports the number newly added.
 function importFromEnvironment(envId: string): void {
   importEnvId.value = '' // reset the control so the same environment can be imported again
   const membership = environments.membershipByEnv[envId]
@@ -85,7 +73,7 @@ function importFromEnvironment(envId: string): void {
   for (const restaurantId of Object.keys(membership ?? {})) {
     const restaurantName = nameById.get(restaurantId)
     if (!restaurantName) continue // membership references a restaurant no longer in the catalog
-    if (selected.has(restaurantName)) continue // already selected — never duplicate
+    if (selected.has(restaurantName)) continue
     selected.add(restaurantName)
     added += 1
   }
@@ -100,7 +88,6 @@ function importFromEnvironment(envId: string): void {
   })
 }
 
-// Choosing an environment in the control triggers one import; the empty reset value is ignored.
 watch(importEnvId, (envId) => {
   if (envId) importFromEnvironment(envId)
 })

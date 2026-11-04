@@ -15,41 +15,35 @@ export interface OffersEntry {
   loaded: boolean
 }
 
-// Cap on restaurants fetched per map viewport; mirrors the backend's default. When a fetch returns
-// this many, the viewport is assumed to hold more and the UI hints the user to zoom in.
+// Mirrors the backend's default per-viewport cap; a full result means the viewport holds more.
 export const DEFAULT_AREA_LIMIT = 250
 
 export const useRestaurantsStore = defineStore('restaurants', () => {
-  // Full catalog: fetched once, cached in memory. Used by the wheel, environments and the
-  // "add restaurants" picker — surfaces that need every restaurant regardless of the map.
+  // Full catalog, fetched once, for surfaces that need every restaurant regardless of the map.
   const list = ref<Restaurant[]>([])
   const listLoaded = ref(false)
   const listLoading = ref(false)
   const listError = ref<string | null>(null)
 
-  // Map/viewport results: replaced on every pan/zoom, so the dashboard map and list show only
-  // the restaurants a user is currently looking at rather than the entire catalog.
+  // Viewport results, replaced on every map search.
   const areaList = ref<Restaurant[]>([])
   const areaLoading = ref(false)
   const areaError = ref<string | null>(null)
   const areaTruncated = ref(false)
 
-  // List view (All tab): one server-side page at a time, name/city searchable. Kept separate from
-  // the viewport set so the list can be a browse/search surface without fetching the whole catalog.
+  // List view (All tab): one server-side page at a time, kept separate from the viewport set.
   const pagedList = ref<Restaurant[]>([])
   const pagedTotal = ref(0)
   const pagedLoading = ref(false)
   const pagedError = ref<string | null>(null)
 
-  // Per-restaurant offers cache, keyed by restaurant id. Fetched lazily.
   const offersById = ref<Record<string, OffersEntry>>({})
 
   let listPending: Promise<void> | null = null
   // Monotonic tokens so an earlier, slower fetch can't overwrite a newer one's results.
   let areaRequestId = 0
   let pageRequestId = 0
-  // Last viewport requested, so an identical bounds fetch (e.g. the map's initial emit plus the
-  // moveend from its own setView) collapses into one request instead of hammering the rate limiter.
+  // Collapses identical bounds fetches into one request so they don't hammer the rate limiter.
   let lastBoundsKey: string | null = null
 
   async function loadRestaurants(): Promise<void> {
@@ -71,10 +65,6 @@ export const useRestaurantsStore = defineStore('restaurants', () => {
     return listPending
   }
 
-  /**
-   * Fetch the restaurants inside the given map viewport and replace `areaList`. Concurrent calls
-   * (rapid panning) are guarded by a request token so only the latest result is kept.
-   */
   async function loadInBounds(bounds: Bounds, limit: number = DEFAULT_AREA_LIMIT): Promise<void> {
     // Coordinates rounded (~1m) so float jitter from repeated getBounds() reads doesn't defeat the dedupe.
     const key = [bounds.minLat, bounds.minLon, bounds.maxLat, bounds.maxLon]
@@ -100,10 +90,6 @@ export const useRestaurantsStore = defineStore('restaurants', () => {
     }
   }
 
-  /**
-   * Load one page of the searchable list into `pagedList`. Concurrent calls (typing in search,
-   * clicking next) are guarded by a request token so only the latest result is kept.
-   */
   async function loadPage(params: {
     page: number
     pageSize: number
@@ -125,7 +111,6 @@ export const useRestaurantsStore = defineStore('restaurants', () => {
     }
   }
 
-  /** Fetch one restaurant's offers lazily. No-ops if already loaded or in flight. */
   async function loadOffers(id: string): Promise<void> {
     const existing = offersById.value[id]
     if (existing && (existing.loaded || existing.loading)) return

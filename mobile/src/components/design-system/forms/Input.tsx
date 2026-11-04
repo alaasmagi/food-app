@@ -12,20 +12,14 @@ import {
 import { Icon, IconName } from '@/components/design-system/icons/Icon';
 import { colors, fonts, radius, typography } from '@/theme/tokens';
 
-/**
- * Ported from the design system Input. Prop names follow Input.d.ts; the web
- * `onChange(event)` becomes React Native's idiomatic `onChangeText(text)` (the
- * same substitution Button made for `onClick` -> `onPress`). Web `<input>` /
- * `<textarea>` become a single `TextInput` with `multiline`. Focus shows an
- * accent border; `error` overrides `hint` and tints the border/text danger.
- */
+/** Text input; web `onChange(event)` becomes `onChangeText(text)`, and `error` overrides `hint`. */
 export interface InputProps {
   label?: string;
   placeholder?: string;
   value?: string;
   defaultValue?: string;
   onChangeText?: (text: string) => void;
-  /** Web input type. Only 'password'/'email' change native behavior. */
+  // Only 'password' and 'email' change native behavior.
   type?: string;
   icon?: IconName;
   error?: string;

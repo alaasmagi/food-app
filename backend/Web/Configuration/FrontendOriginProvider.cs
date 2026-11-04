@@ -3,7 +3,7 @@ namespace Web.Configuration;
 // Single source of the configured frontend origin, shared by the CORS policy and the login/logout
 // return-url validation so the two can never diverge. Kept IUrlHelper-free so return-url validation
 // is unit-testable without an HTTP context - the caller supplies whether the url is a local url.
-public sealed class FrontendOriginProvider
+public class FrontendOriginProvider
 {
     private readonly Uri _frontendOrigin;
 

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Web.MVC.Areas.Admin.Controllers;
 
-public sealed class RestaurantsController : AdminCrudController<RestaurantDto, Restaurant>
+public class RestaurantsController : AdminCrudController<RestaurantDto, Restaurant>
 {
     private readonly IOfferProviderService _offerProviderService;
 

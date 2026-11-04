@@ -1,8 +1,4 @@
-/**
- * Trailing-edge debounce: delays invoking `fn` until `wait` ms have elapsed since the last call.
- * Used to coalesce rapid map move/zoom events into a single viewport fetch. Call `.cancel()` to
- * drop a pending invocation (e.g. on component unmount).
- */
+/** Trailing-edge debounce; `.cancel()` drops a pending invocation. */
 export interface Debounced<A extends unknown[]> {
   (...args: A): void
   cancel(): void

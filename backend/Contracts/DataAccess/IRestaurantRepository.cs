@@ -5,10 +5,7 @@ namespace Contracts.DataAccess;
 
 public interface IRestaurantRepository : IBaseRepository<Restaurant>
 {
-    /// <summary>
-    /// Restaurants whose coordinates fall inside the given bounding box, ordered by distance to the
-    /// box centre so that when more than <paramref name="limit"/> match, the closest ones are kept.
-    /// </summary>
+    // Ordered by distance to the box centre so the closest ones are kept when the limit is hit.
     Task<IReadOnlyList<Restaurant>> GetInBoundsAsync(
         double minLat,
         double minLon,
@@ -17,12 +14,7 @@ public interface IRestaurantRepository : IBaseRepository<Restaurant>
         int limit,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// Every restaurant whose coordinates fall inside the given bounding box, with no cap and no
-    /// ordering. Used as an indexed pre-filter for proximity auto-fill before the caller applies the
-    /// exact haversine radius test in memory; unlike <see cref="GetInBoundsAsync"/> it must not drop
-    /// any match, so it takes no limit. Bounds are assumed already normalized (min &lt;= max).
-    /// </summary>
+    // No limit: the auto-fill pre-filter must not drop any match before the exact radius test.
     Task<IReadOnlyList<Restaurant>> GetAllInBoundsAsync(
         double minLat,
         double minLon,
@@ -30,12 +22,7 @@ public interface IRestaurantRepository : IBaseRepository<Restaurant>
         double maxLon,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// A single page of restaurants, optionally filtered by a case-insensitive match on name or city,
-    /// ordered by name. Returns the page items together with the total count of matches (so the caller
-    /// can render pagination). The base <c>GetAllByPageAsync</c>/<c>GetCountAsync</c> can't be used here
-    /// because they take no filter.
-    /// </summary>
+    // The base GetAllByPageAsync/GetCountAsync take no filter, so search paging needs its own query.
     Task<(IReadOnlyList<Restaurant> Items, int Total)> SearchPageAsync(
         string? search,
         int pageNr,

@@ -9,14 +9,8 @@ import type { Bounds, Restaurant } from '../../types/restaurant'
 import { hasCoordinates, markerableRestaurants } from './mapMarkers'
 import { TILE_URL } from './basemap'
 
-// The map renders whatever set it is given; it does not fetch restaurants itself. Two modes:
-//  - viewport (default): fetches the initial viewport once, then — rather than refetching on every
-//    pan/zoom — shows a "Search this area" button the user taps to load the new viewport. This keeps
-//    request volume low and the view stable (no reshuffle while the user is still looking around).
-//  - autoFit: a pure viewer over a fixed, fully-loaded set (e.g. an environment's members) — it fits
-//    the view to those markers and does not drive fetching.
-// `focusRestaurant` (set when the user clicks "Show on map" in the list) centres/zooms on one
-// restaurant and opens its popup — the one intentional exception to viewport mode's "don't move" rule.
+// Leaflet map over the given restaurants. Viewport mode asks the parent to fetch via "Search this area";
+// autoFit mode only fits the view to a fixed set and never drives fetching.
 const props = defineProps<{
   restaurants: Restaurant[]
   truncated?: boolean
@@ -29,37 +23,27 @@ const store = useRestaurantsStore()
 const { theme } = useTheme()
 
 const mapEl = ref<HTMLElement | null>(null)
-// Restaurants that carry a usable location; the rest are silently excluded.
 const markerable = computed(() => markerableRestaurants(props.restaurants))
 
-// Fallback view when nothing has coordinates (Tallinn, where the catalog lives).
 const DEFAULT_CENTER: L.LatLngTuple = [59.437, 24.7536]
 const DEFAULT_ZOOM = 17
 
-// Zoom level to snap to when focusing a single restaurant from the list.
 const FOCUS_ZOOM = 16
 
 let map: L.Map | null = null
 let markerLayer: L.LayerGroup | null = null
 let popup: L.Popup | null = null
 let tileLayer: L.TileLayer | null = null
-// Marker for the user's own location, set once geolocation resolves on mount. Kept separate from the
-// restaurant markerLayer so viewport re-fetches (which clear that layer) never remove it.
+// Kept outside markerLayer so viewport re-fetches (which clear that layer) never remove it.
 let userMarker: L.Marker | null = null
-// Id of the restaurant whose focus popup should be preserved across marker re-renders (the viewport
-// re-fetch that focusing triggers would otherwise rebuild the markers and close the popup). Cleared
-// when the popup closes.
+// Focused restaurant whose popup must survive the marker re-render triggered by its own viewport fetch.
 let focusId: string | null = null
-// True while WE move the map (initial view, focus). Programmatic moves must not surface the
-// "Search this area" prompt — only a user's own pan/zoom should.
+// Set while we move the map ourselves, so only a user's own pan/zoom raises "Search this area".
 let programmaticMove = false
 
-// Whether the "Search this area" button is showing: set when the user moves the map away from the
-// last-searched viewport, cleared once they search (or we search for them).
 const searchAreaVisible = ref(false)
 
-// Vue owns the popup body; Leaflet just displays this detached host element, so
-// the "See offers" action reuses the same store and OfferList as RestaurantCard.
+// Vue owns the popup body; Leaflet only displays this detached host element.
 const popupHost = document.createElement('div')
 popupHost.className = 'restaurant-map__popup'
 const selectedRestaurant = ref<Restaurant | null>(null)
@@ -77,10 +61,7 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char])
 }
 
-// A marker is the green dot plus a small name label above it. The icon is built per restaurant (not
-// shared) because each carries its own name; the dot stays anchored on the coordinate and the label
-// floats above it via CSS, so iconSize/iconAnchor only account for the dot.
-// Figma: a filled dot means the restaurant has lunch offers today, a hollow one that it has none.
+// Built per restaurant because each carries its name; the label is positioned by CSS, so iconSize/iconAnchor cover only the dot.
 function markerIconFor(name: string, hasOffers = true): L.DivIcon {
   return L.divIcon({
     className: hasOffers ? 'restaurant-map__marker' : 'restaurant-map__marker restaurant-map__marker--no-offers',
@@ -92,7 +73,6 @@ function markerIconFor(name: string, hasOffers = true): L.DivIcon {
   })
 }
 
-// Visually distinct pin for the user's own location (a haloed dot), so it doesn't read as a restaurant.
 const userIcon = L.divIcon({
   className: 'restaurant-map__user',
   html: '<span class="restaurant-map__user-dot"></span>',
@@ -104,8 +84,7 @@ async function openPopupFor(restaurant: Restaurant, latlng: L.LatLng): Promise<v
   if (!map || !popup) return
   selectedRestaurant.value = restaurant
   offersExpanded.value = false
-  // Wait for Vue to teleport the body into the host so Leaflet measures the real
-  // content - it sizes and centres the popup on the host's width at open time.
+  // Leaflet sizes and centres the popup at open time, so wait for Vue to teleport the real content in.
   await nextTick()
   if (!map || !popup) return
   popup.setLatLng(latlng).setContent(popupHost).openOn(map)
@@ -127,8 +106,7 @@ async function toggleOffers(): Promise<void> {
 
 function renderMarkers(): void {
   if (!map || !markerLayer) return
-  // Preserve an open focus popup: focusing triggers a viewport re-fetch, which lands here — closing
-  // the popup would undo the "show on map" the user just asked for. Any other re-render clears stale popups.
+  // Focusing triggers a viewport re-fetch that lands here; closing its popup would undo "Show on map".
   const preserveFocusPopup = focusId !== null && markerable.value.some((r) => r.id === focusId)
   if (!preserveFocusPopup) map.closePopup()
   markerLayer.clearLayers()
@@ -141,11 +119,7 @@ function renderMarkers(): void {
   declutterLabels()
 }
 
-// Hide name labels that would overlap. Greedy: walk the markers in order, keep a label only if its
-// box clears every label already kept, otherwise hide it (the dot always stays). Depends on the
-// icons being in the DOM, so it runs after markers are added and again on zoom (which changes how far
-// apart the markers sit on screen). Uses visibility, not display, so hidden labels keep their layout
-// box and the pass stays cheap.
+// Uses visibility, not display, so hidden labels keep their layout box and can still be measured.
 function declutterLabels(): void {
   if (!markerLayer) return
   const labels: HTMLElement[] = []
@@ -167,8 +141,7 @@ function declutterLabels(): void {
   }
 }
 
-// Run a map move that must NOT trigger the "Search this area" prompt. Uses animate:false so the
-// move's moveend/zoomend fire synchronously and stay inside the programmatic window.
+// Callers pass animate:false so moveend/zoomend fire synchronously, inside the programmatic window.
 function withProgrammaticMove(move: () => void): void {
   programmaticMove = true
   try {
@@ -178,7 +151,6 @@ function withProgrammaticMove(move: () => void): void {
   }
 }
 
-// Centre and zoom on one restaurant, load its area, and open its popup (from "Show on map").
 async function focusOn(restaurant: Restaurant): Promise<void> {
   if (!map || !hasCoordinates(restaurant)) return
   focusId = restaurant.id
@@ -188,8 +160,6 @@ async function focusOn(restaurant: Restaurant): Promise<void> {
   await openPopupFor(restaurant, latlng)
 }
 
-// Fit the view to the current markers (autoFit mode only). Falls back to the default view when the
-// set has no located restaurants.
 function fitToMarkers(): void {
   if (!map) return
   const points = markerable.value.map((r) => L.latLng(r.latitude, r.longitude))
@@ -200,12 +170,7 @@ function fitToMarkers(): void {
   }
 }
 
-// Try to centre the initial view on the user's location, then load that area. Falls back to the
-// default (Tallinn) view when geolocation is unsupported, denied, times out, or otherwise fails.
-// Viewport mode only — autoFit and focus modes set their own initial view. Because the callbacks
-// fire after the mount's programmatic window has closed, the move is re-wrapped so it never raises
-// the "Search this area" prompt, and the viewport fetch is deferred until the position resolves (or
-// fails) to avoid a Tallinn fetch immediately followed by a second fetch of the user's area.
+// The fetch waits for the position (or its failure) to avoid a Tallinn fetch followed by the user's area.
 function centreOnUserLocation(): void {
   if (!('geolocation' in navigator)) {
     requestSearch()
@@ -233,8 +198,6 @@ function centreOnUserLocation(): void {
   )
 }
 
-// Ask the parent to fetch the current viewport, and dismiss the "Search this area" button. No-op in
-// autoFit mode, where the map is a pure viewer and must not trigger fetches.
 function requestSearch(): void {
   if (!map || props.autoFit) return
   const b = map.getBounds()
@@ -244,8 +207,7 @@ function requestSearch(): void {
   searchAreaVisible.value = false
 }
 
-// A user pan/zoom (not one of ours) means the visible area no longer matches what's loaded — offer
-// to search it. We don't auto-fetch, to keep requests down and the results stable while browsing.
+// No auto-fetch on user moves, to keep requests down and results stable while browsing.
 function onUserMove(): void {
   if (programmaticMove || props.autoFit) return
   searchAreaVisible.value = true
@@ -267,16 +229,14 @@ onMounted(async () => {
     offersExpanded.value = false
     focusId = null
   })
-  // A user pan/zoom offers "Search this area" rather than auto-fetching.
   map.on('moveend', onUserMove)
   map.on('zoomend', onUserMove)
   // Zooming changes how far apart markers sit on screen, so re-run label decluttering after it.
   map.on('zoomend', declutterLabels)
 
-  // Everything below moves the map ourselves (default view, initial fetch, focus) and must not raise
-  // the "Search this area" prompt — keep it inside the programmatic window.
+  // Everything below moves the map ourselves and must not raise the "Search this area" prompt.
   programmaticMove = true
-  // Start at the default view (Tallinn). In viewport mode we deliberately do NOT fit to markers.
+  // Viewport mode deliberately starts at the default view instead of fitting to markers.
   map.setView(DEFAULT_CENTER, DEFAULT_ZOOM, { animate: false })
   renderMarkers()
   // The container may have just become visible via v-if; give it a laid-out size.
@@ -286,40 +246,31 @@ onMounted(async () => {
     programmaticMove = false
     return
   }
-  // pan:false so re-measuring the container never animates a recenter (which would fire an async
-  // moveend after the programmatic window and spuriously raise the "Search this area" button).
+  // pan:false: an animated recenter would fire moveend after the programmatic window and raise the prompt.
   map.invalidateSize({ pan: false })
   if (props.autoFit) {
     fitToMarkers()
   } else if (props.focusRestaurant) {
-    // Arrived here via "Show on map": centre on the restaurant (which also fetches its area).
     focusOn(props.focusRestaurant)
   } else {
-    // Centre on the user's location if they allow it (falling back to Tallinn), then load that
-    // viewport; later moves use the "Search this area" button.
     centreOnUserLocation()
   }
   programmaticMove = false
 })
 
-// New data: redraw the markers. In autoFit mode also re-fit to them; in viewport mode never move
-// the map (the user's chosen viewport is what drove the fetch).
 watch(markerable, () => {
   renderMarkers()
   if (props.autoFit) fitToMarkers()
 })
 
-// Switching between modes (e.g. selecting/clearing an environment) with the map already open.
 watch(
   () => props.autoFit,
   (autoFit) => {
     if (autoFit) fitToMarkers()
-    else requestSearch() // entering viewport mode: load the current area once
+    else requestSearch()
   },
 )
 
-// Focus a restaurant requested while the map is already mounted (e.g. clicking another list row's
-// "Show on map" without the map unmounting in between).
 watch(
   () => props.focusRestaurant,
   (restaurant) => {
@@ -327,7 +278,6 @@ watch(
   },
 )
 
-// Swap the basemap in place when the app theme changes.
 watch(theme, (value) => {
   tileLayer?.setUrl(TILE_URL[value])
 })
@@ -346,7 +296,6 @@ onUnmounted(() => {
   <div class="restaurant-map">
     <div ref="mapEl" class="restaurant-map__canvas" role="application" aria-label="Restaurant map" />
 
-    <!-- Appears after the user moves the map; fetching is deferred to this deliberate tap. -->
     <div v-if="searchAreaVisible" class="restaurant-map__search-area">
       <Button variant="primary" size="sm" icon="search" @click="requestSearch">
         Search this area
@@ -386,46 +335,35 @@ onUnmounted(() => {
 <style scoped>
 .restaurant-map {
   position: relative;
-  /* Leaflet gives its panes/controls z-indexes up to 1000. Without an isolated stacking context
-     those leak into the page and paint over higher-level UI like modals. isolate traps them. */
+  /* Trap Leaflet's pane/control z-indexes (up to 1000) so they don't paint over modals. */
   isolation: isolate;
 }
 .restaurant-map__canvas { height: 640px; width: 100%; border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-lg); background: var(--color-bg-sunken); overflow: hidden; }
 .restaurant-map__empty { margin: var(--space-4) 0 0; font-family: var(--font-body); font-size: 16px; line-height: 24px; color: var(--color-text-secondary); }
-/* Floating "Search this area" button, centred near the top of the map (above Leaflet panes). */
 .restaurant-map__search-area { position: absolute; top: var(--space-4); left: 50%; transform: translateX(-50%); z-index: 500; }
-/* Figma: hint card bottom-left, legend bottom-right — both on the raised surface. */
 .restaurant-map__hint, .restaurant-map__legend { position: absolute; bottom: var(--space-4); z-index: 500; margin: 0; padding: var(--space-2) var(--space-3); background: var(--color-bg-raised); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); font-family: var(--font-body); pointer-events: none; }
 .restaurant-map__hint { left: var(--space-4); right: 220px; max-width: max-content; font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
 .restaurant-map__legend { right: var(--space-4); display: flex; gap: var(--space-4); list-style: none; font-size: 12px; line-height: 16px; color: var(--color-text-secondary); }
 .restaurant-map__legend li { display: flex; align-items: center; gap: var(--space-1-5); }
 .restaurant-map__legend-dot { width: 10px; height: 10px; border-radius: var(--radius-full); background: var(--color-accent-solid); border: var(--border-thick) solid var(--color-bg-surface); box-shadow: 0 0 0 1px var(--color-accent-solid); }
 .restaurant-map__legend-dot--none { background: var(--color-bg-surface); }
-/* Token-styled marker (Figma map marker): dot + name pill. */
 :deep(.restaurant-map__marker) { display: flex; align-items: center; justify-content: center; overflow: visible; }
 :deep(.restaurant-map__marker-label) { position: absolute; left: calc(100% + 4px); top: 50%; transform: translateY(-50%); max-width: 160px; padding: var(--space-0-5) var(--space-2); overflow: hidden; font-family: var(--font-body); font-size: 12px; line-height: 16px; font-weight: var(--weight-medium); white-space: nowrap; text-overflow: ellipsis; color: var(--color-text-primary); background: var(--color-bg-raised); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-full); box-shadow: var(--shadow-sm); pointer-events: none; }
 :deep(.restaurant-map__marker-dot) { display: block; width: 16px; height: 16px; box-sizing: border-box; border-radius: var(--radius-full); background: var(--color-accent-solid); border: var(--border-thick) solid var(--color-bg-surface); box-shadow: var(--shadow-sm); }
 :deep(.restaurant-map__marker--no-offers .restaurant-map__marker-dot) { background: var(--color-bg-surface); border-color: var(--color-accent-solid); }
 :deep(.restaurant-map__marker--no-offers .restaurant-map__marker-label) { color: var(--color-text-secondary); }
-/* User's own location: Figma uses status/info for "you are here". */
 :deep(.restaurant-map__user) { display: flex; align-items: center; justify-content: center; }
 :deep(.restaurant-map__user-dot) { display: block; width: 18px; height: 18px; box-sizing: border-box; border-radius: var(--radius-full); background: var(--color-status-info-solid); border: var(--border-thick) solid var(--color-bg-surface); box-shadow: 0 0 0 4px var(--color-status-info-subtle), var(--shadow-sm); }
 </style>
 
-<!--
-  Map chrome (tiles, popup, controls, attribution) lives in Leaflet's own DOM
-  outside this component's scope, so it is themed with unscoped rules that
-  reference the design tokens. Kept in this file to stay colocated with the map.
--->
+<!-- Leaflet's own DOM is outside this component's scope, so it is themed with unscoped rules. -->
 <style>
 .leaflet-container {
   background: var(--surface-app);
   font-family: var(--font-body);
 }
 
-/* The dark CARTO basemap is very low-contrast on its own — streets and place names barely read.
-   Lift only the tile pane (the "undermap"); markers, labels and popups live in other panes and are
-   untouched. Light theme needs no correction. */
+/* The dark CARTO basemap is too low-contrast; lift only the tile pane so markers and popups are untouched. */
 :root[data-theme='dark'] .restaurant-map .leaflet-tile-pane {
   filter: brightness(1.8) contrast(1.25) saturate(1.1);
 }
@@ -477,7 +415,6 @@ onUnmounted(() => {
   min-width: 176px;
 }
 
-/* Keep the action label on one line even in the narrow popup column. */
 .restaurant-map__popup-body button {
   white-space: nowrap;
 }

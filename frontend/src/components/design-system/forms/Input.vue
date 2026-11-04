@@ -13,7 +13,6 @@ withDefaults(
     hint?: string
     disabled?: boolean
     size?: 'sm' | 'md'
-    /** Renders a <textarea> instead of <input>. Default false. */
     multiline?: boolean
     rows?: number
   }>(),
@@ -65,7 +64,6 @@ const model = defineModel<string>({ default: '' })
 </template>
 
 <style scoped>
-/* Figma "Input" / "Textarea": label Label/Default, 44px field on bg/sunken, accent focus ring. */
 .ds-input { display: flex; flex-direction: column; gap: var(--space-1-5); width: 100%; }
 .ds-input__label { font-family: var(--font-body); font-size: 14px; line-height: 20px; font-weight: var(--weight-semibold); color: var(--color-text-secondary); }
 .ds-input__wrap { position: relative; display: flex; align-items: center; }

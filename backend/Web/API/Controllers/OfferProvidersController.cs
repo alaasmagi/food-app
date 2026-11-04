@@ -1,6 +1,4 @@
 using Asp.Versioning;
-using Base.Contracts.DTO;
-using Base.DTO;
 using Contracts.Application;
 using DTO.Web;
 using Microsoft.AspNetCore.Authorization;
@@ -19,8 +17,13 @@ namespace Web.API.Controllers;
 [ApiBearerAuthorize]
 public class OfferProvidersController(
     IOfferProviderService offerProviderService,
-    IMapper mapper) : ControllerBase
+    IMapper mapper) : ApiControllerBase
 {
+    protected override IReadOnlyDictionary<string, int> ErrorStatusCodes { get; } = new Dictionary<string, int>
+    {
+        [OfferProviderErrorCodes.LocatorValidation] = StatusCodes.Status400BadRequest,
+    };
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<OfferProviderDto>>> GetAll()
     {
@@ -103,32 +106,5 @@ public class OfferProvidersController(
         }
 
         return NoContent();
-    }
-
-    private static string? NormalizeConcurrencyToken(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value)
-            ? null
-            : value.Trim().Trim('"');
-    }
-
-    private ObjectResult ToProblem(IError? error)
-    {
-        var statusCode = error?.Code switch
-        {
-            ErrorDefaults.Codes.NotFound => StatusCodes.Status404NotFound,
-            ErrorDefaults.Codes.Forbidden => StatusCodes.Status403Forbidden,
-            ErrorDefaults.Codes.ConcurrencyConflict => StatusCodes.Status409Conflict,
-            ErrorDefaults.Codes.ConcurrencyTokenRequired => StatusCodes.Status428PreconditionRequired,
-            ErrorDefaults.Codes.InvalidPaging => StatusCodes.Status400BadRequest,
-            ErrorDefaults.Codes.MapFailed => StatusCodes.Status400BadRequest,
-            OfferProviderErrorCodes.LocatorValidation => StatusCodes.Status400BadRequest,
-            _ => StatusCodes.Status500InternalServerError
-        };
-
-        return Problem(
-            statusCode: statusCode,
-            title: error?.Code ?? "REQUEST_FAILED",
-            detail: error?.Message ?? "The request failed.");
     }
 }

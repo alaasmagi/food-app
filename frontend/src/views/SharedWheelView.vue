@@ -88,7 +88,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* Figma "Desktop / 10 Shared wheel": public page, top bar, wheel + winner + call to action. */
 .shared-wheel { min-height: 100vh; box-sizing: border-box; background: var(--color-bg-canvas); }
 .shared-wheel__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-4) var(--space-6); }
 .shared-wheel__brand { display: flex; align-items: center; gap: var(--space-3); color: var(--color-text-primary); font-size: 14px; line-height: 20px; font-weight: var(--weight-semibold); text-decoration: none; }

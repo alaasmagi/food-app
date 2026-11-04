@@ -3,7 +3,6 @@ import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-n
 
 import { colors, fonts, radius, typography } from '@/theme/tokens';
 
-/** Ported 1:1 from Switch.d.ts. `onClick` becomes `onPress`. */
 export interface SwitchProps {
   label?: string;
   checked?: boolean;
@@ -13,12 +12,7 @@ export interface SwitchProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Toggle switch with an accent track when on. Ported from the web Switch: the
- * `<label>`/`<span>` track+thumb become `Pressable`/`View`, the CSS `left`
- * transition becomes the thumb's absolute position keyed off `checked`, and
- * values come from tokens. Controlled when `checked` is passed, else internal.
- */
+/** Toggle switch with an accent track when on; controlled when `checked` is passed. */
 export function Switch({
   label,
   checked,

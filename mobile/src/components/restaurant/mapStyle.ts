@@ -1,11 +1,6 @@
 import type { MapStyleElement, Region } from 'react-native-maps';
 
-/**
- * Dark map style for Google Maps (Android). iOS uses Apple Maps' native dark
- * mode via `userInterfaceStyle`, so this array is only applied on Android. The
- * palette approximates the design system's dark surfaces (near-black base,
- * muted labels) so the map reads as part of the dark app.
- */
+/** Dark Google Maps style for Android; iOS uses Apple Maps' native dark mode instead. */
 export const darkMapStyle: MapStyleElement[] = [
   { elementType: 'geometry', stylers: [{ color: '#121518' }] },
   { elementType: 'labels.text.stroke', stylers: [{ color: '#121518' }] },
@@ -57,7 +52,6 @@ export const darkMapStyle: MapStyleElement[] = [
   },
 ];
 
-/** Fallback region when there are no coordinate-bearing restaurants. */
 export const DEFAULT_REGION: Region = {
   latitude: 59.437,
   longitude: 24.7536,
@@ -65,10 +59,6 @@ export const DEFAULT_REGION: Region = {
   longitudeDelta: 0.4,
 };
 
-/**
- * Fits a region to a set of coordinates (bounding box + padding). Returns
- * DEFAULT_REGION when the list is empty.
- */
 export function regionForCoordinates(
   coords: { latitude: number; longitude: number }[],
 ): Region {

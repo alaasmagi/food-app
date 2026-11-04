@@ -8,12 +8,7 @@ export interface NotificationPreferencesVars {
   notificationEnvironmentId: string | null;
 }
 
-/**
- * Updates the current user's notification preferences. The PATCH returns the
- * full updated AppUser, so on success we write it straight into the current-user
- * cache (rather than invalidating + refetching) — the Settings screen then
- * reflects the saved state immediately.
- */
+/** Updates notification preferences, writing the returned AppUser straight into the current-user cache. */
 export function useUpdateNotificationPreferences() {
   const qc = useQueryClient();
   return useMutation({

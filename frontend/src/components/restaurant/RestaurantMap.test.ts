@@ -12,6 +12,7 @@ vi.mock('leaflet', () => {
   const layerGroup = vi.fn(() => ({
     addTo: vi.fn().mockReturnThis(),
     clearLayers: vi.fn(),
+    eachLayer: vi.fn(),
   }))
   const popup = vi.fn(() => ({
     setLatLng: vi.fn().mockReturnThis(),

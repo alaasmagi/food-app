@@ -7,19 +7,6 @@ using Domain;
 
 namespace Application;
 
-public class FavouriteIdentityMapper : IMapper<Favourite, Favourite>
-{
-    public Favourite? Map(Favourite? entity)
-    {
-        return entity;
-    }
-
-    public IEnumerable<Favourite>? Map(IEnumerable<Favourite>? entities)
-    {
-        return entities;
-    }
-}
-
 public class FavouriteService
     : BaseService<Favourite, Favourite, IFavouriteRepository>, IFavouriteService
 {
@@ -34,12 +21,7 @@ public class FavouriteService
         _favouriteRepository = favouriteRepository;
     }
 
-    /// <summary>
-    /// A Favourite is one rating per (user, restaurant): re-submitting a create for a restaurant the
-    /// actor already rated updates that existing row in place instead of erroring or duplicating
-    /// (see design.md Decision 3). The current ConcurrencyToken is read here and handed straight to
-    /// UpdateAsync so the caller never needs to know the existing row's id or token.
-    /// </summary>
+    // One rating per (user, restaurant): creating again for a rated restaurant updates the existing row.
     public override async Task<IMethodResponse<Favourite>> CreateAsync(Favourite entity, Guid actor = default)
     {
         var existing = await _favouriteRepository.GetByRestaurantAsync(entity.RestaurantId, actor);
@@ -91,10 +73,7 @@ public class FavouriteService
         return await base.RemoveAsync(id, expectedConcurrencyToken, actor);
     }
 
-    /// <summary>
-    /// Same unscoped-fetch-first pattern as DiningEnvironmentService (see design.md Decision 2), so
-    /// cross-user access to an existing Favourite surfaces as FORBIDDEN instead of NOT_FOUND.
-    /// </summary>
+    // Fetches unscoped first so cross-user access to an existing row reports FORBIDDEN instead of NOT_FOUND.
     private async Task<IError?> CheckOwnershipAsync(Guid id, Guid actor)
     {
         var unscopedResponse = await _favouriteRepository.GetByIdAsync(id);

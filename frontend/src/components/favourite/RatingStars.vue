@@ -1,9 +1,7 @@
 <script setup lang="ts">
-// Feature-specific rating control. The design system has no star glyph, so this
-// draws its own inline star SVG rather than depending on the Icon primitive.
+// Feature-specific rating control.
 withDefaults(
   defineProps<{
-    /** Editable click-to-set mode; otherwise read-only display. */
     editable?: boolean
     size?: number
   }>(),
@@ -67,7 +65,6 @@ function select(value: number): void {
 }
 
 .stars__star--filled {
-  /* Figma rating: filled stars use accent/solid, empty ones border/strong. */
   color: var(--color-accent-solid);
 }
 

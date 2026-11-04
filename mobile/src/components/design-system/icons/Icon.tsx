@@ -4,12 +4,7 @@ import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
 
 import { colors } from '@/theme/tokens';
 
-/**
- * Ported from alaasmagi-design-system Icon.jsx. The `.d.ts` there is stale
- * (14 names); the JSX PATHS map is authoritative, so the name union below
- * covers all 27 glyphs. Web inline-SVG becomes react-native-svg; the web
- * `currentColor` default becomes an explicit theme color.
- */
+/** Design-system icon set rendered with react-native-svg. */
 export type IconName =
   | 'chevron-down'
   | 'chevron-right'
@@ -40,13 +35,9 @@ export type IconName =
   | 'zoom';
 
 export interface IconProps {
-  /** Which glyph to render. */
   name: IconName;
-  /** Pixel size (square). Default 16. */
   size?: number;
-  /** Stroke width. Default 2. */
   strokeWidth?: number;
-  /** Stroke color. Defaults to the primary text token. */
   color?: string;
   style?: StyleProp<ViewStyle>;
 }

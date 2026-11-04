@@ -1,6 +1,4 @@
 using Asp.Versioning;
-using Base.Contracts.DTO;
-using Base.DTO;
 using Contracts.Application;
 using DTO.Web;
 using Microsoft.AspNetCore.RateLimiting;
@@ -18,7 +16,7 @@ namespace Web.API.Controllers;
 [ApiBearerAuthorize]
 public class AppUsersController(
     IAppUserService appUserService,
-    IMapper mapper) : ControllerBase
+    IMapper mapper) : ApiControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<AppUserDto>>> GetAll()
@@ -96,31 +94,5 @@ public class AppUsersController(
         }
 
         return NoContent();
-    }
-
-    private static string? NormalizeConcurrencyToken(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value)
-            ? null
-            : value.Trim().Trim('"');
-    }
-
-    private ObjectResult ToProblem(IError? error)
-    {
-        var statusCode = error?.Code switch
-        {
-            ErrorDefaults.Codes.NotFound => StatusCodes.Status404NotFound,
-            ErrorDefaults.Codes.Forbidden => StatusCodes.Status403Forbidden,
-            ErrorDefaults.Codes.ConcurrencyConflict => StatusCodes.Status409Conflict,
-            ErrorDefaults.Codes.ConcurrencyTokenRequired => StatusCodes.Status428PreconditionRequired,
-            ErrorDefaults.Codes.InvalidPaging => StatusCodes.Status400BadRequest,
-            ErrorDefaults.Codes.MapFailed => StatusCodes.Status400BadRequest,
-            _ => StatusCodes.Status500InternalServerError
-        };
-
-        return Problem(
-            statusCode: statusCode,
-            title: error?.Code ?? "REQUEST_FAILED",
-            detail: error?.Message ?? "The request failed.");
     }
 }

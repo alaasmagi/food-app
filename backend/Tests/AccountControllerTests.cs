@@ -48,7 +48,7 @@ public class AccountControllerTests
 
     // Minimal IUrlHelper: IsLocalUrl mirrors ASP.NET's rule (leading '/', not '//' or '/\'), and
     // Action(...) stands in for Url.Action("Index", "Home") returning the app root.
-    private sealed class FakeUrlHelper : IUrlHelper
+    private class FakeUrlHelper : IUrlHelper
     {
         public ActionContext ActionContext { get; } = new();
 

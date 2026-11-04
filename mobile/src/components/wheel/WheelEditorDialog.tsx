@@ -23,16 +23,10 @@ import { colors, fonts, spacing, typography } from '@/theme/tokens';
 export interface WheelEditorDialogProps {
   open: boolean;
   onClose: () => void;
-  /** When set, the dialog edits this wheel; otherwise it creates one. */
   wheel?: UserWheel | null;
 }
 
-/**
- * Create or edit a wheel: a name, a searchable checkbox list over the already
- * cached restaurant catalog (no extra fetch), and an isPublic switch. The saved
- * `restaurantNames` is a frozen snapshot of the checked restaurants' names (not
- * ids). Editing a saved, public wheel also offers a "Copy share link" action.
- */
+/** Create or edit a wheel; `restaurantNames` is a frozen snapshot of names, not ids. */
 export function WheelEditorDialog({
   open,
   onClose,
@@ -40,8 +34,6 @@ export function WheelEditorDialog({
 }: WheelEditorDialogProps): React.ReactElement {
   const isEdit = wheel != null;
   const { data: restaurants } = useRestaurants();
-  // Import-from-environment reads the user's environments and their membership join rows — both
-  // already cached client-side via React Query. No backend call is involved in the import.
   const { data: environments } = useEnvironments();
   const { data: memberships } = useEnvironmentRestaurants();
   const create = useCreateWheel();
@@ -53,11 +45,9 @@ export function WheelEditorDialog({
   const [isPublic, setIsPublic] = useState(false);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  // Transient: the environment picked in the import control. It only triggers one import and is reset
-  // afterward — the wheel records names, never which environment they came from.
+  // Transient: the wheel records names, never which environment they came from.
   const [importEnvId, setImportEnvId] = useState('');
 
-  // Seed the form from the edited wheel each time the dialog opens.
   useEffect(() => {
     if (open) {
       setName(wheel?.name ?? '');
@@ -84,15 +74,12 @@ export function WheelEditorDialog({
     });
   }
 
-  // Environments offered by the import control; empty when the user has none.
   const environmentOptions: SelectOption[] = useMemo(
     () => (environments ?? []).map((environment) => ({ value: environment.id, label: environment.name })),
     [environments],
   );
 
-  // Merge an environment's current restaurants into the selection, by name. Additive and
-  // de-duplicating: existing selections are kept and no name is added twice. Membership ids that no
-  // longer resolve to a catalog restaurant (deleted since) are skipped. Reports the number newly added.
+  // Additive and de-duplicating by name; memberships whose restaurant was deleted are skipped.
   function importFromEnvironment(envId: string) {
     // Reset the control so the same environment can be imported again.
     setImportEnvId('');
@@ -103,8 +90,8 @@ export function WheelEditorDialog({
     let added = 0;
     for (const restaurantId of Object.keys(membership)) {
       const restaurantName = nameById.get(restaurantId);
-      if (restaurantName == null) continue; // membership references a restaurant no longer in the catalog
-      if (next.has(restaurantName)) continue; // already selected — never duplicate
+      if (restaurantName == null) continue;
+      if (next.has(restaurantName)) continue;
       next.add(restaurantName);
       added += 1;
     }
@@ -126,7 +113,6 @@ export function WheelEditorDialog({
 
   function handleSave() {
     if (!canSave) return;
-    // Frozen snapshot of names, in catalog order, deduped.
     const restaurantNames = catalog.map((r) => r.name).filter((n) => selected.has(n));
     const input = { name: trimmedName, restaurantNames, isPublic };
     if (isEdit && wheel) {

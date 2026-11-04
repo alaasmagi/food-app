@@ -17,11 +17,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {
   /* ignore — splash may already be hidden */
 });
 
-/**
- * Auth gate: redirects between the (auth) and (tabs) route groups whenever the
- * auth status settles. While `loading`, it waits so we never flash the login
- * screen before secure-store hydration completes.
- */
+/** Redirects between (auth) and (tabs) once auth settles; waits while loading so login never flashes. */
 function useAuthGate() {
   const status = useAuthStore((s) => s.status);
   const segments = useSegments();

@@ -135,8 +135,7 @@ public class DailyRecommendationNotificationService(
         var rows = new List<PreparedRow>();
         foreach (var candidate in candidates)
         {
-            // A restaurant whose offer window cannot be parsed into from/until is omitted rather than
-            // sent with a bad window (Step 5: never emit degraded rows).
+            // A restaurant whose offer window cannot be parsed is omitted rather than sent with a bad window.
             if (!OfferValueParser.TryParseOfferWindow(candidate.OfferTimeText, out var from, out var until))
             {
                 logger.LogDebug(
@@ -316,5 +315,5 @@ public class DailyRecommendationNotificationService(
     }
 
     // A prepared row plus the UTC instant its offer window ends, used to compute the message expiration.
-    private sealed record PreparedRow(RecommendationRow Row, DateTimeOffset WindowEndUtc);
+    private record PreparedRow(RecommendationRow Row, DateTimeOffset WindowEndUtc);
 }

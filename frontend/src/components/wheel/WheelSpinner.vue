@@ -4,15 +4,12 @@ import Button from '../design-system/forms/Button.vue'
 
 const props = defineProps<{
   names: string[]
-  /** Hide the built-in winner line (the page shows its own winner panel). */
   hideResult?: boolean
-  /** Hide the built-in Spin button (the page drives `spin()` itself). */
   hideControls?: boolean
 }>()
 const emit = defineEmits<{ result: [name: string] }>()
 
-// Token-only segment palette (no hardcoded colors), cycled by index.
-// Figma: wheel segments use the categorical chart series tokens (color/chart/series-1…8).
+// Figma: segments cycle through the chart series tokens (color/chart/series-1…8).
 const PALETTE = [1, 2, 3, 4, 5, 6, 7, 8].map((i) => `var(--color-chart-series-${i})`)
 
 const CENTER = 100
@@ -22,8 +19,6 @@ const LABEL_RADIUS = 60
 const rotation = ref(0)
 const spinning = ref(false)
 const result = ref<string | null>(null)
-// Index of the settled winner, or null while idle/spinning. Drives dimming the other segments so
-// the chosen one stands out under the pointer.
 const winnerIndex = ref<number | null>(null)
 let chosenIndex = 0
 
@@ -61,7 +56,6 @@ const segments = computed(() => {
 function spin(): void {
   if (!canSpin.value) return
   const n = props.names.length
-  // Clear the previous winner so all segments are lit again while the wheel turns.
   winnerIndex.value = null
   result.value = null
   chosenIndex = Math.floor(Math.random() * n)
@@ -77,9 +71,7 @@ function spin(): void {
 }
 
 function onTransitionEnd(event: TransitionEvent): void {
-  // The rotor's `transform` ending is the wheel stopping. The segments' `opacity` transition (fading
-  // the losers) also bubbles a transitionend here — ignore it, otherwise starting a new spin (which
-  // un-dims the previous winner) would fire this early and light up the winner mid-spin.
+  // Only the transform ends the spin; the segments' opacity transitionend also bubbles here and would settle it mid-spin.
   if (event.propertyName !== 'transform') return
   if (!spinning.value) return
   spinning.value = false
@@ -119,7 +111,6 @@ defineExpose({ spin, canSpin, spinning })
             </text>
           </g>
         </g>
-        <!-- Outer rim + hub (static, drawn over the rotor) frame the wheel. -->
         <circle :cx="CENTER" :cy="CENTER" r="93" fill="none" stroke="var(--border-subtle)" stroke-width="2" />
         <circle :cx="CENTER" :cy="CENTER" r="10" fill="var(--surface-raised)" stroke="var(--border-strong)" stroke-width="1.5" />
         <circle :cx="CENTER" :cy="CENTER" r="3.5" fill="var(--color-accent-solid)" />
@@ -138,12 +129,10 @@ defineExpose({ spin, canSpin, spinning })
 </template>
 
 <style scoped>
-/* Figma wheel: chart-series segments, text/on-accent labels, text/primary pointer, raised hub. */
 .spinner { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); width: 100%; }
 .spinner__wheel-wrap { position: relative; width: 100%; max-width: 440px; aspect-ratio: 1; padding-top: 12px; box-sizing: content-box; }
 .spinner__wheel { display: block; width: 100%; height: 100%; }
 .spinner__rotor { transform-origin: 100px 100px; transition: transform 3.2s cubic-bezier(0.16, 1, 0.3, 1); }
-/* After the wheel settles, fade the losing segments so the winner under the pointer stands out. */
 .spinner__seg { transition: opacity var(--duration-slow) var(--ease-standard); }
 .spinner__seg--dim { opacity: 0.35; }
 .spinner__label { fill: var(--color-text-on-accent); font-family: var(--font-body); font-size: 7px; font-weight: var(--weight-medium); pointer-events: none; }

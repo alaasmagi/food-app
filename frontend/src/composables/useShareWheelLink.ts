@@ -1,19 +1,10 @@
 import { useToastsStore } from '../stores/toasts'
 
-/** Build the shareable URL for a wheel from the running origin. */
 export function shareLinkFor(wheelId: string): string {
   return `${window.location.origin}/w/${wheelId}`
 }
 
-/**
- * Reusable copy-share-link behaviour for public wheels, used by the wheel editor
- * dialog and the wheel view.
- *
- * `copyShareLink(wheelId)` writes `window.location.origin + '/w/' + id` to the
- * clipboard and confirms with a success toast. A clipboard failure (insecure
- * context, older browser, denied permission) is surfaced as a danger toast
- * rather than thrown, so callers never need a try/catch.
- */
+/** Copies a public wheel's share link; clipboard failures become a danger toast instead of throwing. */
 export function useShareWheelLink() {
   const toasts = useToastsStore()
 

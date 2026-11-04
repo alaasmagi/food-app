@@ -6,19 +6,6 @@ using Domain;
 
 namespace Application;
 
-public class UserWheelIdentityMapper : IMapper<UserWheel, UserWheel>
-{
-    public UserWheel? Map(UserWheel? entity)
-    {
-        return entity;
-    }
-
-    public IEnumerable<UserWheel>? Map(IEnumerable<UserWheel>? entities)
-    {
-        return entities;
-    }
-}
-
 public class UserWheelService(
     IUserWheelRepository userWheelRepository,
     Base.Contracts.DataAccess.IBaseUow uow,

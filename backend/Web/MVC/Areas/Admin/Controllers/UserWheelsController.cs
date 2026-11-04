@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Web.MVC.Areas.Admin.Controllers;
 
-public sealed class UserWheelsController : UserScopedAdminController<UserWheelDto, UserWheel>
+public class UserWheelsController : UserScopedAdminController<UserWheelDto, UserWheel>
 {
     public UserWheelsController(
         IUserWheelService service,

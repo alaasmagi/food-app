@@ -8,7 +8,7 @@ using Domain;
 
 namespace Tests;
 
-internal sealed class FakeOfferCacheRepository : IOfferCacheRepository
+internal class FakeOfferCacheRepository : IOfferCacheRepository
 {
     private readonly Dictionary<Guid, OfferCacheEntry> _entries = new();
 
@@ -24,7 +24,7 @@ internal sealed class FakeOfferCacheRepository : IOfferCacheRepository
     }
 }
 
-internal sealed class FakeOfferFetchService : IOfferFetchService
+internal class FakeOfferFetchService : IOfferFetchService
 {
     private readonly Dictionary<Guid, IMethodResponse<IReadOnlyCollection<DailyOfferItem>>> _results = new();
 
@@ -42,7 +42,7 @@ internal sealed class FakeOfferFetchService : IOfferFetchService
 
 // Records confirmed publishes with their AMQP expiration. FailIds forces an unconfirmed result for
 // matching envelope ids so tests can exercise the "unconfirmed means failed" path.
-internal sealed class FakeEventPublisher : IBaseEventPublisher
+internal class FakeEventPublisher : IBaseEventPublisher
 {
     public List<PublishedEnvelope> Published { get; } = new();
     public HashSet<string> FailIds { get; } = new();
@@ -62,16 +62,16 @@ internal sealed class FakeEventPublisher : IBaseEventPublisher
     }
 }
 
-internal sealed record PublishedEnvelope(object Envelope, string? Expiration);
+internal record PublishedEnvelope(object Envelope, string? Expiration);
 
 // Minimal TimeProvider returning a fixed instant, for deterministic scheduling/expiry tests.
-internal sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+internal class FixedTimeProvider(DateTimeOffset now) : TimeProvider
 {
     public override DateTimeOffset GetUtcNow() => now;
 }
 
 // Returns a fixed response (or throws) for every request, for HttpClient-based fetcher tests.
-internal sealed class FakeHttpMessageHandler(HttpStatusCode statusCode, string content) : HttpMessageHandler
+internal class FakeHttpMessageHandler(HttpStatusCode statusCode, string content) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         => Task.FromResult(new HttpResponseMessage(statusCode) { Content = new StringContent(content) });

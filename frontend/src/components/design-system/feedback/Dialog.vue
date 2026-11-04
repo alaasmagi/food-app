@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import Icon from '../Icon.vue'
 
-// Ported from the design system's Dialog.d.ts. React onClose -> `close` emit;
-// children/footer -> default and `footer` slots. Uses a page-level fixed overlay
-// so it covers the viewport regardless of the mount container.
+// Ported from the design system's Dialog.d.ts. React onClose -> `close` emit; children/footer -> slots.
 withDefaults(
   defineProps<{
     open: boolean
@@ -40,7 +38,6 @@ const emit = defineEmits<{ close: [] }>()
 </template>
 
 <style scoped>
-/* Figma "Dialog": bg/raised, border/subtle, radius/lg, Shadow/lg, 24px padding; Desktop/H3 title, ghost close button. */
 .ds-dialog__overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: var(--space-4); background: var(--color-overlay-scrim); }
 .ds-dialog__panel { display: flex; flex-direction: column; gap: var(--space-4); max-width: 100%; max-height: calc(100vh - 2 * var(--space-4)); box-sizing: border-box; padding: var(--space-6); overflow-y: auto; background: var(--color-bg-raised); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); color: var(--color-text-primary); }
 .ds-dialog__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }

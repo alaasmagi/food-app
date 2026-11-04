@@ -72,7 +72,7 @@ function viewTabs(wrapper: VueWrapper) {
   return wrapper.find('.dashboard__view-toggle').findAll('.dashboard__view-btn')
 }
 
-// Leaflet cannot render in jsdom; stub the map so mounting the (now default) map view is safe and
+// Leaflet cannot render in jsdom; stub the map so mounting the default map view is safe and
 // the set it receives can be inspected via props.
 const mountWithMapStub = () =>
   mount(DashboardView, { global: { stubs: { RestaurantMap: true } } })
@@ -104,8 +104,7 @@ describe('DashboardView with a specific environment selected', () => {
     const names = wrapper.findAll('.restaurant__name').map((n) => n.text())
     expect(names).toEqual(['Alpha'])
 
-    // Members expose Remove; the inline "Add to place" toggle is gone
-    // (adding now happens through the picker).
+    // Members expose Remove; adding happens through the picker.
     const buttons = wrapper.findAll('button').map((b) => b.text())
     expect(buttons).toContain('Remove from place')
     expect(buttons).not.toContain('Add to place')
@@ -215,8 +214,8 @@ describe('DashboardView list/map toggle', () => {
     await flushPromises()
 
     expect(wrapper.findComponent(RestaurantMap).exists()).toBe(true)
-    // The dashboard no longer pre-seeds the viewport; the map drives it by reporting bounds, which
-    // the dashboard turns into a store.loadInBounds. Exercise that store path directly.
+    // The map drives the viewport by reporting bounds, which the dashboard turns into a
+    // store.loadInBounds. Exercise that store path directly.
     const store = useRestaurantsStore(pinia)
     await store.loadInBounds({ minLat: 59.3, minLon: 24.55, maxLat: 59.58, maxLon: 24.95 })
     await flushPromises()

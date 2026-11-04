@@ -14,20 +14,16 @@ const emit = defineEmits<{ close: [] }>()
 const store = useEnvironmentsStore()
 const toasts = useToastsStore()
 
-// Backend accepts a radius in [1, 50000] meters; mirror it so an out-of-range value never round-trips
-// to a guaranteed 400.
+// Mirrors the backend's [1, 50000] m range so an out-of-range value never round-trips to a 400.
 const MIN_RADIUS_METERS = 1
 const MAX_RADIUS_METERS = 50000
 
 const newName = ref('')
 const newDescription = ref('')
-// Origin for the create form's optional location section.
 const newOrigin = ref<AutoFillOrigin>({ latitude: null, longitude: null, radiusMeters: null })
 const drafts = reactive<Record<string, string>>({})
-// Per-environment origin drafts, seeded from each environment's stored auto-fill fields.
 const originDrafts = reactive<Record<string, AutoFillOrigin>>({})
-// Which location section is expanded: an environment id, 'new' for the create form, or null. Only one
-// picker (one Leaflet map) is mounted at a time.
+// An environment id, 'new' for the create form, or null; only one Leaflet map is mounted at a time.
 const expandedLocationId = ref<string | null>(null)
 const confirmingDeleteId = ref<string | null>(null)
 const error = ref<string | null>(null)
@@ -35,7 +31,6 @@ const locationError = ref<string | null>(null)
 // Id of the environment whose auto-fill request is in flight (guards double submits).
 const filling = ref<string | null>(null)
 
-// Keep a rename draft and an origin draft per environment, seeded from the store.
 watch(
   () => store.list,
   (list) => {
@@ -65,12 +60,10 @@ function hasCoordinates(origin: AutoFillOrigin): boolean {
   return origin.latitude != null && origin.longitude != null
 }
 
-// Whether an environment has a stored origin (so it can be re-filled from the list at any time).
 function hasStoredCoordinates(environment: DiningEnvironment): boolean {
   return environment.autoFillLatitude != null && environment.autoFillLongitude != null
 }
 
-// Mirror the backend's write-path rules to block an obviously invalid save. Returns a message or null.
 function validateOrigin(origin: AutoFillOrigin): string | null {
   const hasLat = origin.latitude != null
   const hasLng = origin.longitude != null
@@ -134,7 +127,6 @@ async function rename(id: string): Promise<void> {
   }
 }
 
-// Persist the edited location (and radius) on an existing environment via the update path.
 async function saveLocation(id: string): Promise<void> {
   const name = drafts[id]?.trim()
   if (!name) return

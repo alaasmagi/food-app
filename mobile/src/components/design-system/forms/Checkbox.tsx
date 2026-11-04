@@ -4,7 +4,6 @@ import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-n
 import { Icon } from '@/components/design-system/icons/Icon';
 import { colors, fonts, radius, typography } from '@/theme/tokens';
 
-/** Ported 1:1 from Checkbox.d.ts. `onClick` becomes `onPress`. */
 export interface CheckboxProps {
   label?: string;
   checked?: boolean;
@@ -14,12 +13,7 @@ export interface CheckboxProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Checkbox with an accent-filled checked state. Ported from the web Checkbox:
- * the box `<span>` becomes a `View` rendering the ported `Icon` check when on,
- * `onClick` becomes `onPress`, and values come from tokens. Controlled when
- * `checked` is passed, else internal.
- */
+/** Checkbox with an accent-filled checked state; controlled when `checked` is passed. */
 export function Checkbox({
   label,
   checked,

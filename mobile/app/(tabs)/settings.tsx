@@ -13,15 +13,9 @@ import { useUpdateNotificationPreferences } from '@/hooks/useUpdateNotificationP
 import type { DiningEnvironment } from '@/types/environment';
 import { colors, fonts, spacing, typography } from '@/theme/tokens';
 
-/** Select value standing in for `notificationEnvironmentId === null` ("all"). */
 const ALL_VALUE = '__all__';
 
-/**
- * Settings: the daily-email notification preferences plus log out. A switch for
- * `sendNotifications` and an environment select (fixed "All environments" plus
- * one per dining environment, disabled when notifications are off). Prefills
- * from the current user; saving persists and confirms with a toast.
- */
+/** Settings: daily-email notification preferences and log out. */
 export default function SettingsScreen() {
   const { logout } = useAuth();
   const { data: user, isLoading } = useCurrentUser();
@@ -32,7 +26,6 @@ export default function SettingsScreen() {
   const [sendNotifications, setSendNotifications] = useState(false);
   const [envValue, setEnvValue] = useState<string>(ALL_VALUE);
 
-  // Prefill from the current user once it loads (and if it changes).
   useEffect(() => {
     if (user) {
       setSendNotifications(user.sendNotifications);
@@ -48,8 +41,7 @@ export default function SettingsScreen() {
     [environments],
   );
 
-  // Fall back to "All environments" if the saved id is not among current options
-  // (e.g. its environment was deleted).
+  // The saved environment may have been deleted; fall back to "All environments".
   const selectValue = options.some((o) => o.value === envValue) ? envValue : ALL_VALUE;
 
   function handleSave() {

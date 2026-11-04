@@ -20,7 +20,6 @@ const model = defineModel<boolean>({ default: false })
 </template>
 
 <style scoped>
-/* Figma "Checkbox": 20px box, 2px border/strong, accent fill when checked, Body/Default label. */
 .ds-checkbox { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; cursor: pointer; font-family: var(--font-body); font-size: 16px; line-height: 24px; color: var(--color-text-primary); }
 .ds-checkbox__input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 .ds-checkbox__box { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; height: 20px; box-sizing: border-box; border: var(--border-thick) solid var(--color-border-strong); border-radius: var(--radius-xs); background: var(--color-bg-surface); transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard); }

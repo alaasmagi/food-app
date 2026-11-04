@@ -2,10 +2,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { colors } from '@/theme/tokens';
 
-/**
- * Entry route. Shows a spinner while auth status hydrates from secure-store;
- * the auth gate in the root layout then redirects to (auth) or (tabs).
- */
+/** Entry route: a spinner while auth hydrates; the root auth gate then redirects. */
 export default function Index() {
   return (
     <View style={styles.container}>

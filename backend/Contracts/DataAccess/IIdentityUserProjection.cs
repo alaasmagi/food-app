@@ -12,7 +12,7 @@ public static class IdentityUserActions
 }
 
 // Identity-sourced user fields carried by a user event. Only UserId is present on user-deleted.
-public sealed record IdentityUserData(
+public record IdentityUserData(
     Guid UserId,
     string? Email,
     string? Username,

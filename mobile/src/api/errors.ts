@@ -1,10 +1,6 @@
 import type { ProblemDetails } from '@/types/restaurant';
 
-/**
- * Error thrown by API modules when the backend returns a non-ok response.
- * Carries the parsed RFC 7807 ProblemDetails fields so callers (and React
- * Query) can surface a meaningful message.
- */
+/** Error thrown by API modules on non-ok responses, carrying the parsed ProblemDetails. */
 export class ProblemDetailsError extends Error {
   constructor(
     readonly title: string,
@@ -16,10 +12,6 @@ export class ProblemDetailsError extends Error {
   }
 }
 
-/**
- * Reads a ProblemDetails body from a non-ok response and returns a typed error.
- * Falls back gracefully when the body is missing or not JSON.
- */
 export async function parseProblemDetails(res: Response): Promise<ProblemDetailsError> {
   let body: Partial<ProblemDetails> = {};
   try {

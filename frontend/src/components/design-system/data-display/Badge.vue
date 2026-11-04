@@ -21,7 +21,6 @@ withDefaults(
 </template>
 
 <style scoped>
-/* Figma "Badge": pill, Label 12/16 500, tone border + subtle fill. */
 .ds-badge { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-0-5) var(--space-2); border: var(--border-thin) solid; border-radius: var(--radius-full); font-family: var(--font-body); font-size: 12px; line-height: 16px; font-weight: var(--weight-medium); letter-spacing: 0.005em; white-space: nowrap; }
 .ds-badge--neutral { background: var(--color-bg-sunken); border-color: var(--color-border-default); color: var(--color-text-secondary); }
 .ds-badge--accent { background: var(--color-accent-subtle); border-color: var(--color-accent-border); color: var(--color-accent-text); }

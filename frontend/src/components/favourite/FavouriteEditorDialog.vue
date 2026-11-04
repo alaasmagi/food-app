@@ -17,7 +17,6 @@ const rating = ref(0)
 const note = ref('')
 const saving = ref(false)
 
-// Seed the form from the existing favourite each time the dialog opens.
 watch(
   () => props.open,
   (open) => {

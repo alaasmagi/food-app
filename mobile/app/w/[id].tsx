@@ -6,12 +6,7 @@ import { WheelSpinner } from '@/components/wheel/WheelSpinner';
 import { usePublicWheel } from '@/hooks/usePublicWheel';
 import { colors, fonts, spacing, typography } from '@/theme/tokens';
 
-/**
- * Public shared-wheel deep-link route (`foodroulette://w/<id>`), exempt from the
- * auth gate and rendered outside the tab shell. Loads the wheel via the public
- * endpoint and shows its name + spinner; a not-found (404) resolves to a
- * friendly message rather than an error page or a login redirect.
- */
+/** Public shared-wheel route (`foodroulette://w/<id>`), outside the auth gate and tab shell. */
 export default function SharedWheelScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: wheel, isLoading, isError } = usePublicWheel(id);

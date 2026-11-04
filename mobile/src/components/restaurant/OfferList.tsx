@@ -5,11 +5,7 @@ import { useRestaurantOffers } from '@/hooks/useRestaurantOffers';
 import type { Offer } from '@/types/restaurant';
 import { colors, fonts, spacing, typography } from '@/theme/tokens';
 
-/**
- * Owns the lazy offers query for one restaurant and renders its rows, plus
- * loading, "No offers today" empty, and error states. Rendered only when the
- * parent card is expanded, so its query is always enabled here.
- */
+/** Offers for one restaurant with loading, empty and error states; rendered only when its card is expanded. */
 export function OfferList({ restaurantId }: { restaurantId: string }): React.ReactElement {
   const { data, isLoading, isError, error } = useRestaurantOffers(restaurantId, true);
 

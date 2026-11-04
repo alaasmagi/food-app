@@ -4,18 +4,11 @@ import * as Clipboard from 'expo-clipboard';
 import { useToast } from '@/components/design-system/feedback/ToastProvider';
 import { config } from '@/config/env';
 
-/** Build the shareable URL for a wheel from the configured web app base. */
 export function shareLinkFor(wheelId: string): string {
   return `${config.webAppBaseUrl}/w/${wheelId}`;
 }
 
-/**
- * Reusable copy-share-link behaviour for public wheels, used by the wheel
- * editor dialog and the wheel tab screen. `copyShareLink(wheelId)` writes
- * `<webAppBaseUrl>/w/<id>` to the clipboard and confirms with a success toast.
- * A clipboard failure is surfaced as a danger toast rather than thrown, so
- * callers never need a try/catch.
- */
+/** Copies a wheel's share link and toasts the outcome (clipboard failures toast instead of throwing). */
 export function useShareWheelLink() {
   const { push } = useToast();
 

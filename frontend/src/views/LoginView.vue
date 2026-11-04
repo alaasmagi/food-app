@@ -7,9 +7,7 @@ import Button from '../components/design-system/forms/Button.vue'
 const auth = useAuthStore()
 const route = useRoute()
 
-// The guarded route that bounced us here, so login returns straight to it (its guard
-// then completes the token exchange). Defaults to the dashboard. Only same-app absolute
-// paths are honored - reject protocol-relative "//host" values as an open-redirect guard.
+// Only same-app absolute paths are honored; protocol-relative "//host" values would be an open redirect.
 const redirectTarget = computed(() => {
   const raw = route.query.redirect
   const path = typeof raw === 'string' ? raw : null

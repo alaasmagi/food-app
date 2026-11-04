@@ -1,7 +1,5 @@
 <script lang="ts">
-// Authoritative prop contract, ported 1:1 from the design system's Icon.d.ts.
-// Exported from a plain <script> block so other components (Button, ...) can
-// import the union type.
+// Ported 1:1 from the design system's Icon.d.ts; a plain <script> block so other components can import IconName.
 export type IconName =
   | 'chevron-down'
   | 'chevron-right'
@@ -37,13 +35,9 @@ import { computed } from 'vue'
 
 const props = withDefaults(
   defineProps<{
-    /** Which glyph to render. */
     name: IconName
-    /** Pixel size (square). Default 16. */
     size?: number
-    /** Stroke width. Default 2. */
     strokeWidth?: number
-    /** Stroke color. Default currentColor - set via parent's color. */
     color?: string
   }>(),
   {
@@ -53,8 +47,7 @@ const props = withDefaults(
   },
 )
 
-// Minimal geometric line-icon set on a 24x24 grid, stroke-based with round
-// caps/joins. Glyph geometry copied verbatim from the design system's Icon.jsx.
+// Glyph geometry copied verbatim from the design system's Icon.jsx.
 const PATHS: Record<IconName, string> = {
   'chevron-down': '<polyline points="6 9 12 15 18 9" />',
   'chevron-right': '<polyline points="9 18 15 12 9 6" />',

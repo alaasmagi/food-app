@@ -9,16 +9,9 @@ import { useEnvironmentStore } from '@/stores/environmentStore';
 import type { DiningEnvironment } from '@/types/environment';
 import { colors, spacing } from '@/theme/tokens';
 
-/** Sentinel tab value for the fixed "All" tab (store selection is `null`). */
 const ALL_VALUE = '__all__';
 
-/**
- * Environment tab row: a fixed "All" tab followed by one tab per environment.
- * Selecting a tab sets the shared selected-environment store, which drives
- * client-side filtering on both the Dashboard and the Map. A trailing "+"
- * opens the editor to create an environment; an edit affordance opens it to
- * rename or delete the currently selected environment.
- */
+/** Environment tabs ("All" plus one per environment) that drive Dashboard and Map filtering. */
 export function EnvironmentTabs(): React.ReactElement {
   const { data: environments } = useEnvironments();
   const selectedEnvironmentId = useEnvironmentStore((s) => s.selectedEnvironmentId);

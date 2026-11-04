@@ -6,12 +6,7 @@ import type { Restaurant } from '../types/restaurant'
 const DEFAULT_PAGE_SIZE = 20
 
 /**
- * Server-side paged, name/city-searchable restaurant list for the "pick a restaurant" dialogs (the
- * wheel editor, the environment add-picker). Each caller gets its own isolated state, so a dialog
- * never fetches or holds the whole catalog and never clashes with the dashboard's own paged list.
- *
- * Search is debounced and resets to page 1; overlapping fetches (typing, paging) are guarded by a
- * request token so only the latest result is kept. Call `reset()` then `load()` when a dialog opens.
+ * Isolated server-side paged, searchable restaurant list for picker dialogs. Call `reset()` then `load()` on open.
  */
 export function useRestaurantSearch(pageSize = DEFAULT_PAGE_SIZE) {
   const items = ref<Restaurant[]>([])
@@ -42,7 +37,6 @@ export function useRestaurantSearch(pageSize = DEFAULT_PAGE_SIZE) {
     }
   }
 
-  // Debounce search so we don't fetch on every keystroke; committing a term restarts from page 1.
   const commitSearch = debounce((value: string) => {
     search.value = value.trim()
     page.value = 1

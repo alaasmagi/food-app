@@ -8,11 +8,7 @@ import {
 } from '@/api/wheels';
 import { wheelsQueryKey } from '@/hooks/useWheels';
 
-/**
- * Mutation hooks for saved wheels. Each invalidates the wheels query on success
- * so the list stays in sync and the refreshed concurrency token is picked up.
- * Update and delete pass the wheel's token as `If-Match`.
- */
+/** Wheel mutations; each invalidates the wheels query so the refreshed concurrency token is picked up. */
 
 export function useCreateWheel() {
   const qc = useQueryClient();

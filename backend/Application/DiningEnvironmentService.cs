@@ -7,27 +7,11 @@ using Domain;
 
 namespace Application;
 
-public class DiningEnvironmentIdentityMapper : IMapper<DiningEnvironment, DiningEnvironment>
-{
-    public DiningEnvironment? Map(DiningEnvironment? entity)
-    {
-        return entity;
-    }
-
-    public IEnumerable<DiningEnvironment>? Map(IEnumerable<DiningEnvironment>? entities)
-    {
-        return entities;
-    }
-}
-
 public class DiningEnvironmentService
     : BaseService<DiningEnvironment, DiningEnvironment, IDiningEnvironmentRepository>, IDiningEnvironmentService
 {
-    // Effective radius used when an environment has coordinates but no stored radius. Applied only
-    // here, at auto-fill time - a null radius is never persisted as this value (see design.md).
+    // Applied only at auto-fill time; a null radius is never persisted as this value.
     private const int DefaultAutoFillRadiusMeters = 500;
-    private const int MinAutoFillRadiusMeters = 1;
-    private const int MaxAutoFillRadiusMeters = 50000;
     private const double MetersPerDegreeLatitude = 111_320.0;
     private const double EarthRadiusMeters = 6_371_000.0;
 
@@ -115,11 +99,7 @@ public class DiningEnvironmentService
         return removeResult;
     }
 
-    /// <summary>
-    /// BaseRepository's actor scoping would already return NOT_FOUND for a foreign-owned row before any
-    /// ownership check runs, so this fetches unscoped first to distinguish "does not exist" from
-    /// "exists but belongs to someone else" and report FORBIDDEN for the latter (see design.md Decision 3).
-    /// </summary>
+    // Fetches unscoped first so cross-user access to an existing row reports FORBIDDEN instead of NOT_FOUND.
     private async Task<IError?> CheckOwnershipAsync(Guid id, Guid actor)
     {
         var unscopedResponse = await _diningEnvironmentRepository.GetByIdAsync(id);
@@ -181,56 +161,13 @@ public class DiningEnvironmentService
             new DiningEnvironmentAutoFillResult(added, alreadyPresent, totalMembers));
     }
 
-    /// <summary>
-    /// Enforces the auto-fill origin write rules: coordinates are both-or-neither, a radius requires
-    /// coordinates, and supplied coordinates/radius stay within valid ranges. Returns null when valid.
-    /// A null radius alongside coordinates is valid and is persisted as null (the 500m default is
-    /// applied only at auto-fill time).
-    /// </summary>
     private static IError? ValidateAutoFillFields(DiningEnvironment entity)
     {
-        var hasLatitude = entity.AutoFillLatitude.HasValue;
-        var hasLongitude = entity.AutoFillLongitude.HasValue;
-
-        if (hasLatitude != hasLongitude)
-        {
-            return AutoFillValidationError("AutoFillLatitude and AutoFillLongitude must be provided together.");
-        }
-
-        if (entity.AutoFillRadiusMeters.HasValue && !(hasLatitude && hasLongitude))
-        {
-            return AutoFillValidationError("AutoFillRadiusMeters requires AutoFillLatitude and AutoFillLongitude to be set.");
-        }
-
-        if (hasLatitude && (entity.AutoFillLatitude!.Value < -90 || entity.AutoFillLatitude.Value > 90))
-        {
-            return AutoFillValidationError("AutoFillLatitude must be between -90 and 90 degrees.");
-        }
-
-        if (hasLongitude && (entity.AutoFillLongitude!.Value < -180 || entity.AutoFillLongitude.Value > 180))
-        {
-            return AutoFillValidationError("AutoFillLongitude must be between -180 and 180 degrees.");
-        }
-
-        if (entity.AutoFillRadiusMeters.HasValue &&
-            (entity.AutoFillRadiusMeters.Value < MinAutoFillRadiusMeters || entity.AutoFillRadiusMeters.Value > MaxAutoFillRadiusMeters))
-        {
-            return AutoFillValidationError($"AutoFillRadiusMeters must be between {MinAutoFillRadiusMeters} and {MaxAutoFillRadiusMeters} meters.");
-        }
-
-        return null;
+        var message = entity.ValidateAutoFillFields();
+        return message == null ? null : new Error(DiningEnvironmentErrorCodes.AutoFillValidation, message);
     }
 
-    private static Error AutoFillValidationError(string message)
-    {
-        return new Error(DiningEnvironmentErrorCodes.AutoFillValidation, message);
-    }
-
-    /// <summary>
-    /// A lat/lon box guaranteed to contain every point within <paramref name="radiusMeters"/> of the
-    /// origin. Longitude degrees shrink with latitude (cos), so the box is widened accordingly and
-    /// clamped to valid ranges; near the poles the longitude span collapses to a full hemisphere.
-    /// </summary>
+    // Longitude degrees shrink with latitude, so the box is widened by cos(lat) and clamped near the poles.
     private static (double MinLat, double MinLon, double MaxLat, double MaxLon) BoundingBox(
         double latitude,
         double longitude,

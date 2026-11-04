@@ -2,15 +2,7 @@ import { publicFetch } from '@/api/client';
 import { parseProblemDetails } from '@/api/errors';
 import type { PublicWheel } from '@/types/wheel';
 
-/**
- * Fetch a public wheel for the shared-wheel deep-link route.
- *
- * This deliberately uses `publicFetch` (not the authenticated `apiFetch`): the
- * caller may be a logged-out visitor, so there is no `Authorization` header and
- * no 401 token-refresh retry. Resolves to a `PublicWheel` on 200, to `null` on
- * 404 (so the route can show a friendly not-found state), and rejects on any
- * other non-ok status.
- */
+/** Fetches a public wheel without auth (the visitor may be logged out); resolves `null` on 404. */
 export async function getPublicWheel(id: string): Promise<PublicWheel | null> {
   const res = await publicFetch(`/api/v1/public/wheels/${id}`, {
     headers: { Accept: 'application/json' },

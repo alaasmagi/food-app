@@ -4,7 +4,6 @@ import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-n
 import { Icon, IconName } from '@/components/design-system/icons/Icon';
 import { colors, fonts, radius, typography } from '@/theme/tokens';
 
-/** Ported 1:1 from Toast.d.ts. `onClose` uses onPress mechanics in RN. */
 export type ToastTone = 'info' | 'success' | 'warning' | 'danger';
 
 export interface ToastProps {
@@ -22,12 +21,7 @@ const TONE: Record<ToastTone, { icon: IconName; color: string }> = {
   danger: { icon: 'alert-circle', color: colors.statusDanger },
 };
 
-/**
- * Notification card with an icon, title, optional description, and 4 tones.
- * Ported from the web Toast: `<div>`/`<span>` become `View`/`Text`, the close
- * `onClick` becomes a `Pressable` `onPress`, and CSS values come from tokens.
- * This is just the card; the ToastProvider positions and stacks it.
- */
+/** Toast card with icon, title, optional description and 4 tones; ToastProvider positions it. */
 export function Toast({
   title,
   description,

@@ -33,21 +33,30 @@ function restaurant(id: string, name: string): Restaurant {
 
 const RouterLinkStub = { template: '<a><slot /></a>' }
 
+function pageResponse(names: string[]) {
+  const items = names.map((n, i) => restaurant(`r${i + 1}`, n))
+  return new Response(JSON.stringify({ items, total: items.length, page: 1, pageSize: 20 }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+// Each call gets a fresh Response; the picker's restaurant page gets `names`, every other endpoint `[]`.
+function stubFetch(names: string[]) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) =>
+      url.includes('/restaurants/page') ? pageResponse(names) : new Response('[]', { status: 200 }),
+    ),
+  )
+}
+
 describe('WheelEditorDialog', () => {
-  // The picker now fetches a page from GET /api/v1/restaurants/page instead of reading the full
-  // catalog from the store; stub that endpoint with Alpha/Beta/Gamma.
-  function pageResponse(names: string[]) {
-    const items = names.map((n, i) => restaurant(`r${i + 1}`, n))
-    return new Response(JSON.stringify({ items, total: items.length, page: 1, pageSize: 20 }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
 
   beforeEach(() => {
     setActivePinia(createPinia())
     copyShareLink.mockClear()
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(pageResponse(['Alpha', 'Beta', 'Gamma'])))
+    stubFetch(['Alpha', 'Beta', 'Gamma'])
   })
   afterEach(() => vi.unstubAllGlobals())
 
@@ -215,7 +224,7 @@ describe('WheelView', () => {
     wheels.list = [
       { id: 'w1', concurrencyToken: 't', name: 'Lunch picks', restaurantNames: ['A', 'B'], isPublic: false } as UserWheel,
     ]
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('[]', { status: 200 })))
+    stubFetch([])
 
     const wrapper = mount(WheelView, { global: { stubs: { RouterLink: RouterLinkStub } } })
     expect(wrapper.text()).toContain('Lunch picks')
@@ -234,7 +243,7 @@ describe('WheelView', () => {
       { id: 'w1', concurrencyToken: 't', name: 'Public wheel', restaurantNames: ['A', 'B'], isPublic: true } as UserWheel,
       { id: 'w2', concurrencyToken: 't', name: 'Private wheel', restaurantNames: ['A', 'B'], isPublic: false } as UserWheel,
     ]
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('[]', { status: 200 })))
+    stubFetch([])
 
     const wrapper = mount(WheelView, { global: { stubs: { RouterLink: RouterLinkStub } } })
 

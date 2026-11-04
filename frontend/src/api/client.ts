@@ -5,15 +5,7 @@ function resolveUrl(path: string): string {
   return path.startsWith('http') ? path : `${API_BASE_URL}${path}`
 }
 
-/**
- * Shared fetch wrapper for every backend call.
- *
- * Attaches `Authorization: Bearer <token>` from the auth store, and sends neither
- * `credentials: "include"` nor a CSRF header (bearer-authorized endpoints are not
- * CSRF-vulnerable). On a 401 it silently refreshes the token via Keycloak once
- * (`fetchToken()`) and retries the original request before returning the (possibly
- * still failing) response.
- */
+/** Shared fetch wrapper for every backend call; bearer auth only, so no cookies or CSRF header. */
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const auth = useAuthStore()
   const url = resolveUrl(path)

@@ -4,14 +4,12 @@ import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Icon, IconName } from '@/components/design-system/icons/Icon';
 import { colors, fonts, radius, typography } from '@/theme/tokens';
 
-/** Ported 1:1 from the design system Badge — an uppercase mono status label. */
+/** Uppercase mono status label. */
 export type BadgeTone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger';
 
 export interface BadgeProps {
   children?: React.ReactNode;
-  /** Semantic tone. Default "neutral". */
   tone?: BadgeTone;
-  /** Optional leading icon glyph, colored to the tone foreground. */
   icon?: IconName;
   style?: StyleProp<ViewStyle>;
 }

@@ -36,7 +36,7 @@ public class DailyRecommendationSchedulerHostedServiceTests
         Assert.True(recording.Calls >= 1);
     }
 
-    private sealed class RecordingNotificationService : IDailyRecommendationNotificationService
+    private class RecordingNotificationService : IDailyRecommendationNotificationService
     {
         private readonly TaskCompletionSource _invoked = new(TaskCreationOptions.RunContinuationsAsynchronously);
 

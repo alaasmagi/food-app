@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Toast, ToastTone } from '@/components/design-system/feedback/Toast';
 import { spacing } from '@/theme/tokens';
 
-/** A queued toast plus the fields the card needs. */
 interface ToastItem {
   id: number;
   title: string;
@@ -13,7 +12,6 @@ interface ToastItem {
   tone?: ToastTone;
 }
 
-/** What `useToast()` accepts — everything but the internally-assigned id. */
 export type ToastInput = Omit<ToastItem, 'id'>;
 
 interface ToastContextValue {
@@ -22,16 +20,9 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-/** How long a toast stays before auto-dismissing, in ms. */
 const TOAST_TIMEOUT = 3500;
 
-/**
- * App-level toast host. Mount once near the root (inside SafeAreaProvider). It
- * holds the active toasts, renders them in a fixed, safe-area-aware stack at the
- * bottom, and auto-dismisses each after a timeout. Children reach it through
- * `useToast()`. This is the mobile analog of the web's toasts store + app-shell
- * stack.
- */
+/** App-level toast host; mount once inside SafeAreaProvider and push via `useToast()`. */
 export function ToastProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(0);
@@ -73,7 +64,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }): Reac
   );
 }
 
-/** Push transient toasts. Throws if used outside a ToastProvider. */
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
   if (!ctx) {

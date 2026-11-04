@@ -28,3 +28,5 @@ yarn-error.*
 
 # Env
 .env*.local
+
+.idea/

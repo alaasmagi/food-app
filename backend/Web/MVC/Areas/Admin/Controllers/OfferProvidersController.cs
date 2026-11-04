@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Web.MVC.Areas.Admin.Controllers;
 
-public sealed class OfferProvidersController : AdminCrudController<OfferProviderDto, OfferProvider>
+public class OfferProvidersController : AdminCrudController<OfferProviderDto, OfferProvider>
 {
     public OfferProvidersController(
         IOfferProviderService service,

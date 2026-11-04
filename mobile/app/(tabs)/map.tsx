@@ -10,12 +10,7 @@ import { useEnvironmentFilteredRestaurants } from '@/hooks/useEnvironmentFiltere
 import type { Restaurant } from '@/types/restaurant';
 import { colors, fonts, spacing, typography } from '@/theme/tokens';
 
-/**
- * Map tab: renders the shared restaurant catalog (same `useRestaurants()` cache
- * as the Dashboard) as map markers, filtered to the selected environment via
- * EnvironmentTabs. "See offers" on a marker opens that restaurant's offers in a
- * dismissible sheet, reusing OfferList.
- */
+/** Map tab: restaurant markers filtered to the selected environment, with an offers sheet. */
 export default function MapScreen() {
   const { query, restaurants } = useEnvironmentFilteredRestaurants();
   const { isLoading, isError, error } = query;

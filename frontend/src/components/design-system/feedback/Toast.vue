@@ -42,7 +42,6 @@ const icon = computed(() => TONE_ICON[props.tone])
 </template>
 
 <style scoped>
-/* Figma "Toast": neutral raised surface, the tone only colours the icon; Shadow/md; 360px. */
 .ds-toast { display: flex; align-items: flex-start; gap: var(--space-3); width: 360px; max-width: 100%; box-sizing: border-box; padding: var(--space-3) var(--space-4); background: var(--color-bg-raised); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-family: var(--font-body); }
 .ds-toast__icon { display: inline-flex; padding-top: 2px; }
 .ds-toast--info .ds-toast__icon { color: var(--color-status-info-text); }

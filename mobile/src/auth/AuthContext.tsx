@@ -18,9 +18,7 @@ WebBrowser.maybeCompleteAuthSession();
 interface AuthContextValue {
   isAuthenticated: boolean;
   accessToken: string | null;
-  /** Starts the OAuth PKCE flow in the system browser. */
   login: () => Promise<void>;
-  /** Clears the session and returns to unauthenticated. */
   logout: () => Promise<void>;
 }
 
@@ -48,7 +46,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     discovery,
   );
 
-  // Restore any existing session from secure-store on launch.
   useEffect(() => {
     let active = true;
     (async () => {
@@ -65,7 +62,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     };
   }, [setAuthenticated, setUnauthenticated]);
 
-  // Handle the redirect: exchange the code (with PKCE verifier) for tokens.
   useEffect(() => {
     if (!response) return;
     // 'cancel' / 'dismiss' / 'error' need no action — the user stays on login.

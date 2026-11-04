@@ -13,11 +13,7 @@ import { useShareWheelLink } from '@/hooks/useShareWheelLink';
 import type { UserWheel } from '@/types/wheel';
 import { colors, fonts, spacing, typography } from '@/theme/tokens';
 
-/**
- * Wheel tab: a list of saved wheels (each a Card with Spin / Edit / Delete, plus
- * a Share action when public), a "New wheel" action opening the editor, and a
- * selected-wheel view showing its WheelSpinner.
- */
+/** Wheel tab: saved wheels (spin, edit, delete, share) and the wheel editor. */
 export default function WheelScreen() {
   const { data: wheels, isLoading, isError, error } = useWheels();
   const remove = useDeleteWheel();

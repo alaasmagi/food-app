@@ -3,7 +3,6 @@
 withDefaults(
   defineProps<{
     padding?: string
-    /** Darkens surface + brightens border on hover - use for clickable cards. */
     hoverable?: boolean
   }>(),
   {
@@ -20,7 +19,6 @@ withDefaults(
 </template>
 
 <style scoped>
-/* Figma "Card": bg/surface, border/subtle, radius/lg. */
 .ds-card { display: flex; flex-direction: column; gap: var(--space-4); background: var(--color-bg-surface); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-lg); }
 .ds-card--hoverable { cursor: pointer; transition: border-color var(--duration-fast) var(--ease-standard); }
 .ds-card--hoverable:hover { border-color: var(--color-border-strong); background-image: linear-gradient(var(--color-bg-hover), var(--color-bg-hover)); }

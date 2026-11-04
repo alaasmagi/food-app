@@ -9,9 +9,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace Web.MVC.Areas.Admin.Controllers;
 
 /// <summary>
-/// Base for admin controllers over user-owned entities. Listing uses the empty actor (returns every
-/// owner's rows); per-row operations act as the row's owner so the service's ownership checks pass; and
-/// creates stamp ownership from an owner picked on the form.
+/// Base for admin controllers over user-owned entities; per-row operations act as the row's owner.
 /// </summary>
 public abstract class UserScopedAdminController<TDto, TDomain> : AdminCrudController<TDto, TDomain>
     where TDto : BaseEntityWithConcurrency, new()
@@ -32,7 +30,6 @@ public abstract class UserScopedAdminController<TDto, TDomain> : AdminCrudContro
 
     protected override Task<Guid> ResolveCreateActorAsync(TDto dto) => Task.FromResult(FormOwnerId());
 
-    /// <summary>Loads the owner (AppUser) picker used on create forms into ViewData["Owners"].</summary>
     protected async Task PopulateOwnersAsync()
     {
         var users = await _appUserService.GetAllAsync(Guid.Empty);

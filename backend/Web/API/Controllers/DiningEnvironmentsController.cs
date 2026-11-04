@@ -1,6 +1,4 @@
 using Asp.Versioning;
-using Base.Contracts.DTO;
-using Base.DTO;
 using Contracts.Application;
 using DTO.Web;
 using Microsoft.AspNetCore.RateLimiting;
@@ -19,12 +17,18 @@ namespace Web.API.Controllers;
 public class DiningEnvironmentsController(
     IDiningEnvironmentService diningEnvironmentService,
     ICurrentActorAccessor currentActorAccessor,
-    IMapper mapper) : ControllerBase
+    IMapper mapper) : ApiControllerBase
 {
+    protected override IReadOnlyDictionary<string, int> ErrorStatusCodes { get; } = new Dictionary<string, int>
+    {
+        [DiningEnvironmentErrorCodes.AutoFillValidation] = StatusCodes.Status400BadRequest,
+        [DiningEnvironmentErrorCodes.AutoFillLocationRequired] = StatusCodes.Status400BadRequest,
+    };
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<DiningEnvironmentDto>>> GetAll()
     {
-        if (!TryGetActorId(out var actorId, out var unauthorized))
+        if (!TryGetActorId(currentActorAccessor, out var actorId, out var unauthorized))
         {
             return unauthorized;
         }
@@ -41,7 +45,7 @@ public class DiningEnvironmentsController(
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<DiningEnvironmentDto>> GetById(Guid id)
     {
-        if (!TryGetActorId(out var actorId, out var unauthorized))
+        if (!TryGetActorId(currentActorAccessor, out var actorId, out var unauthorized))
         {
             return unauthorized;
         }
@@ -58,7 +62,7 @@ public class DiningEnvironmentsController(
     [HttpPost]
     public async Task<ActionResult<DiningEnvironmentDto>> Create(DiningEnvironmentDto input)
     {
-        if (!TryGetActorId(out var actorId, out var unauthorized))
+        if (!TryGetActorId(currentActorAccessor, out var actorId, out var unauthorized))
         {
             return unauthorized;
         }
@@ -85,7 +89,7 @@ public class DiningEnvironmentsController(
         DiningEnvironmentDto input,
         [FromHeader(Name = "If-Match")] string? expectedConcurrencyToken)
     {
-        if (!TryGetActorId(out var actorId, out var unauthorized))
+        if (!TryGetActorId(currentActorAccessor, out var actorId, out var unauthorized))
         {
             return unauthorized;
         }
@@ -114,7 +118,7 @@ public class DiningEnvironmentsController(
         Guid id,
         [FromHeader(Name = "If-Match")] string? expectedConcurrencyToken)
     {
-        if (!TryGetActorId(out var actorId, out var unauthorized))
+        if (!TryGetActorId(currentActorAccessor, out var actorId, out var unauthorized))
         {
             return unauthorized;
         }
@@ -131,7 +135,7 @@ public class DiningEnvironmentsController(
     [HttpPost("{id:guid}/auto-fill")]
     public async Task<ActionResult<DiningEnvironmentAutoFillResultDto>> AutoFill(Guid id)
     {
-        if (!TryGetActorId(out var actorId, out var unauthorized))
+        if (!TryGetActorId(currentActorAccessor, out var actorId, out var unauthorized))
         {
             return unauthorized;
         }
@@ -149,48 +153,5 @@ public class DiningEnvironmentsController(
             AlreadyPresent = summary.AlreadyPresent,
             TotalMembers = summary.TotalMembers
         });
-    }
-
-    private bool TryGetActorId(out Guid actorId, out ActionResult unauthorizedResult)
-    {
-        var resolved = currentActorAccessor.TryGetActorId();
-        if (resolved == null)
-        {
-            actorId = default;
-            unauthorizedResult = Unauthorized();
-            return false;
-        }
-
-        actorId = resolved.Value;
-        unauthorizedResult = null!;
-        return true;
-    }
-
-    private static string? NormalizeConcurrencyToken(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value)
-            ? null
-            : value.Trim().Trim('"');
-    }
-
-    private ObjectResult ToProblem(IError? error)
-    {
-        var statusCode = error?.Code switch
-        {
-            ErrorDefaults.Codes.NotFound => StatusCodes.Status404NotFound,
-            ErrorDefaults.Codes.Forbidden => StatusCodes.Status403Forbidden,
-            ErrorDefaults.Codes.ConcurrencyConflict => StatusCodes.Status409Conflict,
-            ErrorDefaults.Codes.ConcurrencyTokenRequired => StatusCodes.Status428PreconditionRequired,
-            ErrorDefaults.Codes.InvalidPaging => StatusCodes.Status400BadRequest,
-            ErrorDefaults.Codes.MapFailed => StatusCodes.Status400BadRequest,
-            DiningEnvironmentErrorCodes.AutoFillValidation => StatusCodes.Status400BadRequest,
-            DiningEnvironmentErrorCodes.AutoFillLocationRequired => StatusCodes.Status400BadRequest,
-            _ => StatusCodes.Status500InternalServerError
-        };
-
-        return Problem(
-            statusCode: statusCode,
-            title: error?.Code ?? "REQUEST_FAILED",
-            detail: error?.Message ?? "The request failed.");
     }
 }

@@ -41,9 +41,7 @@ const listPage = ref(1)
 
 const addOpen = ref(false)
 
-// List vs map are two views of the same viewport-scoped set. Map is the default:
-// discovery is map-first, and the map drives the viewport fetch. Typed as a plain
-// string to match the Tabs v-model contract (see EnvironmentTabs).
+// A plain string to match the Tabs v-model contract (see EnvironmentTabs).
 const view = ref('map')
 const viewTabs: TabItem[] = [
   { value: 'list', label: 'List' },
@@ -60,9 +58,7 @@ const browseAll = ref(false)
 const firstRun = computed(() => placesChecked.value && !browseAll.value && environments.list.length === 0)
 
 onMounted(() => {
-  // The map fetches its own viewport on mount, and the list fetches its page on demand — so there's
-  // nothing to pre-fetch here. The full catalog is loaded lazily only when an environment is
-  // selected (see the watch below).
+  // The map and list fetch their own data; the full catalog loads only when an environment is selected.
   Promise.resolve(environments.loadEnvironments())
     .then(() => (placesChecked.value = true))
     .catch(() => {})
@@ -80,10 +76,7 @@ async function focusFromQuery(): Promise<void> {
   if (match) focusOnMap(match)
 }
 
-// "All" is viewport-scoped; a specific environment shows its full member set, so ensure the whole
-// catalog is loaded when one is selected (no-op once cached). Under an environment, adding
-// restaurants is a deliberate action via the "Add restaurants" picker rather than an inline toggle
-// on every catalog card, so the tab reads as a curated list of that environment's restaurants.
+// A specific environment shows its full member set, so it needs the whole catalog (no-op once cached).
 const isAllView = computed(() => environments.selectedEnvironmentId === null)
 
 watch(
@@ -93,9 +86,7 @@ watch(
   },
 )
 
-// List and map differ under "All": the list shows the paged/searchable set, the map shows the
-// viewport set. Under an environment both show its members (see the composable).
-// "Load more" for the All list: pages are appended instead of replaced (page 1 resets the set).
+// "Load more" appends pages to the All list; page 1 resets it.
 const allLoaded = ref<Restaurant[]>([])
 watch(
   pagedList,
@@ -112,8 +103,6 @@ watch(
 const listRestaurants = useEnvironmentFilteredRestaurants(allLoaded)
 const mapRestaurants = useEnvironmentFilteredRestaurants(areaList)
 
-// Server-side search + pagination for the "All" list. `searchInput` is the raw field; a debounce
-// commits it to `search` (resetting to page 1) so we don't fetch on every keystroke.
 const searchInput = ref('')
 const search = ref('')
 const totalPages = computed(() => Math.max(1, Math.ceil(pagedTotal.value / PAGE_SIZE)))
@@ -124,7 +113,6 @@ const commitSearch = debounce((value: string) => {
 }, 300)
 watch(searchInput, (value) => commitSearch(value))
 
-// Load a page whenever the "All" list is active and its page or search term changes.
 watch(
   [view, isAllView, listPage, search],
   () => {
@@ -138,22 +126,17 @@ function goToPage(page: number): void {
   listPage.value = Math.min(Math.max(1, page), totalPages.value)
 }
 
-// "Show on map" from a list row: remember the target and switch to the map, which centres on it.
 const focusRestaurant = ref<Restaurant | null>(null)
 function focusOnMap(restaurant: Restaurant): void {
   focusRestaurant.value = restaurant
   view.value = 'map'
 }
-// Manually toggling the view clears any pending focus so the map returns to normal viewport mode.
 function selectView(next: string): void {
   focusRestaurant.value = null
   view.value = next
 }
 
-// Loading/error for the LIST view only. The map is never gated by loading — it must stay mounted
-// across viewport fetches, or every pan/zoom would unmount it, reset it to the default view (zoom
-// out), and re-emit bounds in a refetch loop. Under "All" the list reads the paged fetch state; under
-// an environment it reads the full-catalog load state.
+// List view only: gating the map on loading would unmount it on every fetch and cause a refetch loop.
 const loading = computed(() => (isAllView.value ? pagedLoading.value : listLoading.value))
 const loadError = computed(() => (isAllView.value ? pagedError.value : listError.value))
 
@@ -161,14 +144,11 @@ function onBoundsChange(bounds: Bounds): void {
   store.loadInBounds(bounds)
 }
 
-// The currently selected environment object (null under "All"), used to label
-// the empty state and the "Add restaurants" picker.
 const selectedEnvironment = computed(() =>
   environments.list.find((environment) => environment.id === environments.selectedEnvironmentId) ??
   null,
 )
 
-// ---- Quick filters and sorting (client-side, over the restaurants already loaded) ----
 const offersOnly = ref(false)
 const fastFoodOnly = ref(false)
 const ratedOnly = ref(false)
@@ -233,7 +213,6 @@ function spinPlace(): void {
       <Button variant="secondary" @click="router?.push('/places')">Manage places</Button>
     </div>
 
-    <!-- First run: no places yet (Figma "13 First run"). -->
     <Card v-if="firstRun" class="dashboard__first-run">
       <span class="dashboard__tile"><Icon name="map-pin" :size="24" /></span>
       <h2 class="dashboard__first-title">Where do you usually have lunch?</h2>
@@ -281,7 +260,7 @@ function spinPlace(): void {
         </Button>
       </div>
     </div>
-    <!-- Map view. Rendered independently of loading so a viewport fetch never unmounts it. -->
+    <!-- Rendered independently of loading so a viewport fetch never unmounts the map. -->
     <RestaurantMap
       v-if="view === 'map'"
       :restaurants="mapRestaurants"
@@ -291,7 +270,6 @@ function spinPlace(): void {
       class="dashboard__map"
       @bounds-change="onBoundsChange"
     />
-    <!-- List view. Its content can safely swap for a loading/empty placeholder. -->
     <template v-else>
       <div class="dashboard__filters">
         <Input
@@ -342,7 +320,6 @@ function spinPlace(): void {
           />
         </div>
       </template>
-      <!-- "Load more" for the All list (pages are appended). -->
       <div v-if="isAllView && listPage < totalPages && listRestaurants.length" class="dashboard__pager">
         <Button variant="secondary" :loading="pagedLoading" @click="goToPage(listPage + 1)">
           Load more restaurants

@@ -7,7 +7,6 @@ import { colors, fonts, radius, spacing, typography } from '@/theme/tokens';
 
 export interface WheelSpinnerProps {
   names: string[];
-  /** Called with the chosen name when a spin settles. */
   onResult?: (name: string) => void;
 }
 
@@ -17,7 +16,6 @@ const CENTER = 100;
 const RADIUS = 92;
 const LABEL_RADIUS = 60;
 
-// Token-only segment palette (no hardcoded colors), cycled by index.
 const PALETTE = [
   colors.accent7,
   colors.statusSuccess,
@@ -33,13 +31,7 @@ function pointAt(angleDeg: number, r: number): [number, number] {
   return [CENTER + r * Math.sin(rad), CENTER - r * Math.cos(rad)];
 }
 
-/**
- * Native spinning wheel. Mirrors the web spinner's geometry (one SVG arc
- * segment per name, token-cycled palette) but rotates an Animated layer holding
- * the segments while the pointer and hub stay static on top. `spin()` picks a
- * name client-side and animates a multi-turn ease-out landing that segment
- * under the top pointer, then reports the winner. Needs at least 2 names.
- */
+/** Native spinning wheel: picks a name client-side and animates it under the top pointer; needs at least 2 names. */
 export function WheelSpinner({ names, onResult }: WheelSpinnerProps): React.ReactElement {
   const rotation = useRef(new Animated.Value(0)).current;
   const rotationDeg = useRef(0);
@@ -67,8 +59,7 @@ export function WheelSpinner({ names, onResult }: WheelSpinnerProps): React.Reac
     });
   }, [names]);
 
-  // A single interpolation maps any absolute degree value to a rotate string
-  // (linear extrapolation extends past 360), so multi-turn targets just work.
+  // Linear extrapolation past 360 lets multi-turn targets use a single interpolation.
   const rotate = rotation.interpolate({
     inputRange: [0, 360],
     outputRange: ['0deg', '360deg'],

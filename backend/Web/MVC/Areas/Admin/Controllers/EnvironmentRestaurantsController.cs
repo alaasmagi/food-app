@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Web.MVC.Areas.Admin.Controllers;
 
-public sealed class EnvironmentRestaurantsController
+public class EnvironmentRestaurantsController
     : UserScopedAdminController<EnvironmentRestaurantDto, EnvironmentRestaurant>
 {
     private readonly IDiningEnvironmentService _diningEnvironmentService;

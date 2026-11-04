@@ -8,7 +8,6 @@ import { Input } from '@/components/design-system/forms/Input';
 import { darkMapStyle, regionForCoordinates } from '@/components/restaurant/mapStyle';
 import { colors, fonts, radius, spacing, typography } from '@/theme/tokens';
 
-/** The saved auto-fill origin the picker edits: a point plus an optional radius. */
 export interface LocationOrigin {
   latitude: number | null;
   longitude: number | null;
@@ -20,21 +19,14 @@ export interface EnvironmentLocationPickerProps {
   onChange: (next: LocationOrigin) => void;
 }
 
-/** The backend's effective radius when none is stored, in meters. */
+// Mirrors the backend's default radius when none is stored.
 export const DEFAULT_RADIUS_METERS = 500;
 
-/** True when both coordinates are present (a location has been placed). */
 export function hasLocation(value: LocationOrigin): boolean {
   return value.latitude != null && value.longitude != null;
 }
 
-/**
- * Client-side mirror of the backend's auto-fill write rules. Returns an inline
- * message when the origin is invalid, or null when it is safe to send:
- * coordinates are both-or-neither, a radius is allowed only with a location, and
- * a supplied radius is a whole number within the inclusive range 1..50000. The
- * backend remains the source of truth; this only avoids a predictable 400.
- */
+// Client-side mirror of the backend's auto-fill rules, only to avoid a predictable 400.
 export function validateOrigin(value: LocationOrigin): string | null {
   const hasLat = value.latitude != null;
   const hasLon = value.longitude != null;
@@ -56,15 +48,7 @@ export function validateOrigin(value: LocationOrigin): string | null {
   return null;
 }
 
-/**
- * Optional map-based location + radius picker for an environment's auto-fill
- * origin. Reuses the restaurant map's dark styling. Tapping the map or dragging
- * the marker sets the coordinates; a radius input and a circle overlay appear
- * once a location is set (previewing 500 m when the radius is empty); an
- * optional Nominatim search recentres the map. The whole section is optional,
- * and "clear location" nulls all three fields. Fully controlled — the parent
- * owns the value and the client-side validation on save.
- */
+/** Optional map-based location + radius picker for an environment's auto-fill origin (fully controlled). */
 export function EnvironmentLocationPicker({
   value,
   onChange,

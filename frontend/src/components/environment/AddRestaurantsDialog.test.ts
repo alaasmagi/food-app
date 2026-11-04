@@ -23,7 +23,7 @@ function restaurant(id: string, name: string, city = 'Tallinn'): Restaurant {
   }
 }
 
-// The picker now fetches a page from GET /api/v1/restaurants/page rather than reading the full store.
+// The picker fetches a page from GET /api/v1/restaurants/page.
 function pageResponse(items: Restaurant[]) {
   return new Response(JSON.stringify({ items, total: items.length, page: 1, pageSize: 20 }), {
     status: 200,

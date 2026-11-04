@@ -2,16 +2,7 @@ import { apiFetch } from '@/api/client';
 import { parseProblemDetails } from '@/api/errors';
 import type { DiningEnvironment, EnvironmentRestaurant } from '@/types/environment';
 
-/**
- * Dining-environment API module. Every call goes through the shared
- * authenticated `apiFetch` (bearer + 401 refresh/retry). On ok the body is the
- * bare payload; on error we throw the parsed ProblemDetails, which React Query
- * surfaces without crashing the screen (including the user-scoped 403 case).
- *
- * Update and both delete operations round-trip the entity's concurrency token
- * as the `If-Match` header, matching the backend's optimistic-concurrency
- * requirement. Membership is a first-class join row on `/environment-restaurants`.
- */
+/** Dining-environment and membership API; update/delete send the concurrency token as If-Match. */
 
 const ENVIRONMENTS = '/api/v1/dining-environments';
 const MEMBERSHIPS = '/api/v1/environment-restaurants';
@@ -21,22 +12,12 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 export interface EnvironmentInput {
   name: string;
   description: string | null;
-  /**
-   * Optional saved auto-fill origin. When a location is picked these carry the
-   * coordinates (and optional radius) to the backend; all null when no location
-   * is set. Sent through on create/update alongside name/description.
-   */
   autoFillLatitude?: number | null;
   autoFillLongitude?: number | null;
   autoFillRadiusMeters?: number | null;
 }
 
-/**
- * Summary returned by the proximity auto-fill endpoint: how many nearby
- * restaurants were newly added as memberships, how many were already members,
- * and the environment's resulting total membership count. Auto-fill is additive,
- * so `totalMembers` can exceed the number of in-radius matches.
- */
+// Auto-fill is additive, so totalMembers can exceed the number of in-radius matches.
 export interface DiningEnvironmentAutoFillResult {
   added: number;
   alreadyPresent: number;
@@ -56,13 +37,11 @@ async function expectOk(res: Response): Promise<void> {
   }
 }
 
-/** GET /api/v1/dining-environments — the current user's environments. */
 export async function getEnvironments(): Promise<DiningEnvironment[]> {
   const res = await apiFetch(ENVIRONMENTS);
   return unwrap<DiningEnvironment[]>(res);
 }
 
-/** POST /api/v1/dining-environments — create an environment. */
 export async function createEnvironment(input: EnvironmentInput): Promise<DiningEnvironment> {
   const res = await apiFetch(ENVIRONMENTS, {
     method: 'POST',
@@ -72,7 +51,6 @@ export async function createEnvironment(input: EnvironmentInput): Promise<Dining
   return unwrap<DiningEnvironment>(res);
 }
 
-/** PUT /api/v1/dining-environments/{id} — rename/update, sending If-Match. */
 export async function updateEnvironment(
   id: string,
   input: EnvironmentInput,
@@ -86,7 +64,6 @@ export async function updateEnvironment(
   return unwrap<DiningEnvironment>(res);
 }
 
-/** DELETE /api/v1/dining-environments/{id} — delete, sending If-Match. */
 export async function deleteEnvironment(id: string, concurrencyToken: string): Promise<void> {
   const res = await apiFetch(`${ENVIRONMENTS}/${id}`, {
     method: 'DELETE',
@@ -95,25 +72,16 @@ export async function deleteEnvironment(id: string, concurrencyToken: string): P
   await expectOk(res);
 }
 
-/**
- * POST /api/v1/dining-environments/{id}/auto-fill — additive proximity import.
- * Reads the environment's stored auto-fill origin and adds every restaurant
- * within the radius (500 m when none is stored) as a membership, returning a
- * summary. Throws the parsed ProblemDetails on a non-ok response (e.g. a 400
- * when no location is stored, or a 403 for another user's environment).
- */
 export async function autoFillEnvironment(id: string): Promise<DiningEnvironmentAutoFillResult> {
   const res = await apiFetch(`${ENVIRONMENTS}/${id}/auto-fill`, { method: 'POST' });
   return unwrap<DiningEnvironmentAutoFillResult>(res);
 }
 
-/** GET /api/v1/environment-restaurants — the user's membership join rows. */
 export async function getEnvironmentRestaurants(): Promise<EnvironmentRestaurant[]> {
   const res = await apiFetch(MEMBERSHIPS);
   return unwrap<EnvironmentRestaurant[]>(res);
 }
 
-/** POST /api/v1/environment-restaurants — add a restaurant to an environment. */
 export async function addRestaurantToEnvironment(
   environmentId: string,
   restaurantId: string,
@@ -126,7 +94,6 @@ export async function addRestaurantToEnvironment(
   return unwrap<EnvironmentRestaurant>(res);
 }
 
-/** DELETE /api/v1/environment-restaurants/{joinId} — remove, sending If-Match. */
 export async function removeRestaurantFromEnvironment(
   joinId: string,
   concurrencyToken: string,

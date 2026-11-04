@@ -5,7 +5,6 @@ import AppShell from './components/layout/AppShell.vue'
 import ToastHost from './components/notifications/ToastHost.vue'
 
 const route = useRoute()
-// Public routes (login) render without the authenticated shell chrome.
 const isPublic = computed(() => route.meta.public === true)
 </script>
 
@@ -34,14 +33,11 @@ body,
   min-height: 100vh;
 }
 
-/* Always reserve the vertical scrollbar's gutter so pages that grow past the
-   viewport don't claim width from the centered layout and shift it sideways.
-   No-op on overlay-scrollbar systems; prevents the jump on classic scrollbars. */
+/* Reserve the scrollbar gutter so pages growing past the viewport don't shift the centred layout. */
 html {
   scrollbar-gutter: stable;
 }
 
-/* Screen-reader-only text (icon buttons keep their label for assistive tech). */
 .visually-hidden {
   position: absolute !important;
   width: 1px;
