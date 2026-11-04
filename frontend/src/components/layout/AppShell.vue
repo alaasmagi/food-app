@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useTheme } from '../../composables/useTheme'
@@ -30,7 +30,10 @@ watch(
   () => (menuOpen.value = false),
 )
 
-const userLabel = computed(() => auth.currentUser?.email ?? auth.currentUser?.username ?? '')
+// Only Settings loads the user otherwise; a failed load just leaves the name empty.
+onMounted(() => {
+  if (!auth.currentUser) auth.fetchCurrentUser().catch(() => {})
+})
 
 function isActive(to: string): boolean {
   const path = route?.path ?? '/'
@@ -75,7 +78,7 @@ function isActive(to: string): boolean {
       <div class="shell__footer">
         <Switch v-model="dark" label="Dark mode" />
         <div class="shell__user">
-          <span class="shell__user-email" :title="userLabel">{{ userLabel }}</span>
+          <span class="shell__user-name" :title="auth.currentUser?.fullName">{{ auth.firstName }}</span>
           <button type="button" class="shell__logout" aria-label="Log out" title="Log out" @click="auth.logout()">
             <Icon name="log-out" :size="20" />
           </button>
@@ -102,7 +105,7 @@ function isActive(to: string): boolean {
 .shell__spacer { flex: 1; min-height: var(--space-6); }
 .shell__footer { display: flex; flex-direction: column; gap: var(--space-2); padding-left: var(--space-2); }
 .shell__user { display: flex; align-items: center; gap: var(--space-2); }
-.shell__user-email { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
+.shell__user-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
 .shell__logout { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: var(--radius-md); background: none; color: var(--color-text-secondary); cursor: pointer; }
 .shell__logout:hover, .shell__menu:hover { background: var(--color-bg-hover); color: var(--color-text-primary); }
 .shell__main { min-width: 0; padding: var(--space-10) var(--space-12) var(--space-16); }

@@ -33,6 +33,11 @@ On a full page reload the application SHALL attempt to silently re-establish the
 - **WHEN** the token has been set and the page is fully reloaded
 - **THEN** the previous in-memory token is gone and no copy exists in `localStorage` or `sessionStorage`
 
+## RENAMED Requirements
+
+- FROM: `### Requirement: Login and logout are full-page navigations`
+- TO: `### Requirement: Login and logout drive Keycloak directly`
+
 ## MODIFIED Requirements
 
 ### Requirement: Auth store holds session state in memory only
