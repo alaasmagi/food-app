@@ -114,7 +114,7 @@ context: |
     restaurant can have HasOffers == true with a manually admin-maintained menu and no provider at all
   - An OfferProvider is shared parsing configuration for one real external source (one HTML site or one
     JSON API), identified by EOfferProviderType and three locator fields (OfferLocator, OfferTextLocator,
-    OfferPriceLocator) that mean "CSS selector / regex" for Html and "JSONPath" for Api; multiple
+    OfferPriceLocator) that use a `>`-separated path: .class / #id / tag segments for Html, JSON keys for Api; multiple
     restaurants may reference the same OfferProvider
   - OfferProvider does NOT carry a base URL or endpoint - the fetch URL is entirely
     Restaurant.OffersResourceUrl, per restaurant, even when multiple restaurants share one OfferProvider

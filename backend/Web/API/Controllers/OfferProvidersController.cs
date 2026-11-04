@@ -122,6 +122,7 @@ public class OfferProvidersController(
             ErrorDefaults.Codes.ConcurrencyTokenRequired => StatusCodes.Status428PreconditionRequired,
             ErrorDefaults.Codes.InvalidPaging => StatusCodes.Status400BadRequest,
             ErrorDefaults.Codes.MapFailed => StatusCodes.Status400BadRequest,
+            OfferProviderErrorCodes.LocatorValidation => StatusCodes.Status400BadRequest,
             _ => StatusCodes.Status500InternalServerError
         };
 

@@ -1,3 +1,4 @@
+using System.Net;
 using Base.Contracts.DTO;
 using Base.Contracts.Message;
 using Base.DTO;
@@ -66,4 +67,11 @@ internal sealed record PublishedEnvelope(object Envelope, string? Expiration);
 internal sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
 {
     public override DateTimeOffset GetUtcNow() => now;
+}
+
+// Returns a fixed response (or throws) for every request, for HttpClient-based fetcher tests.
+internal sealed class FakeHttpMessageHandler(HttpStatusCode statusCode, string content) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        => Task.FromResult(new HttpResponseMessage(statusCode) { Content = new StringContent(content) });
 }

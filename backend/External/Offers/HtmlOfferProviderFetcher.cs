@@ -25,14 +25,27 @@ public class HtmlOfferProviderFetcher(HttpClient httpClient) : IOfferProviderFet
                 "Restaurant does not have an offers resource URL."));
         }
 
+        var locatorError = provider.ValidateLocators();
+        if (locatorError != null)
+        {
+            return MethodResponse<IReadOnlyCollection<DailyOfferItem>>.Failure(new Error(
+                OfferFetchErrorCodes.ParseFailed,
+                locatorError));
+        }
+
         try
         {
             var html = await httpClient.GetStringAsync(restaurant.OffersResourceUrl, ct);
             var parser = new HtmlParser();
             var document = await parser.ParseDocumentAsync(html, ct);
-            var offers = IsRegexLocator(provider.OfferLocator)
-                ? ParseRegexOffers(html, parser, provider)
-                : ParseSelectorOffers(document.QuerySelectorAll(provider.OfferLocator), provider);
+            var offers = document.QuerySelectorAll(ToSelector(provider.OfferLocator))
+                .Select(node => new DailyOfferItem
+                {
+                    Text = ExtractText(node, provider.OfferTextLocator) ?? string.Empty,
+                    PriceText = ExtractText(node, provider.OfferPriceLocator)
+                })
+                .Where(offer => !string.IsNullOrWhiteSpace(offer.Text))
+                .ToList();
 
             return MethodResponse<IReadOnlyCollection<DailyOfferItem>>.Success(offers);
         }
@@ -56,86 +69,19 @@ public class HtmlOfferProviderFetcher(HttpClient httpClient) : IOfferProviderFet
         }
     }
 
-    private static IReadOnlyCollection<DailyOfferItem> ParseSelectorOffers(
-        IEnumerable<IElement> offerNodes,
-        OfferProvider provider)
+    private static string? ExtractText(IElement node, string locator)
     {
-        return offerNodes
-            .Select(node => new DailyOfferItem
-            {
-                Text = ExtractText(node, provider.OfferTextLocator),
-                PriceText = ExtractOptionalText(node, provider.OfferPriceLocator)
-            })
-            .Where(offer => !string.IsNullOrWhiteSpace(offer.Text))
-            .ToList();
+        var element = OfferProvider.SplitLocator(locator).Count == 0
+            ? node
+            : node.QuerySelector(ToSelector(locator));
+
+        return Normalize(element?.TextContent);
     }
 
-    private static IReadOnlyCollection<DailyOfferItem> ParseRegexOffers(
-        string html,
-        HtmlParser parser,
-        OfferProvider provider)
+    // Segments are validated as .class, #id or tag, so joining them gives a descendant CSS selector.
+    private static string ToSelector(string locator)
     {
-        var pattern = provider.OfferLocator["regex:".Length..];
-
-        return Regex.Matches(html, pattern, RegexOptions.Singleline | RegexOptions.IgnoreCase)
-            .Select(match => match.Groups.Count > 1 ? match.Groups[1].Value : match.Value)
-            .Select(offerHtml =>
-            {
-                var document = parser.ParseDocument(offerHtml);
-                var node = document.Body ?? document.DocumentElement;
-
-                return new DailyOfferItem
-                {
-                    Text = ExtractText(node, provider.OfferTextLocator, offerHtml),
-                    PriceText = ExtractOptionalText(node, provider.OfferPriceLocator, offerHtml)
-                };
-            })
-            .Where(offer => !string.IsNullOrWhiteSpace(offer.Text))
-            .ToList();
-    }
-
-    private static string ExtractText(IElement node, string locator)
-    {
-        return ExtractOptionalText(node, locator, node.InnerHtml) ?? string.Empty;
-    }
-
-    private static string ExtractText(IElement node, string locator, string regexSource)
-    {
-        return ExtractOptionalText(node, locator, regexSource) ?? string.Empty;
-    }
-
-    private static string? ExtractOptionalText(IElement node, string locator)
-    {
-        return ExtractOptionalText(node, locator, node.InnerHtml);
-    }
-
-    private static string? ExtractOptionalText(IElement node, string locator, string regexSource)
-    {
-        if (string.IsNullOrWhiteSpace(locator) ||
-            locator.Equals(".", StringComparison.Ordinal) ||
-            locator.Equals("$", StringComparison.Ordinal))
-        {
-            return Normalize(node.TextContent);
-        }
-
-        if (locator.StartsWith("regex:", StringComparison.OrdinalIgnoreCase))
-        {
-            var pattern = locator["regex:".Length..];
-            var match = Regex.Match(regexSource, pattern, RegexOptions.Singleline | RegexOptions.IgnoreCase);
-            if (!match.Success)
-            {
-                return null;
-            }
-
-            return Normalize(match.Groups.Count > 1 ? match.Groups[1].Value : match.Value);
-        }
-
-        return Normalize(node.QuerySelector(locator)?.TextContent);
-    }
-
-    private static bool IsRegexLocator(string locator)
-    {
-        return locator.StartsWith("regex:", StringComparison.OrdinalIgnoreCase);
+        return string.Join(' ', OfferProvider.SplitLocator(locator));
     }
 
     private static string? Normalize(string? value)

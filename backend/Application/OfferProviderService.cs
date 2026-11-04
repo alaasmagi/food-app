@@ -34,6 +34,32 @@ public class OfferProviderService
         _offerProviderRepository = offerProviderRepository;
     }
 
+    public override async Task<IMethodResponse<OfferProvider>> CreateAsync(OfferProvider entity, Guid actor = default)
+    {
+        var locatorError = entity.ValidateLocators();
+        if (locatorError != null)
+        {
+            return MethodResponse<OfferProvider>.Failure(new Error(OfferProviderErrorCodes.LocatorValidation, locatorError));
+        }
+
+        return await base.CreateAsync(entity, actor);
+    }
+
+    public override async Task<IMethodResponse<OfferProvider>> UpdateAsync(
+        Guid id,
+        OfferProvider entity,
+        string? expectedConcurrencyToken = default,
+        Guid actor = default)
+    {
+        var locatorError = entity.ValidateLocators();
+        if (locatorError != null)
+        {
+            return MethodResponse<OfferProvider>.Failure(new Error(OfferProviderErrorCodes.LocatorValidation, locatorError));
+        }
+
+        return await base.UpdateAsync(id, entity, expectedConcurrencyToken, actor);
+    }
+
     public override async Task<IMethodResponse<bool>> RemoveAsync(
         Guid id,
         string? expectedConcurrencyToken,

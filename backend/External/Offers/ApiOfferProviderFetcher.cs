@@ -24,11 +24,19 @@ public class ApiOfferProviderFetcher(HttpClient httpClient) : IOfferProviderFetc
                 "Restaurant does not have an offers resource URL."));
         }
 
+        var locatorError = provider.ValidateLocators();
+        if (locatorError != null)
+        {
+            return MethodResponse<IReadOnlyCollection<DailyOfferItem>>.Failure(new Error(
+                OfferFetchErrorCodes.ParseFailed,
+                locatorError));
+        }
+
         try
         {
             var json = await httpClient.GetStringAsync(restaurant.OffersResourceUrl, ct);
             var root = JToken.Parse(json);
-            var offerTokens = root.SelectTokens(provider.OfferLocator, errorWhenNoMatch: false);
+            var offerTokens = Flatten(Resolve(root, OfferProvider.SplitLocator(provider.OfferLocator)));
 
             var offers = offerTokens
                 .Select(token => new DailyOfferItem
@@ -69,17 +77,31 @@ public class ApiOfferProviderFetcher(HttpClient httpClient) : IOfferProviderFetc
 
     private static string? SelectValue(JToken token, string locator)
     {
-        if (string.IsNullOrWhiteSpace(locator) ||
-            locator.Equals(".", StringComparison.Ordinal) ||
-            locator.Equals("$", StringComparison.Ordinal))
-        {
-            return Normalize(token);
-        }
-
-        var selected = token.SelectToken(locator, errorWhenNoMatch: false);
+        var selected = Resolve(token, OfferProvider.SplitLocator(locator)).FirstOrDefault();
         return selected == null || selected.Type == JTokenType.Null
             ? null
             : Normalize(selected);
+    }
+
+    // Each segment is a JSON key; when the current token is an array, the key applies to every item.
+    private static IEnumerable<JToken> Resolve(JToken token, IReadOnlyList<string> segments)
+    {
+        IEnumerable<JToken> current = [token];
+        foreach (var segment in segments)
+        {
+            current = Flatten(current)
+                .OfType<JObject>()
+                .Select(item => item[segment])
+                .OfType<JToken>()
+                .ToList();
+        }
+
+        return current;
+    }
+
+    private static IEnumerable<JToken> Flatten(IEnumerable<JToken> tokens)
+    {
+        return tokens.SelectMany(token => token is JArray array ? array.Children() : (IEnumerable<JToken>)[token]);
     }
 
     private static string? Normalize(JToken token)
