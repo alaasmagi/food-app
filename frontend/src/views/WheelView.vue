@@ -209,18 +209,19 @@ function onResult(name: string): void {
 
 <style scoped>
 /* Figma "Desktop / 08 Wheels": list of wheels (click to select) next to the spinner + winner panel. */
-.wheels { display: flex; flex-direction: column; gap: var(--space-6); max-width: 1120px; }
+.wheels { display: flex; flex-direction: column; gap: var(--space-6); }
 .wheels__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); }
 .wheels__title { margin: 0; font-size: 36px; line-height: 44px; font-weight: var(--weight-bold); letter-spacing: -0.015em; color: var(--color-text-primary); }
 .wheels__status, .wheels__hint { margin: 0; font-size: 14px; line-height: 20px; color: var(--color-text-muted); }
 .wheels__status { font-size: 16px; line-height: 24px; color: var(--color-text-secondary); }
 .wheels__grid { display: grid; grid-template-columns: 1fr; gap: var(--space-6); }
 @media (min-width: 900px) {
-  .wheels__grid { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; }
+  .wheels__grid { grid-template-columns: minmax(0, 1fr) 480px; align-items: start; }
   /* Keep the spinner in view while scrolling a long list of wheels. */
   .wheels__spinner { position: sticky; top: var(--space-6); }
 }
-.wheels__list { display: flex; flex-direction: column; gap: var(--space-3); }
+.wheels__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: var(--space-3); align-content: start; }
+.wheels__hint { grid-column: 1 / -1; }
 .wheels__card { gap: 0; }
 .wheels__card:focus-visible { outline: var(--border-thick) solid var(--color-focus-ring); outline-offset: 2px; }
 .wheels__card--active { border: var(--border-thick) solid var(--color-accent-solid); background: var(--color-accent-subtle); }

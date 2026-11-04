@@ -70,15 +70,17 @@ async function save(): Promise<void> {
       Your saved preferences could not be loaded. Saving will set them from the values below.
     </p>
 
-    <div class="settings__group">
-      <h2 class="settings__group-title">Daily recommendation email</h2>
-      <Switch v-model="sendNotifications" label="Send me the daily recommendation email" />
-      <Select
-        v-model="envValue"
-        label="Cover which place"
-        :options="envOptions"
-        :disabled="!sendNotifications"
-      />
+    <div class="settings__groups">
+      <div class="settings__group">
+        <h2 class="settings__group-title">Daily recommendation email</h2>
+        <Switch v-model="sendNotifications" label="Send me the daily recommendation email" />
+        <Select
+          v-model="envValue"
+          label="Cover which place"
+          :options="envOptions"
+          :disabled="!sendNotifications"
+        />
+      </div>
     </div>
 
     <div class="settings__actions">
@@ -88,10 +90,11 @@ async function save(): Promise<void> {
 </template>
 
 <style scoped>
-/* Figma "11 Settings": 480px column, the email preference grouped in a card. */
-.settings { display: flex; flex-direction: column; gap: var(--space-6); max-width: 480px; }
+/* Figma "11 Settings": preference groups as cards, laid out in a grid at full page width. */
+.settings { display: flex; flex-direction: column; gap: var(--space-6); }
+.settings__groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 480px), 1fr)); gap: var(--space-4); }
 .settings__title { margin: 0; font-size: 36px; line-height: 44px; font-weight: var(--weight-bold); letter-spacing: -0.015em; color: var(--color-text-primary); }
-.settings__note { margin: 0; padding: var(--space-3) var(--space-4); border: var(--border-thin) solid var(--color-status-warning-border); border-radius: var(--radius-md); background: var(--color-status-warning-subtle); color: var(--color-text-primary); font-size: 14px; line-height: 20px; }
+.settings__note { margin: 0; max-width: 720px; padding: var(--space-3) var(--space-4); border: var(--border-thin) solid var(--color-status-warning-border); border-radius: var(--radius-md); background: var(--color-status-warning-subtle); color: var(--color-text-primary); font-size: 14px; line-height: 20px; }
 .settings__group { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-6); border: var(--border-thin) solid var(--color-border-subtle); border-radius: var(--radius-lg); background: var(--color-bg-surface); }
 .settings__group-title { margin: 0; font-size: 18px; line-height: 24px; font-weight: var(--weight-semibold); color: var(--color-text-primary); }
 .settings__actions { display: flex; gap: var(--space-2); }
