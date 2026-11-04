@@ -2,9 +2,23 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAuthStore } from './auth'
 import * as keycloak from '../auth/keycloak'
+import type { AppUser } from '../types/appUser'
 
 const FUTURE = '2999-01-01T00:00:00.000Z'
 const PAST = '2000-01-01T00:00:00.000Z'
+
+function user(fullName: string, username = 'jdoe'): AppUser {
+  return {
+    id: 'u1',
+    concurrencyToken: '',
+    email: 'jdoe@example.com',
+    username,
+    fullName,
+    locale: 'en',
+    sendNotifications: false,
+    notificationEnvironmentId: null,
+  }
+}
 
 // Unsigned JWT (header.payload.sig) carrying realm_access.roles.
 function jwt(roles: string[]): string {
@@ -123,5 +137,21 @@ describe('auth store', () => {
 
     expect(auth.token).toBeNull()
     expect(logout).toHaveBeenCalledWith('https://app.test.local/login')
+  })
+
+  it('firstName is empty without a current user', () => {
+    expect(useAuthStore().firstName).toBe('')
+  })
+
+  it.each([
+    ['Jane Doe', 'Jane'],
+    ['Jane', 'Jane'],
+    ['  Jane   Mary Doe ', 'Jane'],
+    ['', 'jdoe'],
+    ['   ', 'jdoe'],
+  ])('firstName for fullName %j is %j', (fullName, expected) => {
+    const auth = useAuthStore()
+    auth.setCurrentUser(user(fullName))
+    expect(auth.firstName).toBe(expected)
   })
 })

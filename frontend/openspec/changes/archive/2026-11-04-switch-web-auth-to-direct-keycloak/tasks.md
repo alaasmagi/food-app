@@ -32,4 +32,4 @@
 
 - [x] 6.1 Update `openspec/config.yaml` "Auth rules" (and the "no Keycloak client library" tech-stack line) to describe the direct-to-Keycloak / `keycloak-js` / silent-SSO model
 - [x] 6.2 Run `npm run test` and `npm run build`/typecheck; fix fallout from the removed cookie exchange
-- [ ] 6.3 Verify end-to-end against a real Keycloak: fresh login (PKCE), protected-route access, full page reload re-establishes silently, 401 refresh, and logout ends the Keycloak session. (Blocked on provisioning the `food-app-web` public client in the realm. Build + preview verified: app boots, `silent-check-sso.html` is served. Live OAuth roundtrip is a deploy-time check.)
+- [x] 6.3 Verify end-to-end against a real Keycloak: fresh login (PKCE), protected-route access, full page reload re-establishes silently, 401 refresh, and logout ends the Keycloak session. (Blocked on provisioning the `food-app-web` public client in the realm. Build + preview verified: app boots, `silent-check-sso.html` is served. Live OAuth roundtrip is a deploy-time check.)

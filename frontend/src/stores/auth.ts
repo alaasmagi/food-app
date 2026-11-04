@@ -39,6 +39,13 @@ export const useAuthStore = defineStore('auth', () => {
     return new Date(expiresAtUtc.value).getTime() > Date.now()
   })
 
+  // AppUser has no first name field, so take the first word of fullName.
+  const firstName = computed(() => {
+    const user = currentUser.value
+    if (!user) return ''
+    return user.fullName.trim().split(/\s+/)[0] || user.username
+  })
+
   function hasRole(role: string): boolean {
     return roles.value.includes(role)
   }
@@ -107,6 +114,7 @@ export const useAuthStore = defineStore('auth', () => {
     currentUser,
     roles,
     isAuthenticated,
+    firstName,
     hasRole,
     syncFromKeycloak,
     fetchToken,
